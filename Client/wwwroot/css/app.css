@@ -339,8 +339,19 @@ a { color: inherit; text-decoration: none; }
 .pitch::before { content: ""; position: absolute; inset: 5%; border: 2px solid rgba(255, 255, 255, .25); border-radius: 8px; }
 .pitch::after { content: ""; position: absolute; left: 5%; right: 5%; top: 50%; height: 2px; background: rgba(255, 255, 255, .25); }
 .pitch__circle { position: absolute; left: 50%; top: 50%; width: 19cqw; height: 19cqw; transform: translate(-50%, -50%); border: 2px solid rgba(255, 255, 255, .25); border-radius: 50%; }
-/* ancho del slot = ~1/5.6 de la cancha → 5 en fila entran sin amontonarse ni recortarse */
-.pitch__slot { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 3px; width: 17.5cqw; max-width: 84px; cursor: pointer; }
+/* Una línea de la formación = fila flex. El navegador reparte a los jugadores
+   dentro del ancho disponible, así que es IMPOSIBLE que se salgan de la cancha
+   (antes se posicionaban por % con translate(-50%) y podían desbordar). */
+.pitch__line {
+    position: absolute; left: 0; right: 0; transform: translateY(-50%);
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 3%; gap: 2px;
+}
+.pitch__line--solo { justify-content: center; }   /* arquero / punta solitario */
+.pitch__slot {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    flex: 0 1 auto; min-width: 0; max-width: 19%; cursor: pointer;
+}
 .dot-player {
     width: clamp(30px, 10cqw, 48px); aspect-ratio: 1; border-radius: 50%; display: grid; place-content: center;
     font-family: var(--font-display); font-size: clamp(13px, 4.1cqw, 20px); color: #10140b;

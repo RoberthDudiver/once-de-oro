@@ -40,14 +40,20 @@ else
 
             <div class="pitch">
                 <div class="pitch__circle"></div>
-                @foreach (var slot in Slots())
+                @* Cada línea es una fila flex: el navegador la reparte y NUNCA se sale de la cancha. *@
+                @foreach (var line in Lines())
                 {
-                    <div class="pitch__slot" style="left:@(slot.X)%; top:@(slot.Y)%;"
-                         @onclick="() => { if (slot.Player is Player sp && !Game.IsReserve(sp)) Game.ToggleStarter(sp.Id); }">
-                        @{ var pl = slot.Player!; var res = Game.IsReserve(pl); }
-                        <div class="pitch__pos pos--@slot.Pos">@slot.Pos.Label()</div>
-                        <div class="dot-player @(res ? "reserve" : Tier(pl))">@pl.Rating</div>
-                        <div class="pitch__name">@(res ? Loc["libre"] : Short(pl.Name))</div>
+                    <div class="pitch__line @(line.Slots.Count == 1 ? "pitch__line--solo" : "")" style="top:@(line.Y)%;">
+                        @foreach (var slot in line.Slots)
+                        {
+                            <div class="pitch__slot"
+                                 @onclick="() => { if (slot.Player is Player sp && !Game.IsReserve(sp)) Game.ToggleStarter(sp.Id); }">
+                                @{ var pl = slot.Player!; var res = Game.IsReserve(pl); }
+                                <div class="pitch__pos pos--@slot.Pos">@slot.Pos.Label()</div>
+                                <div class="dot-player @(res ? "reserve" : Tier(pl))">@pl.Rating</div>
+                                <div class="pitch__name">@(res ? Loc["libre"] : Short(pl.Name))</div>
+                            </div>
+                        }
                     </div>
                 }
             </div>
@@ -108,49 +114,29 @@ else
 @code {
     private Position? PlantelPos;
     private void OnNameChange(ChangeEventArgs e) => Game.SetClubName(e.Value?.ToString() ?? "");
-    private record Slot(Position Pos, double X, double Y, Player? Player);
+    private record Slot(Position Pos, Player? Player);
+    private record Line(double Y, List<Slot> Slots);
 
     private static readonly Dictionary<Position, double> LineY = new()
     {
         [Position.GK] = 85, [Position.DEF] = 65, [Position.MID] = 44, [Position.FWD] = 17
     };
 
-    private List<Slot> Slots()
+    private List<Line> Lines()
     {
         var f = Game.Formation;
-        var result = new List<Slot>();
-        foreach (var pos in new[] { Position.GK, Position.DEF, Position.MID, Position.FWD })
+        var result = new List<Line>();
+        foreach (var pos in new[] { Position.FWD, Position.MID, Position.DEF, Position.GK })
         {
             int count = f.SlotsFor(pos);
+            if (count == 0) continue;
             var players = Game.Starters.Where(p => p.Pos == pos).ToList();
+            var slots = new List<Slot>();
             for (int i = 0; i < count; i++)
-            {
-                var p = i < players.Count ? players[i] : GameService.ReserveFor(pos, i);
-                result.Add(new Slot(pos, LineX(i, count), LineY[pos], p));
-            }
+                slots.Add(new Slot(pos, i < players.Count ? players[i] : GameService.ReserveFor(pos, i)));
+            result.Add(new Line(LineY[pos], slots));
         }
         return result;
-    }
-
-    /// <summary>
-    /// Reparto horizontal de una línea (en % del ancho de la cancha).
-    /// La línea se ABRE según cuántos jugadores tiene, como una formación real:
-    /// los laterales de una defensa de 4/5 van pegados a la banda y los delanteros
-    /// de una dupla quedan centrados. El slot mide 17.5% del ancho (8.75% a cada lado),
-    /// así que el borde mínimo (12%) deja ~3% de aire y nunca se recorta.
-    /// </summary>
-    private static double LineX(int i, int count)
-    {
-        if (count <= 1) return 50;
-        double halfWidth = count switch
-        {
-            2 => 16,   // dupla de ataque: centrada  → 34 / 66
-            3 => 28,   // línea de 3               → 22 / 50 / 78
-            4 => 37,   // línea de 4: laterales abiertos → 13 / 37.7 / 62.3 / 87
-            _ => 38,   // 5 o más: banda a banda   → 12 / 31 / 50 / 69 / 88
-        };
-        double start = 50 - halfWidth;
-        return start + i * (2 * halfWidth / (count - 1));
     }
 
     private static string Tier(Player p) => p.Rating >= 85 ? "" : p.Rating >= 75 ? "silver" : "bronze";
