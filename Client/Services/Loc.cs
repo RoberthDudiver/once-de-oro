@@ -250,6 +250,28 @@ public sealed class Loc
         ["FUERA DE JUEGO"] = "OFFSIDE",
         ["La página que buscás no existe."] = "The page you're looking for doesn't exist.",
         ["Volver al inicio"] = "Back home",
+        // Cuenta
+        ["Tu cuenta"] = "Your account",
+        ["Guardar progreso"] = "Save progress",
+        ["Guardá tu progreso"] = "Save your progress",
+        ["Este servidor todavía no tiene cuentas habilitadas. Tu progreso se guarda en este navegador."]
+            = "This server doesn't have accounts enabled yet. Your progress is saved in this browser.",
+        ["☁ Progreso guardado"] = "☁ Progress saved",
+        ["Tu equipo, tu dinero, los torneos y todas tus estadísticas se guardan en tu cuenta y te siguen a cualquier dispositivo."]
+            = "Your squad, money, cups and all your stats are stored in your account and follow you to any device.",
+        ["☁ Guardar ahora"] = "☁ Save now",
+        ["✓ Guardado"] = "✓ Saved",
+        ["Cerrar sesión"] = "Log out",
+        ["Crear cuenta"] = "Create account",
+        ["Creá tu cuenta y todo lo que ya jugaste (equipo, dinero, torneos y estadísticas) se guarda ahí mismo. No perdés nada."]
+            = "Create your account and everything you've already played (squad, money, cups and stats) is saved right there. You lose nothing.",
+        ["Entrá para recuperar tu equipo y seguir donde lo dejaste."] = "Log in to get your squad back and pick up where you left off.",
+        ["Nombre de manager"] = "Manager name",
+        ["Email"] = "Email",
+        ["Contraseña"] = "Password",
+        ["Mínimo 6 caracteres"] = "At least 6 characters",
+        ["Un momento…"] = "One moment…",
+        ["Crear cuenta y guardar mi progreso"] = "Create account and save my progress",
     };
 
     private static readonly Dictionary<string, string> Pt = new()
@@ -439,5 +461,26 @@ public sealed class Loc
         ["FUERA DE JUEGO"] = "IMPEDIMENTO",
         ["La página que buscás no existe."] = "A página que você procura não existe.",
         ["Volver al inicio"] = "Voltar ao início",
+        ["Tu cuenta"] = "Sua conta",
+        ["Guardar progreso"] = "Salvar progresso",
+        ["Guardá tu progreso"] = "Salve seu progresso",
+        ["Este servidor todavía no tiene cuentas habilitadas. Tu progreso se guarda en este navegador."]
+            = "Este servidor ainda não tem contas habilitadas. Seu progresso é salvo neste navegador.",
+        ["☁ Progreso guardado"] = "☁ Progresso salvo",
+        ["Tu equipo, tu dinero, los torneos y todas tus estadísticas se guardan en tu cuenta y te siguen a cualquier dispositivo."]
+            = "Seu time, seu dinheiro, os torneios e todas as suas estatísticas ficam salvos na sua conta e te acompanham em qualquer dispositivo.",
+        ["☁ Guardar ahora"] = "☁ Salvar agora",
+        ["✓ Guardado"] = "✓ Salvo",
+        ["Cerrar sesión"] = "Sair",
+        ["Crear cuenta"] = "Criar conta",
+        ["Creá tu cuenta y todo lo que ya jugaste (equipo, dinero, torneos y estadísticas) se guarda ahí mismo. No perdés nada."]
+            = "Crie sua conta e tudo o que você já jogou (time, dinheiro, torneios e estatísticas) fica salvo ali mesmo. Você não perde nada.",
+        ["Entrá para recuperar tu equipo y seguir donde lo dejaste."] = "Entre para recuperar seu time e continuar de onde parou.",
+        ["Nombre de manager"] = "Nome de técnico",
+        ["Email"] = "Email",
+        ["Contraseña"] = "Senha",
+        ["Mínimo 6 caracteres"] = "Mínimo 6 caracteres",
+        ["Un momento…"] = "Um momento…",
+        ["Crear cuenta y guardar mi progreso"] = "Criar conta e salvar meu progresso",
     };
 }

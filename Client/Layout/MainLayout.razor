@@ -2,6 +2,7 @@
 @implements IDisposable
 @inject GameService Game
 @inject Loc Loc
+@inject AuthService Auth
 @inject NavigationManager Nav
 
 <div class="shell">
@@ -24,6 +25,19 @@
             <span class="money__val">@Game.State.Money</span>
             <span class="money__unit">M</span>
         </div>
+        @if (Auth.Available)
+        {
+            <a href="cuenta" class="acct" title="@(Auth.IsLoggedIn ? Auth.Email : Loc["Guardá tu progreso"])">
+                @if (Auth.IsLoggedIn)
+                {
+                    <span class="acct__avatar">@((Auth.DisplayName.Length > 0 ? Auth.DisplayName[..1] : "?").ToUpperInvariant())</span>
+                }
+                else
+                {
+                    <span class="acct__cta">@Loc["Guardar progreso"]</span>
+                }
+            </a>
+        }
     </header>
 
     <nav class="nav">
@@ -42,9 +56,14 @@
     {
         Game.Changed += OnChanged;
         Loc.Changed += OnChanged;
+        Auth.Changed += OnChanged;
         Nav.LocationChanged += OnLocation;
         await Loc.LoadAsync();
         await Game.LoadAsync();
+        await Auth.InitAsync();
+
+        // Si la sesión seguía abierta, traemos/conciliamos la partida de la cuenta.
+        if (Auth.IsLoggedIn) await Game.SyncAfterAuthAsync(justRegistered: false);
     }
 
     private async Task ChangeLang(string code) => await Loc.SetLangAsync(code);
@@ -63,6 +82,7 @@
     {
         Game.Changed -= OnChanged;
         Loc.Changed -= OnChanged;
+        Auth.Changed -= OnChanged;
         Nav.LocationChanged -= OnLocation;
     }
 }

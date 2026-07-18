@@ -1,0 +1,152 @@
+@page "/cuenta"
+@inherits GamePageBase
+@inject AuthService Auth
+@inject NavigationManager Nav
+
+<PageTitle>Cuenta — Once de Oro</PageTitle>
+
+<div class="section-title"><span class="dot"></span> @Loc["Tu cuenta"]</div>
+
+@if (!Auth.Available)
+{
+    <div class="empty">
+        <div class="empty__ico">☁️</div>
+        <p>@Loc["Este servidor todavía no tiene cuentas habilitadas. Tu progreso se guarda en este navegador."]</p>
+    </div>
+}
+else if (Auth.IsLoggedIn)
+{
+    <div class="card card--pad">
+        <div class="row" style="justify-content:space-between; align-items:flex-start;">
+            <div class="row">
+                <div class="acct__avatar">@Initial</div>
+                <div>
+                    <div style="font-family:var(--font-head); font-size:20px;">@Auth.DisplayName</div>
+                    <div class="muted" style="font-size:13px;">@Auth.Email</div>
+                </div>
+            </div>
+            <span class="pill pill--green">@Loc["☁ Progreso guardado"]</span>
+        </div>
+
+        <div class="mt muted" style="font-size:13.5px;">
+            @Loc["Tu equipo, tu dinero, los torneos y todas tus estadísticas se guardan en tu cuenta y te siguen a cualquier dispositivo."]
+        </div>
+
+        <div class="row wrap mt" style="gap:8px;">
+            <span class="pill pill--gold">💰 $@Game.State.Money M</span>
+            <span class="pill">👕 @Game.State.OwnedIds.Count @Loc["jugadores"]</span>
+            <span class="pill">🏆 @Game.State.Honours.Count</span>
+            <span class="pill">⚽ @Game.State.MatchesPlayed @Loc["Partidos"]</span>
+        </div>
+
+        <div class="row wrap mt" style="gap:10px;">
+            <button class="btn btn--gold" disabled="@_busy" @onclick="SaveNow">@(_savedNow ? Loc["✓ Guardado"] : Loc["☁ Guardar ahora"])</button>
+            <button class="btn btn--ghost" @onclick="Logout">@Loc["Cerrar sesión"]</button>
+        </div>
+    </div>
+}
+else
+{
+    <div class="card card--pad" style="max-width:460px; margin:0 auto;">
+        <div class="seg mb">
+            <button class="@(_mode == "login" ? "on" : "")" @onclick='() => SetMode("login")'>@Loc["Entrar"]</button>
+            <button class="@(_mode == "register" ? "on" : "")" @onclick='() => SetMode("register")'>@Loc["Crear cuenta"]</button>
+        </div>
+
+        <p class="muted" style="font-size:13.5px; margin-bottom:14px;">
+            @(_mode == "register"
+                ? Loc["Creá tu cuenta y todo lo que ya jugaste (equipo, dinero, torneos y estadísticas) se guarda ahí mismo. No perdés nada."]
+                : Loc["Entrá para recuperar tu equipo y seguir donde lo dejaste."])
+        </p>
+
+        @if (_mode == "register")
+        {
+            <label class="fld">@Loc["Nombre de manager"]
+                <input class="search" style="margin:6px 0 0;" maxlength="24" @bind="_name" placeholder="@Loc["Tu apodo"]" />
+            </label>
+        }
+        <label class="fld">@Loc["Email"]
+            <input class="search" style="margin:6px 0 0;" type="email" @bind="_email" placeholder="vos@email.com" />
+        </label>
+        <label class="fld">@Loc["Contraseña"]
+            <input class="search" style="margin:6px 0 0;" type="password" @bind="_password" placeholder="@Loc["Mínimo 6 caracteres"]"
+                   @onkeydown="OnKey" />
+        </label>
+
+        @if (_error is not null)
+        {
+            <div class="pill" style="width:100%; justify-content:center; padding:9px; margin-top:12px; color:var(--red); border-color:rgba(255,90,106,.4);">
+                @_error
+            </div>
+        }
+
+        <div class="mt">
+            <button class="btn btn--gold btn--big" style="width:100%;" disabled="@_busy" @onclick="Submit">
+                @(_busy ? Loc["Un momento…"] : _mode == "register" ? Loc["Crear cuenta y guardar mi progreso"] : Loc["Entrar"])
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    private string _mode = "register";
+    private string _email = "", _password = "", _name = "";
+    private string? _error;
+    private bool _busy, _savedNow;
+
+    private string Initial => (Auth.DisplayName.Length > 0 ? Auth.DisplayName[..1] : "?").ToUpperInvariant();
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Auth.Changed += OnAuthChanged;
+    }
+
+    private void OnAuthChanged() => InvokeAsync(StateHasChanged);
+
+    private void SetMode(string m) { _mode = m; _error = null; }
+
+    private async Task OnKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await Submit();
+    }
+
+    private async Task Submit()
+    {
+        _error = null;
+        _busy = true;
+        try
+        {
+            var res = _mode == "register"
+                ? await Auth.RegisterAsync(_email, _password, _name)
+                : await Auth.LoginAsync(_email, _password);
+
+            if (!res.Ok) { _error = res.Error; return; }
+
+            // Acá es donde no se pierde nada: al registrarse se sube lo ya jugado;
+            // al entrar se conserva la partida más avanzada.
+            await Game.SyncAfterAuthAsync(justRegistered: _mode == "register");
+            Nav.NavigateTo("");
+        }
+        finally { _busy = false; }
+    }
+
+    private async Task SaveNow()
+    {
+        _busy = true;
+        try { _savedNow = await Game.PushNowAsync(); }
+        finally { _busy = false; }
+    }
+
+    private async Task Logout()
+    {
+        await Auth.LogoutAsync();
+        _mode = "login";
+    }
+
+    public override void Dispose()
+    {
+        Auth.Changed -= OnAuthChanged;
+        base.Dispose();
+    }
+}

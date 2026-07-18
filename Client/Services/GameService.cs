@@ -16,7 +16,9 @@ public sealed class GameService
     private readonly IJSRuntime _js;
     private readonly MatchEngine _engine;
     private readonly Loc _loc;
+    private readonly AuthService _auth;
     private readonly Random _rng = new();
+    private CancellationTokenSource? _pushCts;
 
     private static readonly JsonSerializerOptions JsonOpts = new(JsonSerializerDefaults.Web)
     {
@@ -30,11 +32,12 @@ public sealed class GameService
     /// <summary>Resultado del último partido jugado (para la pantalla de partido).</summary>
     public MatchResult? LastMatch { get; private set; }
 
-    public GameService(IJSRuntime js, MatchEngine engine, Loc loc)
+    public GameService(IJSRuntime js, MatchEngine engine, Loc loc, AuthService auth)
     {
         _js = js;
         _engine = engine;
         _loc = loc;
+        _auth = auth;
     }
 
     // ---------------------------------------------------------------- persistencia
@@ -74,7 +77,71 @@ public sealed class GameService
     {
         Changed?.Invoke();
         await SaveAsync();
+        QueueCloudPush();
     }
+
+    // ---------------------------------------------------------------- nube (cuenta)
+    /// <summary>Cuánto avanzó una partida. Sirve para no pisar nunca lo más avanzado.</summary>
+    private static int Progress(GameState s) =>
+        s.MatchesPlayed * 10 + s.Honours.Count * 100 + s.History.Count * 20 + s.OwnedIds.Count;
+
+    /// <summary>Sube el estado a la nube, agrupando ráfagas de cambios (1,5 s).</summary>
+    private void QueueCloudPush()
+    {
+        if (!_auth.IsLoggedIn) return;
+        _pushCts?.Cancel();
+        _pushCts = new CancellationTokenSource();
+        var ct = _pushCts.Token;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(1500, ct);
+                if (!ct.IsCancellationRequested) await _auth.PushStateAsync(State);
+            }
+            catch (TaskCanceledException) { }
+            catch { }
+        });
+    }
+
+    /// <summary>
+    /// Une el progreso local con el de la cuenta después de registrarse o entrar.
+    /// - Al REGISTRARSE se sube lo que el jugador ya venía jugando (equipo, dinero,
+    ///   torneos, estadísticas): así no se pierde nada.
+    /// - Al ENTRAR, si la nube ya tiene partida se queda con la MÁS avanzada de las dos.
+    /// </summary>
+    public async Task SyncAfterAuthAsync(bool justRegistered)
+    {
+        if (!_auth.IsLoggedIn) return;
+
+        var fetched = await _auth.FetchStateAsync();
+
+        // Si la consulta FALLÓ no sabemos qué hay guardado: no tocamos nada.
+        // Subir acá borraría el progreso del jugador.
+        if (!fetched.Ok) return;
+
+        var cloud = fetched.State;
+        if (cloud is null)
+        {
+            // La cuenta todavía no tiene partida: subimos lo que el jugador venía jugando.
+            await _auth.PushStateAsync(State);
+            return;
+        }
+
+        if (Progress(cloud) >= Progress(State))
+        {
+            State = cloud;
+            await SaveAsync();
+            Changed?.Invoke();
+        }
+        else
+        {
+            await _auth.PushStateAsync(State);
+        }
+    }
+
+    /// <summary>Fuerza un guardado inmediato en la nube (botón "guardar ahora").</summary>
+    public Task<bool> PushNowAsync() => _auth.PushStateAsync(State);
 
     // ---------------------------------------------------------------- plantel
     public IEnumerable<Player> Owned =>
