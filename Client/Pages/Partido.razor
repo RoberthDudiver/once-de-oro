@@ -131,8 +131,19 @@ else
         else if (run.Eliminated)
         {
             <div class="card card--pad center" style="margin-top:16px;">
-                <div style="font-size:50px;">🚪</div>
-                <h2 style="font-family:var(--font-head); font-size:26px; margin-top:6px;">@Loc[comp.Name]</h2>
+                @if (comp.Format == CompetitionFormat.League)
+                {
+                    <div style="font-size:50px;">🏁</div>
+                    <h2 style="font-family:var(--font-head); font-size:26px; margin-top:6px;">@Loc[comp.Name]</h2>
+                    <div class="pill pill--gold" style="margin-top:8px; padding:8px 14px;">
+                        @Loc["Temporada terminada"] · @Game.LeaguePosition(run)º
+                    </div>
+                }
+                else
+                {
+                    <div style="font-size:50px;">🚪</div>
+                    <h2 style="font-family:var(--font-head); font-size:26px; margin-top:6px;">@Loc[comp.Name]</h2>
+                }
                 <p class="muted">@Loc["Reforzá el equipo y volvé más fuerte."]</p>
                 <div class="mt"><button class="btn btn--gold btn--big" @onclick="Conclude">@Loc["Volver al mercado"]</button></div>
             </div>
@@ -149,6 +160,36 @@ else
                 <button class="btn btn--gold btn--big" @onclick="Conclude">@Loc["Volver"]</button>
             </div>
         }
+    }
+
+    @if (comp.Format == CompetitionFormat.League && run.Table.Count > 0 && _phase != Phase.Playing)
+    {
+        <div class="section-title"><span class="dot"></span> @Loc["Tabla de posiciones"]</div>
+        <div class="card table-wrap">
+            <table class="ltable">
+                <thead>
+                    <tr>
+                        <th>#</th><th class="ltable__team">@Loc["Equipo"]</th>
+                        <th>PJ</th><th>G</th><th>E</th><th>P</th><th>GF</th><th>GC</th><th>DIF</th><th>PTS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{ int pos = 0; }
+                    @foreach (var row in GameService.Standings(run))
+                    {
+                        pos++;
+                        <tr class="@(row.IsMe ? "me" : "")">
+                            <td>@pos</td>
+                            <td class="ltable__team">@row.Flag @row.Name</td>
+                            <td>@row.Played</td><td>@row.Won</td><td>@row.Drawn</td><td>@row.Lost</td>
+                            <td>@row.GoalsFor</td><td>@row.GoalsAgainst</td>
+                            <td>@(row.Diff > 0 ? "+" : "")@row.Diff</td>
+                            <td class="ltable__pts">@row.Points</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
     }
 
     @if (run.Timeline.Count > 0 && _phase != Phase.Playing)

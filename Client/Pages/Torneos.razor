@@ -34,8 +34,11 @@
 
 @{ var myPower = Game.Power.Overall; }
 
-<div class="grid grid--cards">
-    @foreach (var c in CompetitionDatabase.All)
+@foreach (var group in CompetitionDatabase.All.GroupBy(c => c.Kind).OrderBy(g => (int)g.Key))
+{
+    <div class="section-title" style="margin-top:26px;"><span class="dot"></span> @Loc[KindName(group.Key)]</div>
+    <div class="grid grid--cards">
+    @foreach (var c in group.OrderBy(c => c.Tier))
     {
         var gap = myPower - c.RecommendedStrength;
         var canEnter = Game.CanEnter(c);
@@ -46,6 +49,7 @@
                     <div class="comp__emblem">@c.Emblem</div>
                     <div class="comp__name">@Loc[c.Name]</div>
                     <div class="comp__sub">@Loc[c.Subtitle]</div>
+                    <div class="comp__fmt">@Loc[FormatName(c)]</div>
                 </div>
                 <span class="pill" style="position:relative;">@Loc["Nivel"] @c.Tier</span>
             </div>
@@ -82,7 +86,8 @@
             }
         </div>
     }
-</div>
+    </div>
+}
 
 @code {
     private void Enter(Competition c)
@@ -90,4 +95,19 @@
         Game.StartTournament(c.Id);
         if (Game.State.Run is not null) Nav.NavigateTo("partido");
     }
+
+    private static string KindName(CompetitionKind k) => k switch
+    {
+        CompetitionKind.Liga => "Ligas nacionales",
+        CompetitionKind.CopaNacional => "Copas nacionales",
+        CompetitionKind.Continental => "Torneos continentales",
+        _ => "Selecciones",
+    };
+
+    private static string FormatName(Competition c) => c.Format switch
+    {
+        CompetitionFormat.League => "Liga · todos contra todos",
+        CompetitionFormat.Knockout => "Eliminación directa",
+        _ => "Grupos + eliminatorias",
+    };
 }

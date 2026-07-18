@@ -8,9 +8,30 @@ public sealed class RivalSnapshot
     public int Strength { get; set; }
 }
 
+/// <summary>Una fila de la tabla de posiciones de una liga.</summary>
+public sealed class TableRow
+{
+    public string Name { get; set; } = "";
+    public string Flag { get; set; } = "";
+    public int Strength { get; set; }
+    public bool IsMe { get; set; }
+    public int Played { get; set; }
+    public int Won { get; set; }
+    public int Drawn { get; set; }
+    public int Lost { get; set; }
+    public int GoalsFor { get; set; }
+    public int GoalsAgainst { get; set; }
+
+    public int Points => Won * 3 + Drawn;
+    public int Diff => GoalsFor - GoalsAgainst;
+}
+
 /// <summary>Estado serializable de una participación en un torneo.</summary>
 public sealed class RunState
 {
+    /// <summary>Tabla de posiciones (sólo en ligas). Incluye tu equipo y a los rivales.</summary>
+    public List<TableRow> Table { get; set; } = new();
+
     public string CompId { get; set; } = "";
     public int Stage { get; set; }
     public int GroupPoints { get; set; }

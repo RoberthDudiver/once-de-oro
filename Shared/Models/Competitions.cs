@@ -3,6 +3,26 @@ namespace OnceDeOro.Models;
 /// <summary>Un rival controlado por la IA dentro de un torneo.</summary>
 public sealed record RivalTeam(string Name, string Flag, int Strength);
 
+/// <summary>Cómo se disputa un torneo.</summary>
+public enum CompetitionFormat
+{
+    /// <summary>3 partidos de grupo + eliminatorias (el formato clásico de copa internacional).</summary>
+    GroupKnockout,
+    /// <summary>Liga: todos contra todos con tabla de posiciones; gana el que termina primero.</summary>
+    League,
+    /// <summary>Copa: eliminación directa desde la primera ronda.</summary>
+    Knockout,
+}
+
+/// <summary>Familia del torneo, para agrupar en la pantalla de competiciones.</summary>
+public enum CompetitionKind
+{
+    Liga,          // ligas nacionales de clubes
+    CopaNacional,  // copas domésticas de clubes
+    Continental,   // clubes a nivel continente
+    Selecciones,   // torneos de países
+}
+
 /// <summary>
 /// Definición de un torneo: prestigio, formato (grupos + eliminatorias),
 /// pool de rivales y tabla de premios por ronda.
@@ -23,8 +43,22 @@ public sealed class Competition
     /// <summary>Nombres de las rondas eliminatorias (tras la fase de grupos).</summary>
     public required string[] KnockoutRounds { get; init; }
 
+    public CompetitionFormat Format { get; init; } = CompetitionFormat.GroupKnockout;
+    public CompetitionKind Kind { get; init; } = CompetitionKind.Continental;
+
+    /// <summary>En una LIGA: contra cuántos rivales distintos jugás la temporada.</summary>
+    public int LeagueRounds { get; init; }
+
     /// <summary>Premio por superar una ronda (índice = etapa global).</summary>
     public int PrizePerRound => Math.Max(1, ChampionPrize / 12);
+
+    /// <summary>Cantidad de partidos que dura la participación completa.</summary>
+    public int TotalMatches => Format switch
+    {
+        CompetitionFormat.League => LeagueRounds,
+        CompetitionFormat.Knockout => KnockoutRounds.Length,
+        _ => 3 + KnockoutRounds.Length,
+    };
 }
 
 /// <summary>Estado de una participación en curso en un torneo.</summary>

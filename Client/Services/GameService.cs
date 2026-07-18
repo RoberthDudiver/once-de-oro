@@ -309,6 +309,35 @@ public sealed class GameService
         State.Money -= c.EntryFee;
         var run = new RunState { CompId = compId };
 
+        // --- LIGA: jugás contra cada rival una vez y se arma la tabla de posiciones ---
+        if (c.Format == CompetitionFormat.League)
+        {
+            var order = c.Rivals.OrderBy(_ => _rng.Next()).ToList();
+            foreach (var riv in order) run.Schedule.Add(Snap(riv));
+
+            run.Table.Add(new TableRow { Name = State.ClubName, Flag = "⚽", Strength = Power.Overall, IsMe = true });
+            foreach (var riv in c.Rivals)
+                run.Table.Add(new TableRow { Name = riv.Name, Flag = riv.Flag, Strength = riv.Strength });
+
+            State.Run = run;
+            Commit();
+            return;
+        }
+
+        // --- COPA: eliminación directa desde la primera ronda, sin fase de grupos ---
+        if (c.Format == CompetitionFormat.Knockout)
+        {
+            int rounds = c.KnockoutRounds.Length;
+            var ordered = c.Rivals.OrderBy(r => r.Strength).ToList();
+            // los más fuertes quedan para el final
+            var picked = ordered.Skip(Math.Max(0, ordered.Count - rounds)).ToList();
+            foreach (var riv in picked) run.Schedule.Add(Snap(riv));
+
+            State.Run = run;
+            Commit();
+            return;
+        }
+
         // Fixture SIN repetir equipos: se sortea todo el torneo de un pool sin reemplazo.
         // - Los MÁS FUERTES se reservan para las eliminatorias (dificultad creciente, final = el mejor).
         // - El grupo se arma con rivales más accesibles del resto.
@@ -357,6 +386,15 @@ public sealed class GameService
     {
         var r = State.Run!;
         var c = ActiveComp!;
+        if (c.Format == CompetitionFormat.League)
+            return (true, string.Format(_loc["Fecha {0} de {1}"], r.Stage + 1, c.LeagueRounds), r.Stage, c.LeagueRounds);
+
+        if (c.Format == CompetitionFormat.Knockout)
+        {
+            int i = Math.Clamp(r.Stage, 0, c.KnockoutRounds.Length - 1);
+            return (false, _loc[FullRound(c.KnockoutRounds[i])], r.Stage, c.KnockoutRounds.Length);
+        }
+
         bool group = r.Stage < 3;
         string name = group
             ? string.Format(_loc["Fase de grupos · Jornada {0}"], r.Stage + 1)
@@ -464,10 +502,110 @@ public sealed class GameService
     {
         var run = State.Run!;
         var comp = ActiveComp!;
-        bool group = run.Stage < 3;
-        int reward = ApplyResult(comp, run, result, group);
+        int reward = comp.Format == CompetitionFormat.League
+            ? ApplyLeagueResult(comp, run, result)
+            : ApplyResult(comp, run, result, group: comp.Format == CompetitionFormat.GroupKnockout && run.Stage < 3);
         Commit();
         return reward;
+    }
+
+    // ---------------------------------------------------------------- ligas
+    /// <summary>
+    /// Una fecha de liga: se registra tu resultado en la tabla y se simulan los
+    /// partidos del resto para que la tabla avance de forma creíble. No hay
+    /// eliminación: la temporada termina y cobrás según la posición final.
+    /// </summary>
+    private int ApplyLeagueResult(Competition comp, RunState run, MatchResult r)
+    {
+        bool win = r.HomeWon;
+        bool draw = r.HomeGoals == r.AwayGoals;
+
+        // Carrera
+        State.MatchesPlayed++;
+        State.GoalsFor += r.HomeGoals;
+        State.GoalsAgainst += r.AwayGoals;
+        if (win) State.Wins++; else if (draw) State.Draws++; else State.Losses++;
+        State.BestRatingReached = Math.Max(State.BestRatingReached, Power.Overall);
+
+        run.GoalsFor += r.HomeGoals;
+        run.GoalsAgainst += r.AwayGoals;
+        if (r.AwayGoals > 0) run.CleanRun = false;
+
+        // Tabla: mi fila y la del rival
+        var me = run.Table.FirstOrDefault(t => t.IsMe);
+        var opp = run.Table.FirstOrDefault(t => t.Name == r.AwayName);
+        if (me is not null) Record(me, r.HomeGoals, r.AwayGoals);
+        if (opp is not null) Record(opp, r.AwayGoals, r.HomeGoals);
+
+        // El resto de la fecha
+        SimulateLeagueRound(run, r.AwayName);
+
+        int reward = win ? comp.PrizePerRound * 2 : draw ? comp.PrizePerRound : 0;
+        run.Timeline.Add($"Fecha {run.Stage + 1}: {Score(r)} vs {r.AwayName}");
+        run.Stage++;
+
+        // ¿Terminó la temporada?
+        if (run.Stage >= comp.LeagueRounds)
+        {
+            int pos = LeaguePosition(run);
+            if (pos == 1) { run.Champion = true; reward += comp.ChampionPrize; }
+            else
+            {
+                run.Eliminated = true;   // la temporada terminó sin título
+                if (pos == 2) reward += comp.ChampionPrize / 3;
+                else if (pos == 3) reward += comp.ChampionPrize / 6;
+            }
+            run.Timeline.Add($"Posición final: {pos}º");
+        }
+
+        run.MoneyWon += reward;
+        State.Money += reward;
+        if (run.Champion) { State.Honours.Add(comp.Name); if (run.CleanRun) State.AchievedSevenZero = true; }
+        return reward;
+    }
+
+    /// <summary>Tu posición actual en la tabla (1 = primero).</summary>
+    public int LeaguePosition(RunState run) => Standings(run).FindIndex(t => t.IsMe) + 1;
+
+    /// <summary>Tabla ordenada: puntos, luego diferencia de gol, luego goles a favor.</summary>
+    public static List<TableRow> Standings(RunState run) =>
+        run.Table.OrderByDescending(t => t.Points)
+                 .ThenByDescending(t => t.Diff)
+                 .ThenByDescending(t => t.GoalsFor)
+                 .ThenBy(t => t.Name)
+                 .ToList();
+
+    private static void Record(TableRow t, int gf, int ga)
+    {
+        t.Played++; t.GoalsFor += gf; t.GoalsAgainst += ga;
+        if (gf > ga) t.Won++; else if (gf == ga) t.Drawn++; else t.Lost++;
+    }
+
+    /// <summary>Empareja a los demás equipos de la fecha y simula sus resultados.</summary>
+    private void SimulateLeagueRound(RunState run, string myOpponentName)
+    {
+        var others = run.Table.Where(t => !t.IsMe && t.Name != myOpponentName)
+                              .OrderBy(_ => _rng.Next()).ToList();
+        for (int i = 0; i + 1 < others.Count; i += 2)
+        {
+            var a = others[i];
+            var b = others[i + 1];
+            int ga = PoissonSample(Lambda(a.Strength, b.Strength));
+            int gb = PoissonSample(Lambda(b.Strength, a.Strength));
+            Record(a, ga, gb);
+            Record(b, gb, ga);
+        }
+    }
+
+    private static double Lambda(int attack, int defense) =>
+        Math.Clamp(1.35 * Math.Exp((attack - defense) / 16.0), 0.2, 4.0);
+
+    private int PoissonSample(double lambda)
+    {
+        double l = Math.Exp(-lambda), p = 1.0;
+        int k = 0;
+        do { k++; p *= _rng.NextDouble(); } while (p > l);
+        return k - 1;
     }
 
     private int ApplyResult(Competition comp, RunState run, MatchResult r, bool group)
@@ -510,8 +648,11 @@ public sealed class GameService
         }
         else
         {
-            int koIndex = run.Stage - 3;
-            bool isFinal = run.Stage == (2 + comp.KnockoutRounds.Length);
+            // En una copa pura las eliminatorias arrancan en la etapa 0; en el
+            // formato con grupos, después de los 3 partidos de la fase inicial.
+            int koOffset = comp.Format == CompetitionFormat.Knockout ? 0 : 3;
+            int koIndex = Math.Clamp(run.Stage - koOffset, 0, comp.KnockoutRounds.Length - 1);
+            bool isFinal = koIndex == comp.KnockoutRounds.Length - 1;
             string roundName = comp.KnockoutRounds[koIndex];
             run.Timeline.Add($"{roundName}: {Score(r)} vs {r.AwayName}");
 
@@ -555,7 +696,9 @@ public sealed class GameService
             var c = CompetitionDatabase.ById(run.CompId);
             string outcome = run.Champion
                 ? (run.CleanRun ? "🏆 CAMPEÓN (invicto, sin recibir goles)" : "🏆 CAMPEÓN")
-                : $"eliminado en {StageReached(run, c)}";
+                : c.Format == CompetitionFormat.League
+                    ? $"terminó {StageReached(run, c)}"       // en liga no te eliminan: terminás en una posición
+                    : $"eliminado en {StageReached(run, c)}";
             State.History.Insert(0, $"{c.Emblem} {c.Name} — {outcome} · GF {run.GoalsFor}/GC {run.GoalsAgainst} · +${run.MoneyWon}M");
             if (State.History.Count > 25) State.History.RemoveAt(State.History.Count - 1);
         }
@@ -566,8 +709,11 @@ public sealed class GameService
 
     private static string StageReached(RunState run, Competition c)
     {
-        if (run.Stage < 3) return "fase de grupos";
-        int ko = run.Stage - 3;
+        if (c.Format == CompetitionFormat.League)
+            return $"{Standings(run).FindIndex(t => t.IsMe) + 1}º de la tabla";
+        int koOffset = c.Format == CompetitionFormat.Knockout ? 0 : 3;
+        if (run.Stage < koOffset) return "fase de grupos";
+        int ko = run.Stage - koOffset;
         return ko < c.KnockoutRounds.Length ? FullRound(c.KnockoutRounds[ko]).ToLowerInvariant() : "eliminatorias";
     }
 }
