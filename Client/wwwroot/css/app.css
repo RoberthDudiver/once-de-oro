@@ -697,3 +697,7 @@ a { color: inherit; text-decoration: none; }
     .ltable td, .ltable th { padding: 8px 4px; font-size: 12.5px; }
     .ltable__pts { font-size: 14px; }
 }
+
+/* ---------- Academia ---------- */
+.aca__bar { height: 8px; border-radius: 99px; background: rgba(255, 255, 255, .1); overflow: hidden; }
+.aca__bar span { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--gold-deep), var(--gold), var(--gold-2)); transition: width .35s ease; }

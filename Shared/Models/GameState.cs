@@ -8,6 +8,25 @@ public sealed class RivalSnapshot
     public int Strength { get; set; }
 }
 
+/// <summary>
+/// Un jugador que creaste vos en la academia y que sube de nivel entrenando y jugando.
+/// Es el sumidero de dinero del juego avanzado: entrenar cuesta cada vez más caro.
+/// </summary>
+public sealed class AcademyPlayer
+{
+    public string Id { get; set; } = "";
+    public string Name { get; set; } = "";
+    public string Nation { get; set; } = "";
+    public string Flag { get; set; } = "🎓";
+    public Position Pos { get; set; }
+    public int Rating { get; set; } = 55;
+
+    /// <summary>Experiencia acumulada hacia el próximo punto de fuerza.</summary>
+    public int Xp { get; set; }
+    public int Sessions { get; set; }
+    public int Matches { get; set; }
+}
+
 /// <summary>Una fila de la tabla de posiciones de una liga.</summary>
 public sealed class TableRow
 {
@@ -58,6 +77,9 @@ public sealed class GameState
 
     public List<string> OwnedIds { get; set; } = new();
     public List<string> StartingIds { get; set; } = new();
+
+    /// <summary>Jugadores creados y entrenados por vos en la academia.</summary>
+    public List<AcademyPlayer> Academy { get; set; } = new();
 
     // Estadísticas de carrera
     public int MatchesPlayed { get; set; }

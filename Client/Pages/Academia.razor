@@ -1,0 +1,125 @@
+@page "/academia"
+@inherits GamePageBase
+
+<PageTitle>Academia — Once de Oro</PageTitle>
+
+<div class="section-title"><span class="dot"></span> @Loc["Academia"]</div>
+
+<div class="card card--pad mb">
+    <p class="muted" style="margin:0 0 14px; font-size:13.5px;">
+        @Loc["Creá tus propios jugadores y hacelos crecer entrenando y jugando. Entrenar cuesta cada vez más caro: es donde tu fortuna encuentra destino."]
+    </p>
+
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px;">
+        <label class="fld">@Loc["Nombre"]
+            <input class="search" style="margin:6px 0 0;" maxlength="22" @bind="_name" placeholder="@Loc["Tu joya"]" />
+        </label>
+        <label class="fld">@Loc["País"]
+            <input class="search" style="margin:6px 0 0;" maxlength="18" @bind="_nation" placeholder="@Loc["Cantera"]" />
+        </label>
+        <div class="fld">@Loc["Puesto"]
+            <div class="seg wrap" style="margin-top:6px;">
+                @foreach (var p in Enum.GetValues<Position>())
+                {
+                    <button class="@(_pos == p ? "on" : "")" @onclick="() => _pos = p">@p.Label()</button>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="row wrap mt" style="gap:10px; justify-content:space-between;">
+        <span class="pill pill--gold">@Loc["Costo"] $@GameService.AcademyCreateCost M · @Loc["arranca en"] 55</span>
+        <button class="btn btn--gold" disabled="@(!Game.CanCreateAcademyPlayer)" @onclick="Create">
+            @Loc["＋ Crear jugador"]
+        </button>
+    </div>
+    @if (!Game.CanCreateAcademyPlayer)
+    {
+        <div class="muted mt" style="font-size:12.5px;">@Loc["No te alcanza la plata para crear un jugador."]</div>
+    }
+</div>
+
+@if (Game.State.Academy.Count == 0)
+{
+    <div class="empty">
+        <div class="empty__ico">🎓</div>
+        <p>@Loc["Todavía no creaste ningún jugador."]</p>
+    </div>
+}
+else
+{
+    <div class="section-title"><span class="dot"></span> @Loc["Tus jugadores"] (@Game.State.Academy.Count)</div>
+    <div class="grid grid--cards">
+        @foreach (var a in Game.State.Academy.OrderByDescending(x => x.Rating))
+        {
+            var cost = GameService.TrainingCost(a.Rating);
+            var need = GameService.XpNeeded(a.Rating);
+            var pct = a.Rating >= 99 ? 100 : (int)Math.Round(100.0 * a.Xp / need);
+            var maxed = a.Rating >= 99;
+            <div class="card card--pad aca">
+                <div class="row" style="justify-content:space-between; align-items:flex-start;">
+                    <div class="row">
+                        <div class="dot-player @Tier(a.Rating)" style="width:52px;height:52px;font-size:21px;">@a.Rating</div>
+                        <div>
+                            <div style="font-family:var(--font-head); font-size:17px;">@a.Name</div>
+                            <div class="muted" style="font-size:12.5px;">@a.Pos.Full() · @a.Nation</div>
+                        </div>
+                    </div>
+                    <span class="pill pill--gold">@Loc[GameService.AcademyTier(a.Rating)]</span>
+                </div>
+
+                <div class="aca__bar mt" title="@a.Xp / @need">
+                    <span style="width:@(pct)%"></span>
+                </div>
+                <div class="row" style="justify-content:space-between; font-size:12px; color:var(--ink-faint); margin-top:5px;">
+                    <span>@(maxed ? Loc["Máximo"] : $"{a.Xp} / {need} XP")</span>
+                    <span>@a.Sessions @Loc["entrenos"] · @a.Matches @Loc["Partidos"]</span>
+                </div>
+
+                <div class="row wrap mt" style="gap:8px;">
+                    <button class="btn btn--gold" style="flex:1; padding:10px;"
+                            disabled="@(maxed || Game.State.Money < cost)"
+                            @onclick="() => Game.TrainAcademyPlayer(a.Id)">
+                        @(maxed ? Loc["Máximo"] : $"🏋 {Loc["Entrenar"]} · ${cost}M")
+                    </button>
+                    <button class="btn btn--ghost" style="padding:10px 14px;" @onclick="() => Game.SellAcademyPlayer(a.Id)">
+                        @Loc["Vender"]
+                    </button>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="section-title"><span class="dot"></span> @Loc["Ruta de avances"]</div>
+    <div class="card card--pad">
+        <div class="row wrap" style="gap:8px;">
+            @foreach (var (tier, from) in Route)
+            {
+                var reached = Game.State.Academy.Any(a => a.Rating >= from);
+                <span class="pill @(reached ? "pill--green" : "")" style="padding:8px 12px;">
+                    @(reached ? "✓" : "•") @Loc[tier] <span class="muted">@from+</span>
+                </span>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private string _name = "", _nation = "";
+    private Position _pos = Position.FWD;
+
+    private static readonly (string tier, int from)[] Route =
+    {
+        ("Juvenil", 55), ("Promesa", 60), ("Titular", 70), ("Figura", 80), ("Crack", 88), ("Leyenda", 94),
+    };
+
+    private void Create()
+    {
+        if (Game.CreateAcademyPlayer(_name, _pos, _nation) is not null)
+        {
+            _name = ""; _nation = "";
+        }
+    }
+
+    private static string Tier(int rating) => rating >= 85 ? "" : rating >= 75 ? "silver" : "bronze";
+}

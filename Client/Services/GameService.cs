@@ -145,11 +145,11 @@ public sealed class GameService
 
     // ---------------------------------------------------------------- plantel
     public IEnumerable<Player> Owned =>
-        State.OwnedIds.Select(id => PlayerDatabase.All.FirstOrDefault(p => p.Id == id))
+        State.OwnedIds.Select(id => AllPlayers.FirstOrDefault(p => p.Id == id))
                       .Where(p => p is not null)!.Cast<Player>();
 
     public IReadOnlyList<Player> Starters =>
-        State.StartingIds.Select(id => PlayerDatabase.All.FirstOrDefault(p => p.Id == id))
+        State.StartingIds.Select(id => AllPlayers.FirstOrDefault(p => p.Id == id))
                          .Where(p => p is not null).Cast<Player>().ToList();
 
     public Formation Formation =>
@@ -294,6 +294,123 @@ public sealed class GameService
     }
 
     public void AutoFillXI() { RebuildBestXI(); Commit(); }
+
+    // ---------------------------------------------------------------- academia
+    // Crear y entrenar jugadores propios. Entrenar cuesta cada vez más caro, así
+    // que el dinero del juego avanzado siempre tiene dónde ir.
+
+    public const int AcademyCreateCost = 20;
+
+    /// <summary>Materializa un jugador de academia como <see cref="Player"/> jugable.</summary>
+    public static Player ToPlayer(AcademyPlayer a) => new()
+    {
+        Id = a.Id, Name = a.Name, Nation = a.Nation, Flag = a.Flag,
+        Pos = a.Pos, Rating = a.Rating, Era = 2026,
+    };
+
+    /// <summary>Todos los jugadores existentes: los del mercado más los tuyos de academia.</summary>
+    public IEnumerable<Player> AllPlayers =>
+        PlayerDatabase.All.Concat(State.Academy.Select(ToPlayer));
+
+    /// <summary>Cuánto cuesta la próxima sesión de entrenamiento (sube con la fuerza).</summary>
+    public static int TrainingCost(int rating)
+    {
+        double over = Math.Max(0, rating - 50);
+        return (int)Math.Round(4 + Math.Pow(over, 1.9) / 12.0);
+    }
+
+    /// <summary>Experiencia necesaria para ganar el próximo punto de fuerza.</summary>
+    public static int XpNeeded(int rating) => 100 + Math.Max(0, rating - 50) * 18;
+
+    /// <summary>Etapa de la ruta de avances según la fuerza.</summary>
+    public static string AcademyTier(int rating) => rating switch
+    {
+        < 60 => "Juvenil",
+        < 70 => "Promesa",
+        < 80 => "Titular",
+        < 88 => "Figura",
+        < 94 => "Crack",
+        _ => "Leyenda",
+    };
+
+    public bool CanCreateAcademyPlayer => State.Money >= AcademyCreateCost;
+
+    /// <summary>Crea un jugador propio: cuesta dinero y entra directo a tu plantel.</summary>
+    public AcademyPlayer? CreateAcademyPlayer(string name, Position pos, string nation)
+    {
+        if (!CanCreateAcademyPlayer) return null;
+
+        var clean = (name ?? "").Trim();
+        if (clean.Length == 0) clean = "Juvenil";
+        if (clean.Length > 22) clean = clean[..22];
+
+        var p = new AcademyPlayer
+        {
+            Id = $"aca-{Guid.NewGuid():N}"[..12],
+            Name = clean,
+            Nation = string.IsNullOrWhiteSpace(nation) ? "Cantera" : nation.Trim(),
+            Pos = pos,
+            Rating = 55,
+        };
+
+        State.Money -= AcademyCreateCost;
+        State.Academy.Add(p);
+        State.OwnedIds.Add(p.Id);
+        Commit();
+        return p;
+    }
+
+    /// <summary>Una sesión de entrenamiento: cuesta plata y suma experiencia.</summary>
+    public bool TrainAcademyPlayer(string id)
+    {
+        var a = State.Academy.FirstOrDefault(x => x.Id == id);
+        if (a is null || a.Rating >= 99) return false;
+
+        int cost = TrainingCost(a.Rating);
+        if (State.Money < cost) return false;
+
+        State.Money -= cost;
+        a.Sessions++;
+        GrantXp(a, 100);
+        Commit();
+        return true;
+    }
+
+    /// <summary>Suma experiencia y sube de nivel cuando alcanza el umbral.</summary>
+    private static void GrantXp(AcademyPlayer a, int xp)
+    {
+        a.Xp += xp;
+        while (a.Rating < 99 && a.Xp >= XpNeeded(a.Rating))
+        {
+            a.Xp -= XpNeeded(a.Rating);
+            a.Rating++;
+        }
+        if (a.Rating >= 99) { a.Rating = 99; a.Xp = 0; }
+    }
+
+    /// <summary>Jugar también hace crecer a los tuyos: XP para los de academia que fueron titulares.</summary>
+    private void GrantMatchXp()
+    {
+        foreach (var p in EffectiveStarters)
+        {
+            var a = State.Academy.FirstOrDefault(x => x.Id == p.Id);
+            if (a is null) continue;
+            a.Matches++;
+            GrantXp(a, 60);
+        }
+    }
+
+    /// <summary>Vende un jugador de academia (se recupera parte de lo invertido).</summary>
+    public void SellAcademyPlayer(string id)
+    {
+        var a = State.Academy.FirstOrDefault(x => x.Id == id);
+        if (a is null) return;
+        State.Money += ToPlayer(a).Value / 2;
+        State.Academy.Remove(a);
+        State.OwnedIds.Remove(id);
+        State.StartingIds.Remove(id);
+        Commit();
+    }
 
     // ---------------------------------------------------------------- torneos
     public Competition? ActiveComp =>
@@ -526,6 +643,7 @@ public sealed class GameService
         State.GoalsAgainst += r.AwayGoals;
         if (win) State.Wins++; else if (draw) State.Draws++; else State.Losses++;
         State.BestRatingReached = Math.Max(State.BestRatingReached, Power.Overall);
+        GrantMatchXp();
 
         run.GoalsFor += r.HomeGoals;
         run.GoalsAgainst += r.AwayGoals;
@@ -619,6 +737,7 @@ public sealed class GameService
         State.GoalsAgainst += r.AwayGoals;
         if (win) State.Wins++; else if (draw) State.Draws++; else State.Losses++;
         State.BestRatingReached = Math.Max(State.BestRatingReached, Power.Overall);
+        GrantMatchXp();   // tus jugadores de academia crecen jugando
 
         // Estadísticas del torneo
         run.GoalsFor += r.HomeGoals;
