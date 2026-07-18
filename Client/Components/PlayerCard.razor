@@ -1,5 +1,6 @@
 @* Carta de jugador con estética coleccionable *@
-<div class="pcard @(P.IsLegend ? "pcard--legend" : "")">
+@inject GameService Game
+<div class="pcard @(P.IsLegend ? "pcard--legend" : "")" @onclick="OpenDetail">
     <div class="pcard__rating" data-tier="@Tier">@P.Rating</div>
     <div class="pcard__body">
         <div class="pcard__name">
@@ -12,8 +13,17 @@
             <span class="faint">·</span>
             <span>@P.Nation</span>
         </div>
+        @{ var cond = Game.State.Conditions.TryGetValue(P.Id, out var cc) ? cc : null; }
+        @if (cond is not null && (cond.Injured || cond.Fatigue >= 45))
+        {
+            <div class="pcard__flags">
+                @if (cond.Injured) { <span class="tag-inj">🚑 @cond.OutMatches</span> }
+                else { <span class="tag-fat">😮‍💨 @cond.Fatigue%</span> }
+            </div>
+        }
     </div>
-    <div class="pcard__right">
+    @* Los botones de acción no deben abrir la ficha *@
+    <div class="pcard__right" @onclick:stopPropagation="true">
         @if (ShowPrice)
         {
             <div class="pcard__price">
@@ -29,6 +39,11 @@
     [Parameter] public bool ShowPrice { get; set; } = true;
     [Parameter] public int Price { get; set; }
     [Parameter] public RenderFragment? Actions { get; set; }
+
+    /// <summary>Al tocar la carta se abre la ficha completa del jugador.</summary>
+    [Parameter] public EventCallback<Player> OnOpen { get; set; }
+
+    private Task OpenDetail() => OnOpen.HasDelegate ? OnOpen.InvokeAsync(P) : Task.CompletedTask;
 
     private string Tier => P.Rating >= 85 ? "gold" : P.Rating >= 75 ? "silver" : "bronze";
 }

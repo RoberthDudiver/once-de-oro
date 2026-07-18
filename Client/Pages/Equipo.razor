@@ -98,7 +98,7 @@ else
     <div class="grid grid--cards">
         @foreach (var p in Game.Owned.Where(x => PlantelPos is null || x.Pos == PlantelPos).OrderByDescending(x => Game.IsStarter(x.Id)).ThenByDescending(x => x.Rating))
         {
-            <PlayerCard P="p" ShowPrice="false">
+            <PlayerCard P="p" ShowPrice="false" OnOpen="Abrir">
                 <Actions>
                     <button class="icon-btn @(Game.IsStarter(p.Id) ? "icon-btn--sell" : "icon-btn--buy")"
                             title="@(Game.IsStarter(p.Id) ? "Sacar del XI" : "Poner en el XI")"
@@ -111,7 +111,12 @@ else
     </div>
 }
 
+<PlayerDetail P="_ficha" OnClose="() => _ficha = null" />
+
 @code {
+    private Player? _ficha;
+    private void Abrir(Player p) => _ficha = p;
+
     private Position? PlantelPos;
     private void OnNameChange(ChangeEventArgs e) => Game.SetClubName(e.Value?.ToString() ?? "");
     private record Slot(Position Pos, Player? Player);
@@ -126,11 +131,15 @@ else
     {
         var f = Game.Formation;
         var result = new List<Line>();
+        // Se dibuja el XI que REALMENTE juega: sin lesionados y con la fuerza
+        // que rinden hoy (el cansancio ya descontado). Si no, la cancha decía
+        // una cosa y el partido jugaba otra.
+        var xi = Game.EffectiveStarters;
         foreach (var pos in new[] { Position.FWD, Position.MID, Position.DEF, Position.GK })
         {
             int count = f.SlotsFor(pos);
             if (count == 0) continue;
-            var players = Game.Starters.Where(p => p.Pos == pos).ToList();
+            var players = xi.Where(p => p.Pos == pos).ToList();
             var slots = new List<Slot>();
             for (int i = 0; i < count; i++)
                 slots.Add(new Slot(pos, i < players.Count ? players[i] : GameService.ReserveFor(pos, i)));

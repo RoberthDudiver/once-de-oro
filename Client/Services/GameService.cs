@@ -169,6 +169,45 @@ public sealed class GameService
 
     public bool IsReserve(Player p) => p.Id.StartsWith("res-");
 
+    // ---------------------------------------------------------------- condición física
+    /// <summary>Estado (cansancio, lesión, estadísticas) de un jugador. Lo crea si no existe.</summary>
+    public PlayerCondition Cond(string id)
+    {
+        if (!State.Conditions.TryGetValue(id, out var c))
+        {
+            c = new PlayerCondition();
+            State.Conditions[id] = c;
+        }
+        return c;
+    }
+
+    public bool IsInjured(string id) => State.Conditions.TryGetValue(id, out var c) && c.Injured;
+    public int FatigueOf(string id) => State.Conditions.TryGetValue(id, out var c) ? c.Fatigue : 0;
+
+    /// <summary>Cuánto rendimiento le resta el cansancio (hasta -8 de fuerza).</summary>
+    public static int FatiguePenalty(int fatigue) => fatigue / 12;
+
+    /// <summary>El jugador tal como rinde HOY: su fuerza menos el desgaste.</summary>
+    public Player Effective(Player p)
+    {
+        int pen = FatiguePenalty(FatigueOf(p.Id));
+        if (pen <= 0) return p;
+        return new Player
+        {
+            Id = p.Id, Name = p.Name, Nation = p.Nation, Flag = p.Flag, Pos = p.Pos,
+            Rating = Math.Max(35, p.Rating - pen), IsLegend = p.IsLegend, Era = p.Era,
+        };
+    }
+
+    /// <summary>Titulares disponibles: los lesionados no pueden jugar.</summary>
+    public IReadOnlyList<Player> AvailableStarters =>
+        Starters.Where(p => !IsInjured(p.Id)).ToList();
+
+    /// <summary>Suplentes sanos que podrían entrar.</summary>
+    public IReadOnlyList<Player> AvailableBench =>
+        Owned.Where(p => !State.StartingIds.Contains(p.Id) && !IsInjured(p.Id))
+             .OrderByDescending(p => p.Rating).ToList();
+
     /// <summary>El XI real, con los puestos vacíos completados por juveniles de cantera.</summary>
     public IReadOnlyList<Player> EffectiveStarters
     {
@@ -176,10 +215,12 @@ public sealed class GameService
         {
             var f = Formation;
             var result = new List<Player>();
+            // Los LESIONADOS no entran, y los cansados rinden menos.
+            var disponibles = AvailableStarters;
             foreach (var pos in new[] { Position.GK, Position.DEF, Position.MID, Position.FWD })
             {
-                var reals = Starters.Where(p => p.Pos == pos).Take(f.SlotsFor(pos)).ToList();
-                result.AddRange(reals);
+                var reals = disponibles.Where(p => p.Pos == pos).Take(f.SlotsFor(pos)).ToList();
+                result.AddRange(reals.Select(Effective));
                 for (int i = reals.Count; i < f.SlotsFor(pos); i++)
                     result.Add(ReserveFor(pos, i));
             }
@@ -386,6 +427,69 @@ public sealed class GameService
             a.Rating++;
         }
         if (a.Rating >= 99) { a.Rating = 99; a.Xp = 0; }
+    }
+
+    // ---------------------------------------------------------------- después del partido
+    /// <summary>
+    /// Cansancio, lesiones y estadísticas individuales de un partido ya jugado.
+    /// Los que jugaron se desgastan; los que miraron descansan. Las lesiones salen
+    /// de los eventos del propio partido y el riesgo sube si el jugador venía fundido.
+    /// </summary>
+    private void ApplyConditions()
+    {
+        var tl = LastTimeline;
+        var jugaron = EffectiveStarters.Where(p => !IsReserve(p)).Select(p => p.Id).ToHashSet();
+
+        foreach (var id in jugaron)
+        {
+            var c = Cond(id);
+            c.Matches++;
+            c.Fatigue = Math.Min(100, c.Fatigue + 24 + _rng.Next(0, 9));
+        }
+
+        // Los que no jugaron descansan (y los lesionados van cumpliendo su parte)
+        foreach (var p in Owned)
+        {
+            var c = Cond(p.Id);
+            if (!jugaron.Contains(p.Id))
+                c.Fatigue = Math.Max(0, c.Fatigue - 22);
+            if (c.OutMatches > 0) c.OutMatches--;
+        }
+
+        if (tl is null) return;
+
+        // Estadísticas y lesiones a partir de lo que pasó en la cancha (equipo 0 = el tuyo)
+        foreach (var e in tl.Events.Where(e => e.Team == 0))
+        {
+            switch (e.Type)
+            {
+                case SimEventType.Goal when jugaron.Contains(e.ActorId):
+                    Cond(e.ActorId).Goals++;
+                    break;
+                case SimEventType.Yellow when jugaron.Contains(e.ActorId):
+                    Cond(e.ActorId).Yellow++;
+                    break;
+                case SimEventType.Red when jugaron.Contains(e.ActorId):
+                    Cond(e.ActorId).Red++;
+                    break;
+                case SimEventType.Injury when jugaron.Contains(e.ActorId):
+                    var c = Cond(e.ActorId);
+                    c.Injuries++;
+                    c.OutMatches = Math.Max(c.OutMatches, 1 + _rng.Next(3));   // 1 a 3 partidos
+                    break;
+            }
+        }
+
+        // Venir fundido pasa factura: riesgo extra de lesión muscular
+        foreach (var id in jugaron)
+        {
+            var c = Cond(id);
+            if (c.Fatigue >= 80 && !c.Injured && _rng.NextDouble() < 0.10)
+            {
+                c.Injuries++;
+                c.OutMatches = 1 + _rng.Next(2);
+            }
+        }
     }
 
     /// <summary>Jugar también hace crecer a los tuyos: XP para los de academia que fueron titulares.</summary>
@@ -675,6 +779,7 @@ public sealed class GameService
         if (win) State.Wins++; else if (draw) State.Draws++; else State.Losses++;
         State.BestRatingReached = Math.Max(State.BestRatingReached, Power.Overall);
         GrantMatchXp();
+        ApplyConditions();
 
         run.GoalsFor += r.HomeGoals;
         run.GoalsAgainst += r.AwayGoals;
@@ -768,7 +873,8 @@ public sealed class GameService
         State.GoalsAgainst += r.AwayGoals;
         if (win) State.Wins++; else if (draw) State.Draws++; else State.Losses++;
         State.BestRatingReached = Math.Max(State.BestRatingReached, Power.Overall);
-        GrantMatchXp();   // tus jugadores de academia crecen jugando
+        GrantMatchXp();   // los de academia crecen jugando
+        ApplyConditions();  // cansancio, lesiones y estadisticas individuales
 
         // Estadísticas del torneo
         run.GoalsFor += r.HomeGoals;

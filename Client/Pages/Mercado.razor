@@ -66,7 +66,7 @@ else
     <div class="grid grid--cards">
         @foreach (var p in list)
         {
-            <PlayerCard P="p" Price="@(Tab == "buy" ? Game.BuyPrice(p) : Game.SellPrice(p))">
+            <PlayerCard P="p" Price="@(Tab == "buy" ? Game.BuyPrice(p) : Game.SellPrice(p))" OnOpen="Abrir">
                 <Actions>
                     @if (Tab == "buy")
                     {
@@ -85,7 +85,12 @@ else
     </div>
 }
 
+<PlayerDetail P="_ficha" OnClose="() => _ficha = null" />
+
 @code {
+    private Player? _ficha;
+    private void Abrir(Player p) => _ficha = p;
+
     private string Tab = "buy";
     private Position? Pos;
     private string Search = "";

@@ -1,0 +1,100 @@
+@* Ficha completa del jugador: quién es, cómo está y qué hizo con vos *@
+@using OnceDeOro.Models
+@inject GameService Game
+@inject Loc Loc
+
+@if (P is not null)
+{
+    var p = P;
+    var c = Game.Cond(p.Id);
+    var fat = c.Fatigue;
+    var pen = GameService.FatiguePenalty(fat);
+    var aca = Game.State.Academy.FirstOrDefault(a => a.Id == p.Id);
+
+    <div class="modal" @onclick="Close">
+        <div class="modal__box" @onclick:stopPropagation="true">
+            <button class="modal__x" @onclick="Close">✕</button>
+
+            <div class="row" style="gap:14px; align-items:flex-start;">
+                <div class="dot-player @Tier(p.Rating)" style="width:64px;height:64px;font-size:26px;">@p.Rating</div>
+                <div style="min-width:0;">
+                    <div style="font-family:var(--font-head); font-size:22px; line-height:1.1;">
+                        @p.Name @if (p.IsLegend) { <span class="star">★</span> }
+                    </div>
+                    <div class="muted" style="font-size:13px; margin-top:3px;">
+                        @p.Pos.Full() · @p.Nation · @Loc["Época"] @p.Era
+                    </div>
+                    <div class="row wrap" style="gap:6px; margin-top:8px;">
+                        <span class="pill pill--gold">💰 $@p.Value M</span>
+                        @if (aca is not null)
+                        {
+                            <span class="pill">🎓 @Loc[GameService.AcademyTier(aca.Rating)]</span>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            @* ---------- Estado físico ---------- *@
+            <div class="section-title" style="margin:20px 0 12px;"><span class="dot"></span> @Loc["Estado físico"]</div>
+
+            @if (c.Injured)
+            {
+                <div class="pill" style="width:100%; justify-content:center; padding:10px; color:var(--red); border-color:rgba(255,90,106,.45);">
+                    🚑 @Loc["Lesionado"] · @c.OutMatches @(c.OutMatches == 1 ? Loc["partido"] : Loc["partidos"])
+                </div>
+            }
+            else
+            {
+                <div class="pill pill--green" style="width:100%; justify-content:center; padding:10px;">
+                    ✓ @Loc["Disponible"]
+                </div>
+            }
+
+            <div class="fat mt">
+                <div class="row" style="justify-content:space-between; font-size:12.5px;">
+                    <span class="muted">@Loc["Cansancio"]</span>
+                    <span style="color:@(fat >= 70 ? "var(--red)" : fat >= 40 ? "var(--gold-2)" : "var(--green)")">
+                        @fat%@(pen > 0 ? $" · −{pen} " + Loc["de fuerza"] : "")
+                    </span>
+                </div>
+                <div class="fat__bar"><span class="@(fat >= 70 ? "hot" : fat >= 40 ? "warm" : "")" style="width:@(fat)%"></span></div>
+                <div class="faint" style="font-size:11.5px; margin-top:5px;">
+                    @Loc["Descansa cuando no juega. Jugar fundido aumenta el riesgo de lesión."]
+                </div>
+            </div>
+
+            @* ---------- Estadísticas con vos ---------- *@
+            <div class="section-title" style="margin:20px 0 12px;"><span class="dot"></span> @Loc["Con tu equipo"]</div>
+            <div class="stat-grid">
+                <div class="stat-cell"><b>@c.Matches</b><span>@Loc["Partidos"]</span></div>
+                <div class="stat-cell"><b>@c.Goals</b><span>@Loc["Goles"]</span></div>
+                <div class="stat-cell"><b>@c.Yellow</b><span>🟨</span></div>
+                <div class="stat-cell"><b>@c.Red</b><span>🟥</span></div>
+                <div class="stat-cell"><b>@c.Injuries</b><span>🚑 @Loc["Lesiones"]</span></div>
+                <div class="stat-cell"><b>@Ratio(c)</b><span>@Loc["Goles/partido"]</span></div>
+            </div>
+
+            @if (aca is not null)
+            {
+                var need = GameService.XpNeeded(aca.Rating);
+                <div class="section-title" style="margin:20px 0 12px;"><span class="dot"></span> @Loc["Academia"]</div>
+                <div class="stat-grid">
+                    <div class="stat-cell"><b>@aca.Sessions</b><span>@Loc["entrenos"]</span></div>
+                    <div class="stat-cell"><b>@aca.Xp/@need</b><span>XP</span></div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public Player? P { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private Task Close() => OnClose.InvokeAsync();
+
+    private static string Tier(int r) => r >= 85 ? "" : r >= 75 ? "silver" : "bronze";
+
+    private static string Ratio(PlayerCondition c) =>
+        c.Matches == 0 ? "—" : (c.Goals / (double)c.Matches).ToString("0.00");
+}

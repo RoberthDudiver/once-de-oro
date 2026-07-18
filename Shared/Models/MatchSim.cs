@@ -30,6 +30,10 @@ public sealed class SimEvent
     // Datos neutros para reconstruir el relato en cualquier idioma (nombres y marcador no se traducen):
     public string Actor { get; set; } = "";   // jugador/equipo principal del evento
     public string Target { get; set; } = "";  // jugador/equipo secundario (víctima, equipo, arquero…)
+    /// <summary>Id del jugador protagonista, para atribuirle la estadística.</summary>
+    public string ActorId { get; set; } = "";
+    /// <summary>Id del jugador secundario (p. ej. el que sufre la falta o la lesión).</summary>
+    public string TargetId { get; set; } = "";
     public int ScoreH { get; set; } = -1;      // marcador local al momento (o -1 si no aplica)
     public int ScoreA { get; set; } = -1;      // marcador visitante al momento
     public MatchPhase Phase { get; set; } = MatchPhase.First;

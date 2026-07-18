@@ -27,6 +27,27 @@ public sealed class AcademyPlayer
     public int Matches { get; set; }
 }
 
+/// <summary>
+/// Estado físico e historial de UN jugador tuyo: lo que se acumula partido a partido.
+/// </summary>
+public sealed class PlayerCondition
+{
+    /// <summary>0 = entero, 100 = fundido. Resta rendimiento y aumenta el riesgo de lesión.</summary>
+    public int Fatigue { get; set; }
+
+    /// <summary>Partidos que le faltan para volver. 0 = disponible.</summary>
+    public int OutMatches { get; set; }
+
+    // ---- Estadísticas acumuladas con vos ----
+    public int Matches { get; set; }
+    public int Goals { get; set; }
+    public int Yellow { get; set; }
+    public int Red { get; set; }
+    public int Injuries { get; set; }
+
+    public bool Injured => OutMatches > 0;
+}
+
 /// <summary>Una fila de la tabla de posiciones de una liga.</summary>
 public sealed class TableRow
 {
@@ -80,6 +101,9 @@ public sealed class GameState
 
     /// <summary>Jugadores creados y entrenados por vos en la academia.</summary>
     public List<AcademyPlayer> Academy { get; set; } = new();
+
+    /// <summary>Cansancio, lesiones y estadísticas de cada jugador, por Id.</summary>
+    public Dictionary<string, PlayerCondition> Conditions { get; set; } = new();
 
     // Estadísticas de carrera
     public int MatchesPlayed { get; set; }
