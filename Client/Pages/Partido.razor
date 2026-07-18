@@ -1,0 +1,211 @@
+@page "/partido"
+@inherits GamePageBase
+@inject NavigationManager Nav
+
+<PageTitle>Partido — Once de Oro</PageTitle>
+
+@if (Game.State.Run is null || Game.ActiveComp is null)
+{
+    <div class="empty">
+        <div class="empty__ico">🏟️</div>
+        <p>No hay ningún torneo en curso.</p>
+        <button class="btn btn--gold mt" @onclick='() => Nav.NavigateTo("torneos")'>Elegir torneo</button>
+    </div>
+}
+else
+{
+    var comp = Game.ActiveComp!;
+    var run = Game.State.Run!;
+    var info = Game.StageInfo();
+    var opp = Game.CurrentOpponent;
+
+    @if (_phase == Phase.Pre && opp is not null)
+    {
+        var pw = Game.Power;
+        var pred = Game.PredictNext();
+        <div class="board fade-up">
+            <div class="board__comp">@comp.Emblem @comp.Name</div>
+            <div class="board__stage">@info.stageName · PREVIA</div>
+            <div class="board__main">
+                <div class="board__team">
+                    <div class="board__flag">⚽</div>
+                    <div class="board__tname">@Game.State.ClubName</div>
+                </div>
+                <div class="board__score" style="font-size:34px;">
+                    <span style="color:var(--gold-2)">@pw.Overall</span>
+                    <span class="sep">vs</span>
+                    <span style="color:var(--blue)">@opp.Strength</span>
+                </div>
+                <div class="board__team">
+                    <div class="board__flag">@opp.Flag</div>
+                    <div class="board__tname">@opp.Name</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card card--pad mt">
+            <div class="row" style="justify-content:space-between;">
+                <h3 style="font-size:19px;">📊 Pronóstico</h3>
+                <span class="pill">Poisson + Elo</span>
+            </div>
+            <div class="tri mt">
+                <div class="tri__seg win" style="width:@Pc(pred.HomeWin)"><span>@Pc(pred.HomeWin)</span></div>
+                <div class="tri__seg draw" style="width:@Pc(pred.Draw)"><span>@Pc(pred.Draw)</span></div>
+                <div class="tri__seg lose" style="width:@Pc(pred.AwayWin)"><span>@Pc(pred.AwayWin)</span></div>
+            </div>
+            <div class="tri__legend">
+                <span><i class="d win"></i> Ganás</span>
+                <span><i class="d draw"></i> Empate</span>
+                <span><i class="d lose"></i> Perdés</span>
+            </div>
+            <div class="row wrap mt" style="gap:8px;">
+                <span class="pill pill--gold">xG @pred.XgHome.ToString("0.0")</span>
+                <span class="pill">goles esperados</span>
+                <span class="pill" style="color:var(--blue);border-color:rgba(78,163,255,.4)">xG @pred.XgAway.ToString("0.0")</span>
+            </div>
+            <div class="row wrap mt" style="gap:8px;">
+                <span class="pill">Elo @pred.EloHome</span>
+                <span class="pill">favoritismo @Pc(pred.EloHomeWin)</span>
+                <span class="pill" style="color:var(--blue);border-color:rgba(78,163,255,.4)">Elo @pred.EloAway</span>
+            </div>
+            <div class="mt muted" style="font-size:13px;">
+                Marcadores más probables:
+                @foreach (var s in pred.TopScores)
+                {
+                    <span class="pill" style="margin:2px 4px 2px 0;">@s.H–@s.A · @Pc(s.P)</span>
+                }
+            </div>
+        </div>
+
+        <div class="center mt">
+            <button class="btn btn--gold btn--big" @onclick="Play">▶ Ver el partido</button>
+        </div>
+    }
+    else if (_phase == Phase.Playing && _timeline is not null && opp is not null)
+    {
+        <MatchField Timeline="_timeline"
+                    HomeName="@Game.State.ClubName" HomeFlag="⚽" HomeFormationName="@Game.Formation.Name"
+                    AwayName="@opp.Name" AwayFlag="@opp.Flag"
+                    HomeStarters="Game.LastHomeStarters" AwayStarters="Game.LastAwaySquad"
+                    OnFinished="OnMatchFinished" />
+    }
+    else if (_phase == Phase.Done && _result is not null)
+    {
+        var win = _result.HomeWon;
+        var draw = !_result.WentToPenalties && _result.HomeGoals == _result.AwayGoals;
+        <div class="board fade-up">
+            <div class="board__comp">@comp.Emblem @comp.Name</div>
+            <div class="board__stage">@_stageLabel · FINAL</div>
+            <div class="board__main">
+                <div class="board__team"><div class="board__flag">⚽</div><div class="board__tname">@Game.State.ClubName</div></div>
+                <div class="board__score">
+                    <span class="board__num">@_result.HomeGoals</span><span class="sep">–</span><span class="board__num">@_result.AwayGoals</span>
+                </div>
+                <div class="board__team"><div class="board__flag">@_result.AwayFlag</div><div class="board__tname">@_result.AwayName</div></div>
+            </div>
+            @if (_result.WentToPenalties) { <div class="board__pens">PENALES · @_result.HomePens – @_result.AwayPens</div> }
+        </div>
+
+        <div class="result-banner @(win ? "win" : "lose")">
+            <div class="result-banner__title">@(win ? "¡VICTORIA!" : draw ? "EMPATE" : "DERROTA")</div>
+            @if (_reward > 0) { <div class="result-banner__reward">+ $@_reward M en premios 💰</div> }
+        </div>
+
+        @if (run.Champion)
+        {
+            <div class="card card--pad center" style="margin-top:16px; border-color:rgba(245,197,66,.5);">
+                <div class="trophy">🏆</div>
+                <h2 style="font-family:var(--font-display); font-size:34px; color:var(--gold-2); margin-top:6px;">¡CAMPEÓN!</h2>
+                <p class="muted">Ganaste la @comp.Name.</p>
+                @if (run.CleanRun) { <div class="pill pill--gold" style="margin-top:8px; padding:8px 14px;">⭐ INVICTO Y SIN RECIBIR GOLES — MARCA LEGENDARIA</div> }
+                <div class="mt"><button class="btn btn--gold btn--big" @onclick="Conclude">Cobrar y volver</button></div>
+            </div>
+        }
+        else if (run.Eliminated)
+        {
+            <div class="card card--pad center" style="margin-top:16px;">
+                <div style="font-size:50px;">🚪</div>
+                <h2 style="font-family:var(--font-head); font-size:26px; margin-top:6px;">Eliminado de la @comp.Name</h2>
+                <p class="muted">Ganaste $@run.MoneyWon M en total. Reforzá el equipo y volvé más fuerte.</p>
+                <div class="mt"><button class="btn btn--gold btn--big" @onclick="Conclude">Volver al mercado</button></div>
+            </div>
+        }
+        else
+        {
+            <div class="center" style="margin-top:16px;">
+                <button class="btn btn--gold btn--big" @onclick="NextMatch">Siguiente: @Game.StageInfo().stageName ▶</button>
+            </div>
+        }
+    }
+
+    @if (run.Timeline.Count > 0 && _phase != Phase.Playing)
+    {
+        <div class="section-title"><span class="dot"></span> Recorrido en la @comp.Name</div>
+        <div class="grid" style="gap:8px;">
+            @foreach (var line in run.Timeline)
+            {
+                <div class="card" style="padding:12px 16px; font-family:var(--font-head); letter-spacing:.02em;">@line</div>
+            }
+        </div>
+    }
+}
+
+@code {
+    private enum Phase { Pre, Playing, Done }
+    private Phase _phase = Phase.Pre;
+
+    private MatchTimeline? _timeline;
+    private MatchResult? _result;
+    private int _reward;
+    private string _stageLabel = "";
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        SyncDone();
+    }
+
+    // Cuando el estado carga (async) o cambia, si el torneo terminó pasamos a la pantalla final.
+    protected override void OnGameChanged() => SyncDone();
+
+    private void SyncDone()
+    {
+        var run = Game.State.Run;
+        if (run is not null && (run.Champion || run.Eliminated) && _phase == Phase.Pre)
+        {
+            _phase = Phase.Done;
+            _result = Game.LastMatch;
+        }
+    }
+
+    private void Play()
+    {
+        _stageLabel = Game.StageInfo().stageName;
+        _timeline = Game.SimulateNextTimeline();
+        _phase = Phase.Playing;
+        StateHasChanged();
+    }
+
+    private void OnMatchFinished()
+    {
+        _result = Game.LastMatch;
+        _reward = Game.ApplyMatch(_result!);
+        _phase = Phase.Done;
+        StateHasChanged();
+    }
+
+    private void NextMatch()
+    {
+        _phase = Phase.Pre;
+        _timeline = null; _result = null; _reward = 0;
+        StateHasChanged();
+    }
+
+    private void Conclude()
+    {
+        Game.ConcludeTournament();
+        Nav.NavigateTo("");
+    }
+
+    private static string Pc(double v) => Math.Round(v * 100) + "%";
+}

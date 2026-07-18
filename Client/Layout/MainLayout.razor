@@ -1,0 +1,55 @@
+@inherits LayoutComponentBase
+@implements IDisposable
+@inject GameService Game
+@inject NavigationManager Nav
+
+<div class="shell">
+    <header class="topbar">
+        <div class="topbar__crest">⚽</div>
+        <div>
+            <div class="topbar__club">@Game.State.ClubName</div>
+            <div class="topbar__sub">Once de Oro · Manager</div>
+        </div>
+        <div class="topbar__spacer"></div>
+        <div class="money" title="Presupuesto disponible">
+            <span class="money__cur">$</span>
+            <span class="money__val">@Game.State.Money</span>
+            <span class="money__unit">M</span>
+        </div>
+    </header>
+
+    <nav class="nav">
+        <a href="" class="@Active("")"><span class="ico">🏠</span>Inicio</a>
+        <a href="mercado" class="@Active("mercado")"><span class="ico">💰</span>Mercado</a>
+        <a href="equipo" class="@Active("equipo")"><span class="ico">👕</span>Equipo</a>
+        <a href="torneos" class="@Active("torneos")"><span class="ico">🏆</span>Torneos</a>
+        <a href="online" class="@Active("online")"><span class="ico">🌐</span>Online</a>
+    </nav>
+
+    @Body
+</div>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        Game.Changed += OnChanged;
+        Nav.LocationChanged += OnLocation;
+        await Game.LoadAsync();
+    }
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+    private void OnLocation(object? _, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs __) => InvokeAsync(StateHasChanged);
+
+    private string Active(string path)
+    {
+        var rel = Nav.ToBaseRelativePath(Nav.Uri).TrimEnd('/');
+        rel = rel.Split('?')[0];
+        return rel == path ? "active" : "";
+    }
+
+    public void Dispose()
+    {
+        Game.Changed -= OnChanged;
+        Nav.LocationChanged -= OnLocation;
+    }
+}

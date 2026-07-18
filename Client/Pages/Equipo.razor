@@ -1,0 +1,129 @@
+@page "/equipo"
+@inherits GamePageBase
+@inject NavigationManager Nav
+
+<PageTitle>Equipo — Once de Oro</PageTitle>
+
+<div class="section-title"><span class="dot"></span> Mi equipo</div>
+
+@if (!Game.Owned.Any())
+{
+    <div class="empty">
+        <div class="empty__ico">👕</div>
+        <p>No tenés jugadores todavía.</p>
+        <button class="btn btn--gold mt" @onclick='() => Nav.NavigateTo("mercado")'>💰 Ir al mercado</button>
+    </div>
+}
+else
+{
+    <div class="grid team-grid">
+        <div>
+            <div class="card card--pad mb">
+                <div class="muted" style="font-size:12px; letter-spacing:.2em; text-transform:uppercase; margin-bottom:8px;">Formación</div>
+                <div class="seg wrap">
+                    @foreach (var f in Formation.All)
+                    {
+                        <button class="@(Game.Formation.Name == f.Name ? "on" : "")" @onclick="() => Game.SetFormation(f.Name)">@f.Name</button>
+                    }
+                </div>
+                <div class="muted" style="font-size:12px; letter-spacing:.2em; text-transform:uppercase; margin:14px 0 8px;">Estilo</div>
+                <div class="seg">
+                    @foreach (var s in Enum.GetValues<TeamStyle>())
+                    {
+                        <button class="@(Game.State.Style == s ? "on" : "")" @onclick="() => Game.SetStyle(s)">@s</button>
+                    }
+                </div>
+            </div>
+
+            <div class="pitch">
+                <div class="pitch__circle"></div>
+                @foreach (var slot in Slots())
+                {
+                    <div class="pitch__slot" style="left:@(slot.X)%; top:@(slot.Y)%;"
+                         @onclick="() => { if (slot.Player is Player sp && !Game.IsReserve(sp)) Game.ToggleStarter(sp.Id); }">
+                        @{ var pl = slot.Player!; var res = Game.IsReserve(pl); }
+                        <div class="dot-player @(res ? "reserve" : Tier(pl))">@pl.Rating</div>
+                        <div class="pitch__name">@(res ? "Cantera" : Short(pl.Name))</div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div>
+            <div class="card card--pad mb">
+                <div class="row" style="justify-content:space-between;">
+                    <h3 style="font-size:19px;">Fuerza</h3>
+                    <button class="btn btn--ghost" style="padding:8px 14px; font-size:13px;" @onclick="() => Game.AutoFillXI()">⚡ Auto XI</button>
+                </div>
+                @{ var pw = Game.Power; }
+                <div class="power mt">
+                    <div class="pbar"><span class="pbar__lbl">GEN</span><div class="pbar__track"><div class="pbar__fill" style="width:@(pw.Overall)%"></div></div><span class="pbar__num">@pw.Overall</span></div>
+                    <div class="pbar"><span class="pbar__lbl">ATA</span><div class="pbar__track"><div class="pbar__fill atk" style="width:@(pw.Attack)%"></div></div><span class="pbar__num">@pw.Attack</span></div>
+                    <div class="pbar"><span class="pbar__lbl">DEF</span><div class="pbar__track"><div class="pbar__fill def" style="width:@(pw.Defense)%"></div></div><span class="pbar__num">@pw.Defense</span></div>
+                </div>
+                <div class="mt">
+                    @if (Game.HasFullRealXI)
+                    {
+                        <span class="pill pill--green" style="width:100%; justify-content:center; padding:9px;">✓ XI TITULAR COMPLETO — LISTO PARA JUGAR</span>
+                    }
+                    else
+                    {
+                        <span class="pill pill--gold" style="width:100%; justify-content:center; padding:9px;">
+                            🎓 @Game.ReserveCount de cantera cubren los huecos — igual podés jugar
+                        </span>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section-title"><span class="dot"></span> Plantel · tocá para poner/sacar del XI</div>
+    <div class="grid grid--cards">
+        @foreach (var p in Game.Owned.OrderByDescending(x => Game.IsStarter(x.Id)).ThenByDescending(x => x.Rating))
+        {
+            <PlayerCard P="p" ShowPrice="false">
+                <Actions>
+                    <button class="icon-btn @(Game.IsStarter(p.Id) ? "icon-btn--sell" : "icon-btn--buy")"
+                            title="@(Game.IsStarter(p.Id) ? "Sacar del XI" : "Poner en el XI")"
+                            @onclick="() => Game.ToggleStarter(p.Id)">
+                        @(Game.IsStarter(p.Id) ? "−" : "＋")
+                    </button>
+                </Actions>
+            </PlayerCard>
+        }
+    </div>
+}
+
+@code {
+    private record Slot(Position Pos, double X, double Y, Player? Player);
+
+    private static readonly Dictionary<Position, double> LineY = new()
+    {
+        [Position.GK] = 88, [Position.DEF] = 67, [Position.MID] = 44, [Position.FWD] = 18
+    };
+
+    private List<Slot> Slots()
+    {
+        var f = Game.Formation;
+        var result = new List<Slot>();
+        foreach (var pos in new[] { Position.GK, Position.DEF, Position.MID, Position.FWD })
+        {
+            int count = f.SlotsFor(pos);
+            var players = Game.Starters.Where(p => p.Pos == pos).ToList();
+            for (int i = 0; i < count; i++)
+            {
+                double x = (i + 1) / (double)(count + 1) * 100;
+                var p = i < players.Count ? players[i] : GameService.ReserveFor(pos, i);
+                result.Add(new Slot(pos, x, LineY[pos], p));
+            }
+        }
+        return result;
+    }
+
+    private static string Tier(Player p) => p.Rating >= 85 ? "" : p.Rating >= 75 ? "silver" : "bronze";
+    private static string Short(string name)
+    {
+        var parts = name.Split(' ');
+        return parts.Length == 1 ? name : parts[^1];
+    }
+}

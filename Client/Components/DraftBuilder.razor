@@ -1,0 +1,137 @@
+@* Arma un XI desde cero con un presupuesto compartido (modo Draft online) *@
+@using OnceDeOro.Multiplayer
+
+<div class="card card--pad mb">
+    <div class="row wrap" style="justify-content:space-between;">
+        <div>
+            <div class="muted" style="font-size:12px; letter-spacing:.2em; text-transform:uppercase;">Presupuesto</div>
+            <div style="font-family:var(--font-display); font-size:30px; color:@(Remaining < 0 ? "var(--red)" : "var(--gold-2)");">
+                $@Remaining <span style="font-size:16px; color:var(--ink-dim);">/ @Budget M</span>
+            </div>
+        </div>
+        <div class="seg wrap">
+            @foreach (var f in Formation.All)
+            {
+                <button class="@(FormationName == f.Name ? "on" : "")" @onclick="() => SetFormation(f.Name)">@f.Name</button>
+            }
+        </div>
+    </div>
+    <div class="row wrap mt" style="gap:8px;">
+        @foreach (var pos in new[] { Position.GK, Position.DEF, Position.MID, Position.FWD })
+        {
+            var have = Picked.Count(p => p.Pos == pos);
+            var need = Form.SlotsFor(pos);
+            <span class="pill @(have == need ? "pill--green" : "")">@pos.Label() @have/@need</span>
+        }
+        <span class="pill @(IsValid ? "pill--gold" : "")">@Picked.Count/11</span>
+        <div class="seg" style="margin-left:auto;">
+            @foreach (var s in Enum.GetValues<TeamStyle>())
+            {
+                <button class="@(Style == s ? "on" : "")" @onclick="() => Style = s">@s</button>
+            }
+        </div>
+    </div>
+    <button class="btn btn--gold btn--block mt" disabled="@(!IsValid)" @onclick="Confirm">
+        ✓ Confirmar equipo y estar listo
+    </button>
+</div>
+
+@if (Picked.Count > 0)
+{
+    <div class="section-title"><span class="dot"></span> Tu XI</div>
+    <div class="grid grid--cards mb">
+        @foreach (var p in Picked.OrderBy(p => p.Pos))
+        {
+            <PlayerCard P="p" Price="p.Value">
+                <Actions>
+                    <button class="icon-btn icon-btn--sell" @onclick="() => Remove(p.Id)">−</button>
+                </Actions>
+            </PlayerCard>
+        }
+    </div>
+}
+
+<div class="section-title"><span class="dot"></span> Fichar</div>
+<div class="seg wrap mb">
+    <button class="@(Pos is null ? "on" : "")" @onclick="() => Pos = null">Todos</button>
+    <button class="@(Pos == Position.GK ? "on" : "")" @onclick="() => Pos = Position.GK">POR</button>
+    <button class="@(Pos == Position.DEF ? "on" : "")" @onclick="() => Pos = Position.DEF">DEF</button>
+    <button class="@(Pos == Position.MID ? "on" : "")" @onclick="() => Pos = Position.MID">MED</button>
+    <button class="@(Pos == Position.FWD ? "on" : "")" @onclick="() => Pos = Position.FWD">DEL</button>
+</div>
+<input class="search" placeholder="🔎 Buscar…" @bind="Search" @bind:event="oninput" />
+
+<div class="grid grid--cards">
+    @foreach (var p in Market())
+    {
+        var open = Picked.Count(x => x.Pos == p.Pos) < Form.SlotsFor(p.Pos);
+        var canAdd = open && Remaining >= p.Value;
+        <PlayerCard P="p" Price="p.Value">
+            <Actions>
+                <button class="icon-btn icon-btn--buy" disabled="@(!canAdd)" @onclick="() => Add(p)">＋</button>
+            </Actions>
+        </PlayerCard>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public int Budget { get; set; }
+    [Parameter] public EventCallback<TeamDto> OnConfirm { get; set; }
+
+    private string FormationName = "4-3-3";
+    private TeamStyle Style = TeamStyle.Equilibrado;
+    private readonly List<Player> Picked = new();
+    private Position? Pos;
+    private string Search = "";
+
+    private Formation Form => Formation.All.FirstOrDefault(f => f.Name == FormationName) ?? Formation.F433;
+    private int Spent => Picked.Sum(p => p.Value);
+    private int Remaining => Budget - Spent;
+    private bool IsValid => Picked.Count == 11 &&
+        Enum.GetValues<Position>().All(pos => Picked.Count(p => p.Pos == pos) == Form.SlotsFor(pos));
+
+    private IEnumerable<Player> Market() => PlayerDatabase.All
+        .Where(p => Picked.All(x => x.Id != p.Id))
+        .Where(p => Pos is null || p.Pos == Pos)
+        .Where(p => string.IsNullOrWhiteSpace(Search)
+                 || p.Name.Contains(Search, StringComparison.OrdinalIgnoreCase)
+                 || p.Nation.Contains(Search, StringComparison.OrdinalIgnoreCase))
+        .OrderByDescending(p => p.Rating)
+        .Take(60);
+
+    private void SetFormation(string name)
+    {
+        FormationName = name;
+        // saca lo que exceda cada línea
+        foreach (var pos in Enum.GetValues<Position>())
+        {
+            var ofPos = Picked.Where(p => p.Pos == pos).ToList();
+            for (int i = Form.SlotsFor(pos); i < ofPos.Count; i++)
+                Picked.Remove(ofPos[i]);
+        }
+    }
+
+    private void Add(Player p)
+    {
+        if (Picked.Count(x => x.Pos == p.Pos) >= Form.SlotsFor(p.Pos)) return;
+        if (Remaining < p.Value) return;
+        Picked.Add(p);
+    }
+
+    private void Remove(string id) => Picked.RemoveAll(p => p.Id == id);
+
+    private async Task Confirm()
+    {
+        if (!IsValid) return;
+        var dto = new TeamDto
+        {
+            Formation = FormationName,
+            Style = Style.ToString(),
+            Starters = Picked.Select(p => new PlayerLite
+            {
+                Id = p.Id, Name = p.Name, Flag = p.Flag, Pos = p.Pos.ToString(), Rating = p.Rating
+            }).ToList(),
+        };
+        await OnConfirm.InvokeAsync(dto);
+    }
+}

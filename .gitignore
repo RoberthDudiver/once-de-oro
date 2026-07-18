@@ -1,0 +1,21 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+## Rider / VS Code
+.idea/
+.vscode/
+
+## Publicación
+publish/
+*.nupkg
+
+## SO
+Thumbs.db
+.DS_Store
+
+## Local
+.claude/

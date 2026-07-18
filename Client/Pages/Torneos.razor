@@ -1,0 +1,93 @@
+@page "/torneos"
+@inherits GamePageBase
+@inject NavigationManager Nav
+
+<PageTitle>Torneos — Once de Oro</PageTitle>
+
+<div class="section-title"><span class="dot"></span> Competiciones</div>
+
+@if (Game.State.Run is not null && Game.ActiveComp is Competition ac)
+{
+    <div class="card card--pad mb" style="border-color: rgba(245,197,66,.4);">
+        <div class="row wrap" style="justify-content:space-between;">
+            <div class="row">
+                <span style="font-size:34px;">@ac.Emblem</span>
+                <div>
+                    <div style="font-family:var(--font-head); font-size:19px;">Torneo en curso · @ac.Name</div>
+                    <div class="muted">@Game.StageInfo().stageName</div>
+                </div>
+            </div>
+            <button class="btn btn--gold" @onclick='() => Nav.NavigateTo("partido")'>▶ Continuar</button>
+        </div>
+    </div>
+}
+
+@if (Game.ReserveCount > 0)
+{
+    <div class="card card--pad mb" style="border-color: rgba(245,197,66,.35);">
+        <div class="row wrap" style="justify-content:space-between;">
+            <span class="muted">🎓 Tu XI tiene @Game.ReserveCount juvenil@(Game.ReserveCount == 1 ? "" : "es") de cantera cubriendo huecos. Podés competir igual, pero fichá refuerzos para rendir mejor.</span>
+            <button class="btn btn--ghost" @onclick='() => Nav.NavigateTo("mercado")'>Ir al mercado</button>
+        </div>
+    </div>
+}
+
+@{ var myPower = Game.Power.Overall; }
+
+<div class="grid grid--cards">
+    @foreach (var c in CompetitionDatabase.All)
+    {
+        var gap = myPower - c.RecommendedStrength;
+        var canEnter = Game.CanEnter(c);
+        <div class="comp fade-up">
+            <div class="comp__glow" style="background:@c.Accent;"></div>
+            <div class="row" style="justify-content:space-between; align-items:flex-start;">
+                <div>
+                    <div class="comp__emblem">@c.Emblem</div>
+                    <div class="comp__name">@c.Name</div>
+                    <div class="comp__sub">@c.Subtitle</div>
+                </div>
+                <span class="pill" style="position:relative;">Nivel @c.Tier</span>
+            </div>
+
+            <div class="row wrap" style="gap:8px; margin-top:14px; position:relative;">
+                <span class="pill">🎯 Rec. @c.RecommendedStrength</span>
+                <span class="pill @(gap >= 0 ? "pill--green" : "")" style="@(gap < 0 ? "color:var(--red);border-color:rgba(255,90,106,.4);" : "")">
+                    Tu fuerza @myPower
+                </span>
+                @if (c.EntryFee > 0)
+                {
+                    <span class="pill">Inscripción $@c.EntryFee M</span>
+                }
+                else
+                {
+                    <span class="pill pill--green">Gratis</span>
+                }
+            </div>
+
+            <div class="comp__foot">
+                <div>
+                    <div class="faint" style="font-size:11px; letter-spacing:.2em; text-transform:uppercase;">Premio campeón</div>
+                    <div class="comp__prize">$@c.ChampionPrize M</div>
+                </div>
+                <button class="btn btn--gold" disabled="@(!canEnter)" @onclick="() => Enter(c)">
+                    Inscribirse
+                </button>
+            </div>
+            @if (gap < -6)
+            {
+                <div class="muted" style="font-size:12.5px; margin-top:10px; position:relative;">
+                    💡 Tu equipo está por debajo del nivel — ganá plata en torneos menores y reforzá antes.
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private void Enter(Competition c)
+    {
+        Game.StartTournament(c.Id);
+        if (Game.State.Run is not null) Nav.NavigateTo("partido");
+    }
+}

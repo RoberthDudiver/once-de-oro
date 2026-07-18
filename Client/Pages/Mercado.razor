@@ -1,0 +1,69 @@
+@page "/mercado"
+@inherits GamePageBase
+
+<PageTitle>Mercado — Once de Oro</PageTitle>
+
+<div class="section-title"><span class="dot"></span> Mercado de fichajes</div>
+
+<div class="row wrap" style="justify-content:space-between; gap:14px;">
+    <div class="seg">
+        <button class="@(Tab == "buy" ? "on" : "")" @onclick='() => Tab = "buy"'>💰 Comprar</button>
+        <button class="@(Tab == "own" ? "on" : "")" @onclick='() => Tab = "own"'>👕 Mi plantel (@Game.Owned.Count())</button>
+    </div>
+    <div class="seg">
+        <button class="@(Pos is null ? "on" : "")" @onclick="() => Pos = null">Todos</button>
+        <button class="@(Pos == Position.GK ? "on" : "")" @onclick="() => Pos = Position.GK">POR</button>
+        <button class="@(Pos == Position.DEF ? "on" : "")" @onclick="() => Pos = Position.DEF">DEF</button>
+        <button class="@(Pos == Position.MID ? "on" : "")" @onclick="() => Pos = Position.MID">MED</button>
+        <button class="@(Pos == Position.FWD ? "on" : "")" @onclick="() => Pos = Position.FWD">DEL</button>
+    </div>
+</div>
+
+<input class="search" placeholder="🔎 Buscar jugador o selección…" @bind="Search" @bind:event="oninput" />
+
+@{
+    var list = (Tab == "buy" ? Game.Market : Game.Owned)
+        .Where(p => Pos is null || p.Pos == Pos)
+        .Where(p => string.IsNullOrWhiteSpace(Search)
+                 || p.Name.Contains(Search, StringComparison.OrdinalIgnoreCase)
+                 || p.Nation.Contains(Search, StringComparison.OrdinalIgnoreCase))
+        .OrderByDescending(p => p.Rating)
+        .ToList();
+}
+
+@if (list.Count == 0)
+{
+    <div class="empty">
+        <div class="empty__ico">@(Tab == "buy" ? "🔍" : "👕")</div>
+        <p>@(Tab == "buy" ? "No hay jugadores con ese filtro." : "Tu plantel está vacío. Andá a Comprar para fichar.")</p>
+    </div>
+}
+else
+{
+    <div class="grid grid--cards">
+        @foreach (var p in list)
+        {
+            <PlayerCard P="p" Price="@(Tab == "buy" ? Game.BuyPrice(p) : Game.SellPrice(p))">
+                <Actions>
+                    @if (Tab == "buy")
+                    {
+                        <button class="icon-btn icon-btn--buy" title="Fichar por @Game.BuyPrice(p) M"
+                                disabled="@(Game.State.Money < Game.BuyPrice(p))"
+                                @onclick="() => Game.Buy(p.Id)">＋</button>
+                    }
+                    else
+                    {
+                        <button class="icon-btn icon-btn--sell" title="Vender por @Game.SellPrice(p) M"
+                                @onclick="() => Game.Sell(p.Id)">✕</button>
+                    }
+                </Actions>
+            </PlayerCard>
+        }
+    </div>
+}
+
+@code {
+    private string Tab = "buy";
+    private Position? Pos;
+    private string Search = "";
+}

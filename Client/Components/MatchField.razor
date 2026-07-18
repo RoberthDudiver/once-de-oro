@@ -1,0 +1,315 @@
+@* Cancha 2D vista desde arriba: reproduce el timeline con 22 jugadores + pelota *@
+@using OnceDeOro.Models
+
+<div class="mf">
+    <div class="mf__hud">
+        <div class="mf__team">
+            <span class="mf__flag">@HomeFlag</span>
+            <span class="mf__tname">@Short(HomeName)</span>
+        </div>
+        <div class="mf__score">
+            <span class="board__num @(_flashHome ? "pop" : "")" @key='("h", _hs)'>@_hs</span>
+            <span class="sep">–</span>
+            <span class="board__num @(_flashAway ? "pop" : "")" @key='("a", _as)'>@_as</span>
+        </div>
+        <div class="mf__team mf__team--r">
+            <span class="mf__tname">@Short(AwayName)</span>
+            <span class="mf__flag">@AwayFlag</span>
+        </div>
+    </div>
+    <div class="mf__clock">
+        <span class="mf__phase">@PhaseLabel</span>
+        <span class="mf__min">@Clock'</span>
+        @if (_pens is not null) { <span class="mf__pens">PEN @_pens</span> }
+    </div>
+
+    @if (_phase == MatchPhase.Shootout)
+    {
+        @* ---------- Escena de la tanda de penales ---------- *@
+        <div class="pk">
+            <div class="pk__scene">
+                <div class="pk__net"></div>
+                <div class="pk__keeper" style="left:@(_penScored ? "24%" : "50%")"></div>
+                <div class="pk__ball @(_penKickId > 0 ? (_penScored ? "in" : "out") : "")" @key="_penKickId"></div>
+                @if (_penTaker is not null)
+                {
+                    <div class="pk__taker">@_penTaker <span>@(_penScored ? "⚽" : "🧤")</span></div>
+                }
+            </div>
+            <div class="pk__rows">
+                <div class="pk__row">
+                    <span class="pk__flag">@HomeFlag</span>
+                    @for (int i = 0; i < 5 || i < _homePens.Count; i++)
+                    {
+                        var mk = i < _homePens.Count ? (_homePens[i] ? "sc" : "ms") : "";
+                        <span class="pk__mk @mk"></span>
+                    }
+                </div>
+                <div class="pk__row">
+                    <span class="pk__flag">@AwayFlag</span>
+                    @for (int i = 0; i < 5 || i < _awayPens.Count; i++)
+                    {
+                        var mk = i < _awayPens.Count ? (_awayPens[i] ? "sc" : "ms") : "";
+                        <span class="pk__mk @mk"></span>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="mf__pitch" style="--t:@($"{_stepSec.ToString(System.Globalization.CultureInfo.InvariantCulture)}s")">
+            <div class="mf__mid"></div>
+            <div class="mf__circle"></div>
+            <div class="mf__box mf__box--l"></div>
+            <div class="mf__box mf__box--r"></div>
+            <div class="mf__goal mf__goal--l"></div>
+            <div class="mf__goal mf__goal--r"></div>
+
+            @for (int i = 0; i < 11; i++)
+            {
+                var idx = i;
+                <div class="mf__p mf__p--home" @key='("h" + idx)'
+                     style="left:@Pct(_hx[idx]);top:@Pct(_hy[idx]);">
+                    @if (_homeNames[idx].Length > 0) { <span class="mf__pn">@_homeNames[idx]</span> }
+                </div>
+            }
+            @for (int i = 0; i < 11; i++)
+            {
+                var idx = i;
+                <div class="mf__p mf__p--away" @key='("a" + idx)'
+                     style="left:@Pct(_ax[idx]);top:@Pct(_ay[idx]);">
+                    @if (_awayNames[idx].Length > 0) { <span class="mf__pn">@_awayNames[idx]</span> }
+                </div>
+            }
+            <div class="mf__ball" style="left:@Pct(_bx);top:@Pct(_by);"></div>
+
+            @if (_banner is not null)
+            {
+                <div class="mf__banner" @key="_bannerId"><span>@_banner</span></div>
+            }
+        </div>
+    }
+
+    <div class="mf__ticker">@_ticker</div>
+
+    <div class="mf__stats">
+        <div class="mf__stat"><b>@_st.PossHome%</b><span>Posesión</span><b>@_st.PossAway%</b></div>
+        <div class="mf__statbar"><span style="width:@(_st.PossHome)%"></span></div>
+        <div class="mf__statrow"><b>@_st.ShotsHome</b><span>Remates</span><b>@_st.ShotsAway</b></div>
+        <div class="mf__statrow"><b>@_st.FoulsHome</b><span>Faltas</span><b>@_st.FoulsAway</b></div>
+        <div class="mf__statrow"><b>@_st.YellowHome/@_st.RedHome</b><span>🟨/🟥</span><b>@_st.YellowAway/@_st.RedAway</b></div>
+    </div>
+
+    @if (!_done)
+    {
+        <div class="mf__controls">
+            <div class="seg">
+                <button class="@(_speed == 1.0 ? "on" : "")" @onclick="() => _speed = 1.0">1×</button>
+                <button class="@(_speed == 0.5 ? "on" : "")" @onclick="() => _speed = 0.5">2×</button>
+                <button class="@(_speed == 0.25 ? "on" : "")" @onclick="() => _speed = 0.25">4×</button>
+            </div>
+            <button class="btn btn--ghost" @onclick="() => _skip = true">⏩ Saltar al final</button>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public MatchTimeline Timeline { get; set; } = default!;
+    [Parameter] public string HomeName { get; set; } = "Local";
+    [Parameter] public string AwayName { get; set; } = "Visitante";
+    [Parameter] public string HomeFlag { get; set; } = "⚽";
+    [Parameter] public string AwayFlag { get; set; } = "⚽";
+    [Parameter] public string HomeFormationName { get; set; } = "4-3-3";
+    [Parameter] public string AwayFormationName { get; set; } = "4-3-3";
+    [Parameter] public IReadOnlyList<Player>? HomeStarters { get; set; }
+    [Parameter] public IReadOnlyList<Player>? AwayStarters { get; set; }
+    [Parameter] public EventCallback OnFinished { get; set; }
+
+    private readonly double[] _hx = new double[11], _hy = new double[11], _ax = new double[11], _ay = new double[11];
+    private readonly string[] _homeNames = new string[11], _awayNames = new string[11];
+    private (double x, double y)[] _homeBase = default!, _awayBase = default!;
+    private double _bx = 0.5, _by = 0.5;
+    private int _hs, _as, _clockSec;
+    private string? _pens;
+    private MatchPhase _phase = MatchPhase.First;
+    private string _ticker = "Preparados…";
+    private string? _banner;
+    private int _bannerId;
+    private bool _flashHome, _flashAway, _done, _skip;
+    private double _speed = 0.5, _stepSec = 0.4;
+    private MatchStats _st = new();
+    private readonly Random _rng = new();
+
+    // Tanda de penales
+    private readonly List<bool> _homePens = new(), _awayPens = new();
+    private List<string> _homeTakers = new(), _awayTakers = new();
+    private int _penKickId;
+    private bool _penScored;
+    private string? _penTaker;
+
+    private int Clock => Math.Max(1, _clockSec / 60 + (_clockSec % 60 > 0 ? 1 : 0));
+
+    protected override async Task OnInitializedAsync()
+    {
+        _homeBase = BasePositions(Formation.All.FirstOrDefault(f => f.Name == HomeFormationName) ?? Formation.F433, true);
+        _awayBase = BasePositions(Formation.All.FirstOrDefault(f => f.Name == AwayFormationName) ?? Formation.F433, false);
+        for (int i = 0; i < 11; i++)
+        {
+            (_hx[i], _hy[i]) = _homeBase[i]; (_ax[i], _ay[i]) = _awayBase[i];
+            _homeNames[i] = NameAt(HomeStarters, i);
+            _awayNames[i] = NameAt(AwayStarters, i);
+        }
+        _homeTakers = Takers(HomeStarters, HomeName);
+        _awayTakers = Takers(AwayStarters, AwayName);
+        await Play();
+    }
+
+    private async Task Play()
+    {
+        foreach (var e in Timeline.Events)
+        {
+            Apply(e);
+            _stepSec = Math.Max(0.12, e.Dur * _speed);
+            StateHasChanged();
+            int ms = (int)(e.Dur * 1000 * (_skip ? 0.02 : _speed));
+            await Task.Delay(Math.Max(6, ms));
+        }
+        _done = true;
+        StateHasChanged();
+        await OnFinished.InvokeAsync();
+    }
+
+    private void Apply(SimEvent e)
+    {
+        _clockSec = e.Clock;
+        _phase = e.Phase;
+        _flashHome = _flashAway = false;
+
+        if (e.Type is not (SimEventType.HydrationBreak or SimEventType.HalfTime or SimEventType.FullTime
+                        or SimEventType.ExtraTimeStart or SimEventType.ShootoutStart or SimEventType.End
+                        or SimEventType.PenaltyGoal or SimEventType.PenaltyMiss))
+        {
+            _bx = e.BallX; _by = e.BallY;
+            for (int t = 0; t < 2; t++)
+            {
+                bool attacking = e.Team == t;
+                var bx = t == 0 ? _hx : _ax;
+                var by = t == 0 ? _hy : _ay;
+                var baseP = t == 0 ? _homeBase : _awayBase;
+                for (int i = 0; i < 11; i++)
+                {
+                    double dx = _bx - baseP[i].x;
+                    double tx = baseP[i].x + dx * (attacking ? 0.30 : 0.12);
+                    double ty = baseP[i].y + (_by - baseP[i].y) * (attacking ? 0.20 : 0.08)
+                                + (_rng.NextDouble() - 0.5) * 0.03;
+                    bx[i] = Math.Clamp(tx, 0.02, 0.98);
+                    by[i] = Math.Clamp(ty, 0.05, 0.95);
+                }
+            }
+            if (e.Team is 0 or 1 && e.Player is >= 0 and < 11 && e.Type is SimEventType.Pass or SimEventType.Carry or SimEventType.Shot or SimEventType.Goal)
+            {
+                var bx = e.Team == 0 ? _hx : _ax;
+                var by = e.Team == 0 ? _hy : _ay;
+                bx[e.Player] = _bx; by[e.Player] = _by;
+            }
+        }
+
+        switch (e.Type)
+        {
+            case SimEventType.Goal:
+                if (e.Team == 0) { _hs++; _flashHome = true; } else { _as++; _flashAway = true; }
+                break;
+            case SimEventType.PenaltyGoal:
+            case SimEventType.PenaltyMiss:
+                RegisterPen(e);
+                break;
+        }
+
+        _st = SnapshotStats(e);
+
+        if (!string.IsNullOrEmpty(e.Text)) _ticker = e.Text;
+        if (e.Big || e.Type is SimEventType.HydrationBreak or SimEventType.HalfTime or SimEventType.ExtraTimeStart or SimEventType.ShootoutStart or SimEventType.FullTime)
+        { _banner = e.Text; _bannerId++; }
+        else _banner = null;
+    }
+
+    private void RegisterPen(SimEvent e)
+    {
+        bool scored = e.Type == SimEventType.PenaltyGoal;
+        var list = e.Team == 0 ? _homePens : _awayPens;
+        var takers = e.Team == 0 ? _homeTakers : _awayTakers;
+        int kick = list.Count;
+        list.Add(scored);
+        _penScored = scored;
+        _penTaker = takers.Count > 0 ? takers[kick % takers.Count] : (e.Team == 0 ? HomeName : AwayName);
+        _penKickId++;
+        UpdatePens(e.Text);
+    }
+
+    private MatchStats SnapshotStats(SimEvent e)
+    {
+        double prog = Math.Clamp(_clockSec / (double)(120 * 60), 0, 1);
+        var f = Timeline.Stats;
+        int S(int v) => (int)Math.Round(v * Math.Max(prog, 0.02));
+        return new MatchStats
+        {
+            PossHome = f.PossHome,
+            ShotsHome = S(f.ShotsHome), ShotsAway = S(f.ShotsAway),
+            FoulsHome = S(f.FoulsHome), FoulsAway = S(f.FoulsAway),
+            YellowHome = S(f.YellowHome), YellowAway = S(f.YellowAway),
+            RedHome = S(f.RedHome), RedAway = S(f.RedAway),
+        };
+    }
+
+    private void UpdatePens(string text)
+    {
+        int i = text.LastIndexOf('('), j = text.LastIndexOf(')');
+        if (i >= 0 && j > i) _pens = text.Substring(i + 1, j - i - 1);
+    }
+
+    private (double x, double y)[] BasePositions(Formation f, bool home)
+    {
+        double[] xl = home ? new[] { 0.06, 0.22, 0.40, 0.60 } : new[] { 0.94, 0.78, 0.60, 0.40 };
+        var res = new List<(double, double)>();
+        var lines = new[] { (0, 1), (1, f.Def), (2, f.Mid), (3, f.Fwd) };
+        foreach (var (li, count) in lines)
+            for (int i = 0; i < count; i++)
+            {
+                double y = 0.14 + (i + 1) / (double)(count + 1) * 0.72;
+                res.Add((xl[li], y));
+            }
+        while (res.Count < 11) res.Add((0.5, 0.5));
+        return res.Take(11).ToArray();
+    }
+
+    private static string NameAt(IReadOnlyList<Player>? sq, int i)
+        => sq is not null && i < sq.Count ? Short(sq[i].Name) : "";
+
+    private static List<string> Takers(IReadOnlyList<Player>? sq, string fallback)
+    {
+        if (sq is null || sq.Count == 0) return new() { fallback };
+        return sq.OrderByDescending(p => p.Pos == Position.FWD ? 3 : p.Pos == Position.MID ? 2 : p.Pos == Position.DEF ? 1 : 0)
+                 .ThenByDescending(p => p.Rating)
+                 .Select(p => Short(p.Name)).ToList();
+    }
+
+    private string PhaseLabel => _phase switch
+    {
+        MatchPhase.First => "1º TIEMPO",
+        MatchPhase.Half => "ENTRETIEMPO",
+        MatchPhase.Second => "2º TIEMPO",
+        MatchPhase.ExtraFirst => "PRÓRROGA 1",
+        MatchPhase.ExtraSecond => "PRÓRROGA 2",
+        MatchPhase.Shootout => "TANDA DE PENALES",
+        _ => "FINAL"
+    };
+
+    private static string Pct(double v) => (v * 100).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + "%";
+    private static string Short(string s)
+    {
+        var parts = s.Split(' ');
+        var name = parts.Length == 1 ? s : parts[^1];
+        return name.Length <= 12 ? name : name[..12];
+    }
+}
