@@ -8,7 +8,7 @@
 <div class="shell">
     <header class="topbar">
         <div class="topbar__crest">⚽</div>
-        <div>
+        <div class="topbar__id">
             <div class="topbar__club">@Game.State.ClubName</div>
             <div class="topbar__sub">@Loc["Once de Oro · Manager"]</div>
         </div>
@@ -35,7 +35,10 @@
                 }
                 else
                 {
-                    <span class="acct__cta">@Loc["Guardar progreso"]</span>
+                    <span class="acct__cta">
+                        <span class="acct__cta-full">@Loc["Guardar progreso"]</span>
+                        <span class="acct__cta-short">☁</span>
+                    </span>
                 }
             </a>
         }
