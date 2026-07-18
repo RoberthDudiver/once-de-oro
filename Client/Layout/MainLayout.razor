@@ -1,6 +1,7 @@
 @inherits LayoutComponentBase
 @implements IDisposable
 @inject GameService Game
+@inject Loc Loc
 @inject NavigationManager Nav
 
 <div class="shell">
@@ -8,10 +9,17 @@
         <div class="topbar__crest">⚽</div>
         <div>
             <div class="topbar__club">@Game.State.ClubName</div>
-            <div class="topbar__sub">Once de Oro · Manager</div>
+            <div class="topbar__sub">@Loc["Once de Oro · Manager"]</div>
         </div>
         <div class="topbar__spacer"></div>
-        <div class="money" title="Presupuesto disponible">
+        <div class="lang" title="@(Loc["Idioma"])">
+            @foreach (var l in Loc.Languages)
+            {
+                <button class="lang__btn @(Loc.Lang == l.Code ? "on" : "")"
+                        title="@l.Name" @onclick="() => ChangeLang(l.Code)">@l.Flag</button>
+            }
+        </div>
+        <div class="money" title="@Loc["Presupuesto disponible"]">
             <span class="money__cur">$</span>
             <span class="money__val">@Game.State.Money</span>
             <span class="money__unit">M</span>
@@ -19,11 +27,11 @@
     </header>
 
     <nav class="nav">
-        <a href="" class="@Active("")"><span class="ico">🏠</span>Inicio</a>
-        <a href="mercado" class="@Active("mercado")"><span class="ico">💰</span>Mercado</a>
-        <a href="equipo" class="@Active("equipo")"><span class="ico">👕</span>Equipo</a>
-        <a href="torneos" class="@Active("torneos")"><span class="ico">🏆</span>Torneos</a>
-        <a href="online" class="@Active("online")"><span class="ico">🌐</span>Online</a>
+        <a href="" class="@Active("")"><span class="ico">🏠</span>@Loc["Inicio"]</a>
+        <a href="mercado" class="@Active("mercado")"><span class="ico">💰</span>@Loc["Mercado"]</a>
+        <a href="equipo" class="@Active("equipo")"><span class="ico">👕</span>@Loc["Equipo"]</a>
+        <a href="torneos" class="@Active("torneos")"><span class="ico">🏆</span>@Loc["Torneos"]</a>
+        <a href="online" class="@Active("online")"><span class="ico">🌐</span>@Loc["Online"]</a>
     </nav>
 
     @Body
@@ -33,9 +41,13 @@
     protected override async Task OnInitializedAsync()
     {
         Game.Changed += OnChanged;
+        Loc.Changed += OnChanged;
         Nav.LocationChanged += OnLocation;
+        await Loc.LoadAsync();
         await Game.LoadAsync();
     }
+
+    private async Task ChangeLang(string code) => await Loc.SetLangAsync(code);
 
     private void OnChanged() => InvokeAsync(StateHasChanged);
     private void OnLocation(object? _, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs __) => InvokeAsync(StateHasChanged);
@@ -50,6 +62,7 @@
     public void Dispose()
     {
         Game.Changed -= OnChanged;
+        Loc.Changed -= OnChanged;
         Nav.LocationChanged -= OnLocation;
     }
 }

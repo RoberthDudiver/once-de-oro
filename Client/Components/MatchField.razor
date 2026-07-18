@@ -1,5 +1,6 @@
 @* Cancha 2D vista desde arriba: reproduce el timeline con 22 jugadores + pelota *@
 @using OnceDeOro.Models
+@inject Loc Loc
 
 <div class="mf">
     @if (_goalId > 0)
@@ -41,7 +42,7 @@
                 <button class="@(_speed == 0.5 ? "on" : "")" @onclick="() => _speed = 0.5">2×</button>
                 <button class="@(_speed == 0.25 ? "on" : "")" @onclick="() => _speed = 0.25">4×</button>
             </div>
-            <button class="btn btn--ghost" @onclick="() => _skip = true">⏩ Saltar al final</button>
+            <button class="btn btn--ghost" @onclick="() => _skip = true">@Loc["⏩ Saltar al final"]</button>
         </div>
     }
 
@@ -116,10 +117,10 @@
     <div class="mf__ticker">@_ticker</div>
 
     <div class="mf__stats">
-        <div class="mf__stat"><b>@_st.PossHome%</b><span>Posesión</span><b>@_st.PossAway%</b></div>
+        <div class="mf__stat"><b>@_st.PossHome%</b><span>@Loc["Posesión"]</span><b>@_st.PossAway%</b></div>
         <div class="mf__statbar"><span style="width:@(_st.PossHome)%"></span></div>
-        <div class="mf__statrow"><b>@_st.ShotsHome</b><span>Remates</span><b>@_st.ShotsAway</b></div>
-        <div class="mf__statrow"><b>@_st.FoulsHome</b><span>Faltas</span><b>@_st.FoulsAway</b></div>
+        <div class="mf__statrow"><b>@_st.ShotsHome</b><span>@Loc["Remates"]</span><b>@_st.ShotsAway</b></div>
+        <div class="mf__statrow"><b>@_st.FoulsHome</b><span>@Loc["Faltas"]</span><b>@_st.FoulsAway</b></div>
         <div class="mf__statrow"><b>@_st.YellowHome/@_st.RedHome</b><span>🟨 / 🟥</span><b>@_st.YellowAway/@_st.RedAway</b></div>
     </div>
 
@@ -396,7 +397,7 @@
         }
     }
 
-    private string PhaseLabel => _phase switch
+    private string PhaseLabel => Loc[_phase switch
     {
         MatchPhase.First => "1º TIEMPO",
         MatchPhase.Half => "ENTRETIEMPO",
@@ -405,7 +406,7 @@
         MatchPhase.ExtraSecond => "PRÓRROGA 2",
         MatchPhase.Shootout => "TANDA DE PENALES",
         _ => "FINAL"
-    };
+    }];
 
     private static string Pct(double v) => (v * 100).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + "%";
     private static string Short(string s)

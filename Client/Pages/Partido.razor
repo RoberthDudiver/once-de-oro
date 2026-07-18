@@ -25,7 +25,7 @@ else
         var pred = Game.PredictNext();
         <div class="board fade-up">
             <div class="board__comp">@comp.Emblem @comp.Name</div>
-            <div class="board__stage">@info.stageName · PREVIA</div>
+            <div class="board__stage">@info.stageName · @Loc["PREVIA"]</div>
             <div class="board__main">
                 <div class="board__team">
                     <div class="board__flag">⚽</div>
@@ -45,7 +45,7 @@ else
 
         <div class="card card--pad mt">
             <div class="row" style="justify-content:space-between;">
-                <h3 style="font-size:19px;">📊 Pronóstico</h3>
+                <h3 style="font-size:19px;">@Loc["📊 Pronóstico"]</h3>
                 <span class="pill">Poisson + Elo</span>
             </div>
             <div class="tri mt">
@@ -54,22 +54,22 @@ else
                 <div class="tri__seg lose" style="width:@Pc(pred.AwayWin)"><span>@Pc(pred.AwayWin)</span></div>
             </div>
             <div class="tri__legend">
-                <span><i class="d win"></i> Ganás</span>
-                <span><i class="d draw"></i> Empate</span>
-                <span><i class="d lose"></i> Perdés</span>
+                <span><i class="d win"></i> @Loc["Ganás"]</span>
+                <span><i class="d draw"></i> @Loc["Empate"]</span>
+                <span><i class="d lose"></i> @Loc["Perdés"]</span>
             </div>
             <div class="row wrap mt" style="gap:8px;">
                 <span class="pill pill--gold">xG @pred.XgHome.ToString("0.0")</span>
-                <span class="pill">goles esperados</span>
+                <span class="pill">@Loc["goles esperados"]</span>
                 <span class="pill" style="color:var(--blue);border-color:rgba(78,163,255,.4)">xG @pred.XgAway.ToString("0.0")</span>
             </div>
             <div class="row wrap mt" style="gap:8px;">
                 <span class="pill">Elo @pred.EloHome</span>
-                <span class="pill">favoritismo @Pc(pred.EloHomeWin)</span>
+                <span class="pill">@Loc["favoritismo"] @Pc(pred.EloHomeWin)</span>
                 <span class="pill" style="color:var(--blue);border-color:rgba(78,163,255,.4)">Elo @pred.EloAway</span>
             </div>
             <div class="mt muted" style="font-size:13px;">
-                Marcadores más probables:
+                @Loc["Marcadores más probables:"]
                 @foreach (var s in pred.TopScores)
                 {
                     <span class="pill" style="margin:2px 4px 2px 0;">@s.H–@s.A · @Pc(s.P)</span>
@@ -78,7 +78,7 @@ else
         </div>
 
         <div class="center mt">
-            <button class="btn btn--gold btn--big" @onclick="Play">▶ Ver el partido</button>
+            <button class="btn btn--gold btn--big" @onclick="Play">@Loc["▶ Ver el partido"]</button>
         </div>
     }
     else if (_phase == Phase.Playing && _timeline is not null && opp is not null)
@@ -110,8 +110,8 @@ else
             </div>
 
             <div class="result-banner @(win ? "win" : "lose")">
-                <div class="result-banner__title">@(win ? "¡VICTORIA!" : draw ? "EMPATE" : "DERROTA")</div>
-                @if (_reward > 0) { <div class="result-banner__reward">+ $@_reward M en premios 💰</div> }
+                <div class="result-banner__title">@(win ? Loc["¡VICTORIA!"] : draw ? Loc["EMPATE"] : Loc["DERROTA"])</div>
+                @if (_reward > 0) { <div class="result-banner__reward">+ $@_reward M @Loc["en premios"] 💰</div> }
             </div>
         }
 
@@ -121,10 +121,10 @@ else
                 <div class="champ-cele__confetti">@for (int i = 0; i < 40; i++) { <span style="--i:@i"></span> }</div>
                 <div class="card card--pad center" style="margin-top:16px; border-color:rgba(245,197,66,.6); position:relative; z-index:2;">
                     <div class="trophy champ-cele__trophy">🏆</div>
-                    <h2 style="font-family:var(--font-display); font-size:38px; color:var(--gold-2); margin-top:6px;">¡CAMPEÓN!</h2>
-                    <p class="muted">Ganaste la @comp.Name.</p>
-                    @if (run.CleanRun) { <div class="pill pill--gold" style="margin-top:8px; padding:8px 14px;">⭐ INVICTO Y SIN RECIBIR GOLES — MARCA LEGENDARIA</div> }
-                    <div class="mt"><button class="btn btn--gold btn--big" @onclick="Conclude">Cobrar y volver</button></div>
+                    <h2 style="font-family:var(--font-display); font-size:38px; color:var(--gold-2); margin-top:6px;">@Loc["¡CAMPEÓN!"]</h2>
+                    <p class="muted">@comp.Name</p>
+                    @if (run.CleanRun) { <div class="pill pill--gold" style="margin-top:8px; padding:8px 14px;">@Loc["⭐ CAMPEÓN INVICTO SIN RECIBIR GOLES"]</div> }
+                    <div class="mt"><button class="btn btn--gold btn--big" @onclick="Conclude">@Loc["Cobrar y volver"]</button></div>
                 </div>
             </div>
         }
@@ -132,21 +132,21 @@ else
         {
             <div class="card card--pad center" style="margin-top:16px;">
                 <div style="font-size:50px;">🚪</div>
-                <h2 style="font-family:var(--font-head); font-size:26px; margin-top:6px;">Eliminado de la @comp.Name</h2>
-                <p class="muted">Ganaste $@run.MoneyWon M en total. Reforzá el equipo y volvé más fuerte.</p>
-                <div class="mt"><button class="btn btn--gold btn--big" @onclick="Conclude">Volver al mercado</button></div>
+                <h2 style="font-family:var(--font-head); font-size:26px; margin-top:6px;">@comp.Name</h2>
+                <p class="muted">@Loc["Reforzá el equipo y volvé más fuerte."]</p>
+                <div class="mt"><button class="btn btn--gold btn--big" @onclick="Conclude">@Loc["Volver al mercado"]</button></div>
             </div>
         }
         else if (_result is not null)
         {
             <div class="center" style="margin-top:16px;">
-                <button class="btn btn--gold btn--big" @onclick="NextMatch">Siguiente: @Game.StageInfo().stageName ▶</button>
+                <button class="btn btn--gold btn--big" @onclick="NextMatch">@Game.StageInfo().stageName ▶</button>
             </div>
         }
         else
         {
             <div class="center" style="margin-top:16px;">
-                <button class="btn btn--gold btn--big" @onclick="Conclude">Volver</button>
+                <button class="btn btn--gold btn--big" @onclick="Conclude">@Loc["Volver"]</button>
             </div>
         }
     }

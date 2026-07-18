@@ -4,7 +4,7 @@
 
 <PageTitle>Torneos — Once de Oro</PageTitle>
 
-<div class="section-title"><span class="dot"></span> Competiciones</div>
+<div class="section-title"><span class="dot"></span> @Loc["Competiciones"]</div>
 
 @if (Game.State.Run is not null && Game.ActiveComp is Competition ac)
 {
@@ -13,11 +13,11 @@
             <div class="row">
                 <span style="font-size:34px;">@ac.Emblem</span>
                 <div>
-                    <div style="font-family:var(--font-head); font-size:19px;">Torneo en curso · @ac.Name</div>
+                    <div style="font-family:var(--font-head); font-size:19px;">@Loc["Torneo en curso"] · @ac.Name</div>
                     <div class="muted">@Game.StageInfo().stageName</div>
                 </div>
             </div>
-            <button class="btn btn--gold" @onclick='() => Nav.NavigateTo("partido")'>▶ Continuar</button>
+            <button class="btn btn--gold" @onclick='() => Nav.NavigateTo("partido")'>@Loc["▶ Continuar"]</button>
         </div>
     </div>
 }
@@ -47,31 +47,31 @@
                     <div class="comp__name">@c.Name</div>
                     <div class="comp__sub">@c.Subtitle</div>
                 </div>
-                <span class="pill" style="position:relative;">Nivel @c.Tier</span>
+                <span class="pill" style="position:relative;">@Loc["Nivel"] @c.Tier</span>
             </div>
 
             <div class="row wrap" style="gap:8px; margin-top:14px; position:relative;">
                 <span class="pill">🎯 Rec. @c.RecommendedStrength</span>
                 <span class="pill @(gap >= 0 ? "pill--green" : "")" style="@(gap < 0 ? "color:var(--red);border-color:rgba(255,90,106,.4);" : "")">
-                    Tu fuerza @myPower
+                    @Loc["Tu fuerza"] @myPower
                 </span>
                 @if (c.EntryFee > 0)
                 {
-                    <span class="pill">Inscripción $@c.EntryFee M</span>
+                    <span class="pill">@Loc["Inscripción"] $@c.EntryFee M</span>
                 }
                 else
                 {
-                    <span class="pill pill--green">Gratis</span>
+                    <span class="pill pill--green">@Loc["Gratis"]</span>
                 }
             </div>
 
             <div class="comp__foot">
                 <div>
-                    <div class="faint" style="font-size:11px; letter-spacing:.2em; text-transform:uppercase;">Premio campeón</div>
+                    <div class="faint" style="font-size:11px; letter-spacing:.2em; text-transform:uppercase;">@Loc["Premio campeón"]</div>
                     <div class="comp__prize">$@c.ChampionPrize M</div>
                 </div>
                 <button class="btn btn--gold" disabled="@(!canEnter)" @onclick="() => Enter(c)">
-                    Inscribirse
+                    @Loc["Inscribirse"]
                 </button>
             </div>
             @if (gap < -6)

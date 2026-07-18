@@ -3,15 +3,15 @@
 
 <PageTitle>Mercado — Once de Oro</PageTitle>
 
-<div class="section-title"><span class="dot"></span> Mercado de fichajes</div>
+<div class="section-title"><span class="dot"></span> @Loc["Mercado de fichajes"]</div>
 
 <div class="row wrap" style="justify-content:space-between; gap:14px;">
     <div class="seg">
-        <button class="@(Tab == "buy" ? "on" : "")" @onclick='() => Tab = "buy"'>💰 Comprar</button>
-        <button class="@(Tab == "own" ? "on" : "")" @onclick='() => Tab = "own"'>👕 Mi plantel (@Game.Owned.Count())</button>
+        <button class="@(Tab == "buy" ? "on" : "")" @onclick='() => Tab = "buy"'>@Loc["💰 Comprar"]</button>
+        <button class="@(Tab == "own" ? "on" : "")" @onclick='() => Tab = "own"'>@Loc["👕 Mi plantel"] (@Game.Owned.Count())</button>
     </div>
     <div class="seg">
-        <button class="@(Pos is null ? "on" : "")" @onclick="() => Pos = null">Todos</button>
+        <button class="@(Pos is null ? "on" : "")" @onclick="() => Pos = null">@Loc["Todos"]</button>
         <button class="@(Pos == Position.GK ? "on" : "")" @onclick="() => Pos = Position.GK">POR</button>
         <button class="@(Pos == Position.DEF ? "on" : "")" @onclick="() => Pos = Position.DEF">DEF</button>
         <button class="@(Pos == Position.MID ? "on" : "")" @onclick="() => Pos = Position.MID">MED</button>
@@ -19,26 +19,26 @@
     </div>
 </div>
 
-<input class="search" placeholder="🔎 Buscar jugador o selección…" @bind="Search" @bind:event="oninput" />
+<input class="search" placeholder="@Loc["🔎 Buscar jugador o selección…"]" @bind="Search" @bind:event="oninput" />
 
 <div class="row wrap mb" style="gap:10px;">
     <select class="mkt-select" @bind="Country">
-        <option value="">🌍 Todos los países</option>
+        <option value="">@Loc["🌍 Todos los países"]</option>
         @foreach (var n in Countries)
         {
             <option value="@n">@n</option>
         }
     </select>
     <select class="mkt-select" @bind="Decade">
-        <option value="0">📅 Todas las épocas</option>
+        <option value="0">@Loc["📅 Todas las épocas"]</option>
         @foreach (var d in Decades)
         {
             <option value="@d">@d — @(d + 9)</option>
         }
     </select>
-    @if (Country is not null || Decade != 0 || Pos is not null || !string.IsNullOrWhiteSpace(Search))
+    @if (!string.IsNullOrEmpty(Country) || Decade != 0 || Pos is not null || !string.IsNullOrWhiteSpace(Search))
     {
-        <button class="btn btn--ghost" style="padding:10px 16px;" @onclick="ClearFilters">✕ Limpiar</button>
+        <button class="btn btn--ghost" style="padding:10px 16px;" @onclick="ClearFilters">@Loc["✕ Limpiar"]</button>
     }
 </div>
 
@@ -58,7 +58,7 @@
 {
     <div class="empty">
         <div class="empty__ico">@(Tab == "buy" ? "🔍" : "👕")</div>
-        <p>@(Tab == "buy" ? "No hay jugadores con ese filtro." : "Tu plantel está vacío. Andá a Comprar para fichar.")</p>
+        <p>@(Tab == "buy" ? Loc["No hay jugadores con ese filtro."] : Loc["Tu plantel está vacío. Andá a Comprar para fichar."])</p>
     </div>
 }
 else

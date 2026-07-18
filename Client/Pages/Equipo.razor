@@ -19,21 +19,21 @@ else
     <div class="grid team-grid">
         <div>
             <div class="card card--pad mb">
-                <div class="muted" style="font-size:12px; letter-spacing:.2em; text-transform:uppercase; margin-bottom:8px;">Nombre del club</div>
-                <input class="search" style="margin:0 0 14px;" maxlength="26" placeholder="Nombre de tu equipo"
+                <div class="muted" style="font-size:12px; letter-spacing:.2em; text-transform:uppercase; margin-bottom:8px;">@Loc["Nombre del club"]</div>
+                <input class="search" style="margin:0 0 14px;" maxlength="26" placeholder="@Loc["Nombre de tu equipo"]"
                        value="@Game.State.ClubName" @onchange="OnNameChange" />
-                <div class="muted" style="font-size:12px; letter-spacing:.2em; text-transform:uppercase; margin-bottom:8px;">Formación</div>
+                <div class="muted" style="font-size:12px; letter-spacing:.2em; text-transform:uppercase; margin-bottom:8px;">@Loc["Formación"]</div>
                 <div class="seg wrap">
                     @foreach (var f in Formation.All)
                     {
                         <button class="@(Game.Formation.Name == f.Name ? "on" : "")" @onclick="() => Game.SetFormation(f.Name)">@f.Name</button>
                     }
                 </div>
-                <div class="muted" style="font-size:12px; letter-spacing:.2em; text-transform:uppercase; margin:14px 0 8px;">Estilo</div>
+                <div class="muted" style="font-size:12px; letter-spacing:.2em; text-transform:uppercase; margin:14px 0 8px;">@Loc["Estilo"]</div>
                 <div class="seg">
                     @foreach (var s in Enum.GetValues<TeamStyle>())
                     {
-                        <button class="@(Game.State.Style == s ? "on" : "")" @onclick="() => Game.SetStyle(s)">@s</button>
+                        <button class="@(Game.State.Style == s ? "on" : "")" @onclick="() => Game.SetStyle(s)">@Loc[s.ToString()]</button>
                     }
                 </div>
             </div>
@@ -47,7 +47,7 @@ else
                         @{ var pl = slot.Player!; var res = Game.IsReserve(pl); }
                         <div class="pitch__pos pos--@slot.Pos">@slot.Pos.Label()</div>
                         <div class="dot-player @(res ? "reserve" : Tier(pl))">@pl.Rating</div>
-                        <div class="pitch__name">@(res ? "libre" : Short(pl.Name))</div>
+                        <div class="pitch__name">@(res ? Loc["libre"] : Short(pl.Name))</div>
                     </div>
                 }
             </div>
@@ -56,8 +56,8 @@ else
         <div>
             <div class="card card--pad mb">
                 <div class="row" style="justify-content:space-between;">
-                    <h3 style="font-size:19px;">Fuerza</h3>
-                    <button class="btn btn--ghost" style="padding:8px 14px; font-size:13px;" @onclick="() => Game.AutoFillXI()">⚡ Auto XI</button>
+                    <h3 style="font-size:19px;">@Loc["Fuerza"]</h3>
+                    <button class="btn btn--ghost" style="padding:8px 14px; font-size:13px;" @onclick="() => Game.AutoFillXI()">@Loc["⚡ Auto XI"]</button>
                 </div>
                 @{ var pw = Game.Power; }
                 <div class="power mt">
@@ -68,7 +68,7 @@ else
                 <div class="mt">
                     @if (Game.HasFullRealXI)
                     {
-                        <span class="pill pill--green" style="width:100%; justify-content:center; padding:9px;">✓ XI TITULAR COMPLETO — LISTO PARA JUGAR</span>
+                        <span class="pill pill--green" style="width:100%; justify-content:center; padding:9px;">@Loc["✓ XI TITULAR COMPLETO — LISTO PARA JUGAR"]</span>
                     }
                     else
                     {
@@ -81,9 +81,9 @@ else
         </div>
     </div>
 
-    <div class="section-title"><span class="dot"></span> Plantel (@Game.Owned.Count()) · tocá para poner/sacar del XI</div>
+    <div class="section-title"><span class="dot"></span> @Loc["Plantel"] (@Game.Owned.Count()) · @Loc["tocá para poner/sacar del XI"]</div>
     <div class="seg wrap mb">
-        <button class="@(PlantelPos is null ? "on" : "")" @onclick="() => PlantelPos = null">Todos</button>
+        <button class="@(PlantelPos is null ? "on" : "")" @onclick="() => PlantelPos = null">@Loc["Todos"]</button>
         <button class="@(PlantelPos == Position.GK ? "on" : "")" @onclick="() => PlantelPos = Position.GK">POR (@Game.Owned.Count(p => p.Pos == Position.GK))</button>
         <button class="@(PlantelPos == Position.DEF ? "on" : "")" @onclick="() => PlantelPos = Position.DEF">DEF (@Game.Owned.Count(p => p.Pos == Position.DEF))</button>
         <button class="@(PlantelPos == Position.MID ? "on" : "")" @onclick="() => PlantelPos = Position.MID">MED (@Game.Owned.Count(p => p.Pos == Position.MID))</button>

@@ -5,45 +5,43 @@
 <PageTitle>Once de Oro — Manager</PageTitle>
 
 <section class="hero fade-up">
-    <div class="hero__eyebrow">★ Temporada abierta</div>
+    <div class="hero__eyebrow">@Loc["★ Temporada abierta"]</div>
     <h1 class="hero__title">ARMÁ TU <em>ONCE</em><br />DE ORO</h1>
     <p class="hero__sub">
-        Empezás de cero con tu presupuesto. Fichá leyendas de todos los Mundiales,
-        ganá torneos, cobrá premios y volvé al mercado por más estrellas.
-        La meta legendaria: ser campeón sin recibir un solo gol.
+        @Loc["Empezás de cero con tu presupuesto. Fichá leyendas de todos los Mundiales, ganá torneos, cobrá premios y volvé al mercado por más estrellas. La meta legendaria: ser campeón sin recibir un solo gol."]
     </p>
     <div class="hero__cta">
         @if (Game.State.Run is not null)
         {
             <button class="btn btn--gold btn--big" @onclick="@(() => Nav.NavigateTo("partido"))">
-                ▶ Continuar torneo
+                @Loc["▶ Continuar torneo"]
             </button>
         }
         else if (Game.Owned.Any())
         {
             <button class="btn btn--gold btn--big" @onclick="@(() => Nav.NavigateTo("torneos"))">
-                🏆 Inscribirse a un torneo
+                @Loc["🏆 Inscribirse a un torneo"]
             </button>
         }
         else
         {
             <button class="btn btn--gold btn--big" @onclick="@(() => Nav.NavigateTo("mercado"))">
-                💰 Ir al mercado de fichajes
+                @Loc["💰 Ir al mercado de fichajes"]
             </button>
         }
         <button class="btn btn--ghost btn--big" @onclick="@(() => Nav.NavigateTo("equipo"))">
-            👕 Ver mi equipo
+            @Loc["👕 Ver mi equipo"]
         </button>
     </div>
 </section>
 
-<div class="section-title"><span class="dot"></span> Estado del club</div>
+<div class="section-title"><span class="dot"></span> @Loc["Estado del club"]</div>
 
 <div class="grid dash-grid">
     <div class="card card--pad">
         <div class="row" style="justify-content: space-between;">
-            <h3 style="font-size:20px;">Fuerza del equipo</h3>
-            <span class="pill pill--gold">@(Game.HasFullRealXI ? "XI TITULAR COMPLETO" : $"{Game.ReserveCount} DE CANTERA")</span>
+            <h3 style="font-size:20px;">@Loc["Fuerza del equipo"]</h3>
+            <span class="pill pill--gold">@(Game.HasFullRealXI ? Loc["XI TITULAR COMPLETO"] : $"{Game.ReserveCount} {Loc["DE CANTERA"]}")</span>
         </div>
         @{ var pw = Game.Power; }
         <div class="power mt">
@@ -64,19 +62,19 @@
             </div>
         </div>
         <div class="row wrap mt">
-            <span class="pill">🧮 @Game.Owned.Count() jugadores</span>
+            <span class="pill">🧮 @Game.Owned.Count() @Loc["jugadores"]</span>
             <span class="pill">📋 @Game.Formation.Name</span>
-            <span class="pill">🎯 @Game.State.Style</span>
+            <span class="pill">🎯 @Loc[Game.State.Style.ToString()]</span>
         </div>
     </div>
 
     <div class="card card--pad">
-        <h3 style="font-size:20px;">Palmarés</h3>
+        <h3 style="font-size:20px;">@Loc["Palmarés"]</h3>
         @if (Game.State.Honours.Count == 0)
         {
             <div class="empty" style="padding:26px 6px;">
                 <div class="empty__ico">🏆</div>
-                <p>Todavía sin trofeos.<br />¡Salí a ganar tu primer título!</p>
+                <p>@Loc["Todavía sin trofeos."]<br />@Loc["¡Salí a ganar tu primer título!"]</p>
             </div>
         }
         else
@@ -94,25 +92,25 @@
         @if (Game.State.AchievedSevenZero)
         {
             <div class="pill pill--gold mt" style="width:100%; justify-content:center; padding:10px;">
-                ⭐ CAMPEÓN INVICTO SIN RECIBIR GOLES
+                @Loc["⭐ CAMPEÓN INVICTO SIN RECIBIR GOLES"]
             </div>
         }
     </div>
 </div>
 
-<div class="section-title"><span class="dot"></span> Carrera</div>
+<div class="section-title"><span class="dot"></span> @Loc["Carrera"]</div>
 <div class="stats">
-    <div class="stat"><div class="stat__val gold">@Game.State.MatchesPlayed</div><div class="stat__lbl">Partidos</div></div>
-    <div class="stat"><div class="stat__val" style="color:var(--green)">@Game.State.Wins</div><div class="stat__lbl">Ganados</div></div>
-    <div class="stat"><div class="stat__val">@Game.State.Draws</div><div class="stat__lbl">Empates</div></div>
-    <div class="stat"><div class="stat__val" style="color:var(--red)">@Game.State.Losses</div><div class="stat__lbl">Perdidos</div></div>
-    <div class="stat"><div class="stat__val">@Game.State.GoalsFor</div><div class="stat__lbl">Goles a favor</div></div>
-    <div class="stat"><div class="stat__val">@Game.State.GoalsAgainst</div><div class="stat__lbl">En contra</div></div>
+    <div class="stat"><div class="stat__val gold">@Game.State.MatchesPlayed</div><div class="stat__lbl">@Loc["Partidos"]</div></div>
+    <div class="stat"><div class="stat__val" style="color:var(--green)">@Game.State.Wins</div><div class="stat__lbl">@Loc["Ganados"]</div></div>
+    <div class="stat"><div class="stat__val">@Game.State.Draws</div><div class="stat__lbl">@Loc["Empates"]</div></div>
+    <div class="stat"><div class="stat__val" style="color:var(--red)">@Game.State.Losses</div><div class="stat__lbl">@Loc["Perdidos"]</div></div>
+    <div class="stat"><div class="stat__val">@Game.State.GoalsFor</div><div class="stat__lbl">@Loc["Goles a favor"]</div></div>
+    <div class="stat"><div class="stat__val">@Game.State.GoalsAgainst</div><div class="stat__lbl">@Loc["En contra"]</div></div>
 </div>
 
 @if (Game.State.History.Count > 0)
 {
-    <div class="section-title"><span class="dot"></span> Historial de torneos</div>
+    <div class="section-title"><span class="dot"></span> @Loc["Historial de torneos"]</div>
     <div class="grid" style="gap:8px;">
         @foreach (var h in Game.State.History)
         {
@@ -122,7 +120,7 @@
 }
 
 <div class="center" style="margin-top:34px;">
-    <button class="btn btn--danger" @onclick="Reset">↺ Reiniciar carrera</button>
+    <button class="btn btn--danger" @onclick="Reset">@Loc["↺ Reiniciar carrera"]</button>
 </div>
 
 @code {
