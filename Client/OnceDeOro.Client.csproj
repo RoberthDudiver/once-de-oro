@@ -7,6 +7,11 @@
     <RootNamespace>OnceDeOro</RootNamespace>
     <AssemblyName>OnceDeOro</AssemblyName>
     <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
+    <!-- Sin fingerprint en los assets WASM: el loader queda en el nombre estable
+         blazor.webassembly.js. Evita que el placeholder #[.{fingerprint}] quede sin
+         resolver al publicar la app hosteada (rompía el arranque en el contenedor). -->
+    <WasmFingerprintAssets>false</WasmFingerprintAssets>
+    <StaticWebAssetsFingerprintContent>false</StaticWebAssetsFingerprintContent>
   </PropertyGroup>
 
   <ItemGroup>
