@@ -7,6 +7,10 @@
     <RootNamespace>OnceDeOro</RootNamespace>
     <AssemblyName>OnceDeOro</AssemblyName>
     <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
+    <!-- Sin fingerprint en dotnet.js/native/runtime: el loader los importa por su
+         nombre estable. Al publicar la app hosteada no hay middleware que resuelva
+         el fingerprint, así que sin esto dan 404 (dotnet.js) y no arranca. -->
+    <WasmFingerprintAssets>false</WasmFingerprintAssets>
   </PropertyGroup>
 
   <ItemGroup>
