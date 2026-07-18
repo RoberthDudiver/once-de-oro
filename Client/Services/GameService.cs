@@ -418,6 +418,24 @@ public sealed class GameService
 
     public bool CanEnter(Competition c) => State.Money >= c.EntryFee && CanPlay && State.Run is null;
 
+    // ---------------------------------------------------------------- dificultad viva
+    // Los rivales no se quedan quietos: crecen con tu trayectoria y se ponen a tiro
+    // si tu equipo quedó muy por encima del torneo. Así ganar nunca es un trámite.
+
+    /// <summary>Refuerzo por trayectoria: cada 2 torneos jugados, +1 (tope +8).</summary>
+    public int RivalGrowth => Math.Min(8, State.History.Count / 2);
+
+    /// <summary>Cuánto se acercan los rivales cuando tu equipo supera al torneo (tope +7).</summary>
+    public int RivalCatchUp(Competition c) =>
+        Math.Clamp((Power.Overall - c.RecommendedStrength) / 3, 0, 7);
+
+    /// <summary>Refuerzo total que reciben los rivales de un torneo.</summary>
+    public int RivalBoost(Competition c) => RivalGrowth + RivalCatchUp(c);
+
+    /// <summary>Fuerza real con la que juega un rival, ya escalada.</summary>
+    public int ScaledStrength(Competition c, int baseStrength) =>
+        Math.Clamp(baseStrength + RivalBoost(c), 40, 99);
+
     public void StartTournament(string compId)
     {
         var c = CompetitionDatabase.ById(compId);
@@ -434,7 +452,7 @@ public sealed class GameService
 
             run.Table.Add(new TableRow { Name = State.ClubName, Flag = "⚽", Strength = Power.Overall, IsMe = true });
             foreach (var riv in c.Rivals)
-                run.Table.Add(new TableRow { Name = riv.Name, Flag = riv.Flag, Strength = riv.Strength });
+                run.Table.Add(new TableRow { Name = riv.Name, Flag = riv.Flag, Strength = ScaledStrength(c, riv.Strength) });
 
             State.Run = run;
             Commit();
@@ -493,7 +511,9 @@ public sealed class GameService
         State.Run = run;
         Commit();
 
-        static RivalSnapshot Snap(RivalTeam r) => new() { Name = r.Name, Flag = r.Flag, Strength = r.Strength };
+        // Los rivales entran al fixture ya escalados a tu nivel actual.
+        RivalSnapshot Snap(RivalTeam r) =>
+            new() { Name = r.Name, Flag = r.Flag, Strength = ScaledStrength(c, r.Strength) };
     }
 
     public RivalSnapshot? CurrentOpponent =>

@@ -56,6 +56,13 @@
 
             <div class="row wrap" style="gap:8px; margin-top:14px; position:relative;">
                 <span class="pill">🎯 @Loc["Rec."] @c.RecommendedStrength</span>
+                @if (Game.RivalBoost(c) > 0)
+                {
+                    <span class="pill" style="color:var(--violet); border-color:rgba(185,139,255,.45);"
+                          title="@Loc["Los rivales se refuerzan con tu trayectoria y tu nivel"]">
+                        🔥 @Loc["Rivales"] +@Game.RivalBoost(c)
+                    </span>
+                }
                 <span class="pill @(gap >= 0 ? "pill--green" : "")" style="@(gap < 0 ? "color:var(--red);border-color:rgba(255,90,106,.4);" : "")">
                     @Loc["Tu fuerza"] @myPower
                 </span>
