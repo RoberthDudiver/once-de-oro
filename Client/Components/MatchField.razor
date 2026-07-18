@@ -2,15 +2,20 @@
 @using OnceDeOro.Models
 
 <div class="mf">
+    @if (_goalId > 0)
+    {
+        <div class="goalflash" @key="_goalId"><span>@_goalText</span></div>
+    }
+
     <div class="mf__hud">
         <div class="mf__team">
             <span class="mf__flag">@HomeFlag</span>
             <span class="mf__tname">@Short(HomeName)</span>
         </div>
         <div class="mf__score">
-            <span class="board__num @(_flashHome ? "pop" : "")" @key='("h", _hs)'>@_hs</span>
+            <span class="board__num" @key='("h", _hs)'>@_hs</span>
             <span class="sep">–</span>
-            <span class="board__num @(_flashAway ? "pop" : "")" @key='("a", _as)'>@_as</span>
+            <span class="board__num" @key='("a", _as)'>@_as</span>
         </div>
         <div class="mf__team mf__team--r">
             <span class="mf__tname">@Short(AwayName)</span>
@@ -19,26 +24,26 @@
     </div>
     <div class="mf__clock">
         <span class="mf__phase">@PhaseLabel</span>
-        <span class="mf__min">@Clock'</span>
+        <span class="mf__min">@ClockLabel</span>
         @if (_pens is not null) { <span class="mf__pens">PEN @_pens</span> }
     </div>
 
     @if (_phase == MatchPhase.Shootout)
     {
-        @* ---------- Escena de la tanda de penales ---------- *@
+        @* ---------- Tanda de penales ---------- *@
         <div class="pk">
             <div class="pk__scene">
                 <div class="pk__net"></div>
-                <div class="pk__keeper" style="left:@(_penScored ? "24%" : "50%")"></div>
-                <div class="pk__ball @(_penKickId > 0 ? (_penScored ? "in" : "out") : "")" @key="_penKickId"></div>
+                <div class="pk__keeper @_penKeeperClass" @key='"k" + _penKickId'></div>
+                <div class="pk__ball @_penBallClass" @key='"b" + _penKickId'></div>
                 @if (_penTaker is not null)
                 {
-                    <div class="pk__taker">@_penTaker <span>@(_penScored ? "⚽" : "🧤")</span></div>
+                    <div class="pk__taker">@_penTaker <span>@(_penScored ? "⚽ GOL" : "🧤 ATAJADO")</span></div>
                 }
             </div>
             <div class="pk__rows">
                 <div class="pk__row">
-                    <span class="pk__flag">@HomeFlag</span>
+                    <span class="pk__flag">@HomeFlag</span> <b>@Short(HomeName)</b>
                     @for (int i = 0; i < 5 || i < _homePens.Count; i++)
                     {
                         var mk = i < _homePens.Count ? (_homePens[i] ? "sc" : "ms") : "";
@@ -46,7 +51,7 @@
                     }
                 </div>
                 <div class="pk__row">
-                    <span class="pk__flag">@AwayFlag</span>
+                    <span class="pk__flag">@AwayFlag</span> <b>@Short(AwayName)</b>
                     @for (int i = 0; i < 5 || i < _awayPens.Count; i++)
                     {
                         var mk = i < _awayPens.Count ? (_awayPens[i] ? "sc" : "ms") : "";
@@ -69,7 +74,7 @@
             @for (int i = 0; i < 11; i++)
             {
                 var idx = i;
-                <div class="mf__p mf__p--home" @key='("h" + idx)'
+                <div class="mf__p mf__p--home @(idx == 0 ? "gk" : "")" @key='("h" + idx)'
                      style="left:@Pct(_hx[idx]);top:@Pct(_hy[idx]);">
                     @if (_homeNames[idx].Length > 0) { <span class="mf__pn">@_homeNames[idx]</span> }
                 </div>
@@ -77,12 +82,12 @@
             @for (int i = 0; i < 11; i++)
             {
                 var idx = i;
-                <div class="mf__p mf__p--away" @key='("a" + idx)'
+                <div class="mf__p mf__p--away @(idx == 0 ? "gk" : "")" @key='("a" + idx)'
                      style="left:@Pct(_ax[idx]);top:@Pct(_ay[idx]);">
                     @if (_awayNames[idx].Length > 0) { <span class="mf__pn">@_awayNames[idx]</span> }
                 </div>
             }
-            <div class="mf__ball" style="left:@Pct(_bx);top:@Pct(_by);"></div>
+            <div class="mf__ball @_ballClass" style="left:@Pct(_bx);top:@Pct(_by);"></div>
 
             @if (_banner is not null)
             {
@@ -98,8 +103,22 @@
         <div class="mf__statbar"><span style="width:@(_st.PossHome)%"></span></div>
         <div class="mf__statrow"><b>@_st.ShotsHome</b><span>Remates</span><b>@_st.ShotsAway</b></div>
         <div class="mf__statrow"><b>@_st.FoulsHome</b><span>Faltas</span><b>@_st.FoulsAway</b></div>
-        <div class="mf__statrow"><b>@_st.YellowHome/@_st.RedHome</b><span>🟨/🟥</span><b>@_st.YellowAway/@_st.RedAway</b></div>
+        <div class="mf__statrow"><b>@_st.YellowHome/@_st.RedHome</b><span>🟨 / 🟥</span><b>@_st.YellowAway/@_st.RedAway</b></div>
     </div>
+
+    @if (_keyEvents.Count > 0)
+    {
+        <div class="mf__events">
+            @foreach (var ev in _keyEvents)
+            {
+                <div class="mf__ev @ev.Side">
+                    <span class="mf__ev-min">@ev.Min'</span>
+                    <span class="mf__ev-ico">@ev.Ico</span>
+                    <span class="mf__ev-txt">@ev.Txt</span>
+                </div>
+            }
+        </div>
+    }
 
     @if (!_done)
     {
@@ -130,25 +149,28 @@
     private readonly string[] _homeNames = new string[11], _awayNames = new string[11];
     private (double x, double y)[] _homeBase = default!, _awayBase = default!;
     private double _bx = 0.5, _by = 0.5;
+    private string _ballClass = "";
     private int _hs, _as, _clockSec;
     private string? _pens;
     private MatchPhase _phase = MatchPhase.First;
     private string _ticker = "Preparados…";
     private string? _banner;
-    private int _bannerId;
-    private bool _flashHome, _flashAway, _done, _skip;
+    private int _bannerId, _goalId;
+    private string _goalText = "¡GOOOL!";
+    private bool _done, _skip;
     private double _speed = 0.5, _stepSec = 0.4;
     private MatchStats _st = new();
     private readonly Random _rng = new();
+
+    private record KeyEv(int Min, string Ico, string Txt, string Side);
+    private readonly List<KeyEv> _keyEvents = new();
 
     // Tanda de penales
     private readonly List<bool> _homePens = new(), _awayPens = new();
     private List<string> _homeTakers = new(), _awayTakers = new();
     private int _penKickId;
     private bool _penScored;
-    private string? _penTaker;
-
-    private int Clock => Math.Max(1, _clockSec / 60 + (_clockSec % 60 > 0 ? 1 : 0));
+    private string? _penTaker, _penBallClass = "", _penKeeperClass = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -184,13 +206,16 @@
     {
         _clockSec = e.Clock;
         _phase = e.Phase;
-        _flashHome = _flashAway = false;
 
-        if (e.Type is not (SimEventType.HydrationBreak or SimEventType.HalfTime or SimEventType.FullTime
-                        or SimEventType.ExtraTimeStart or SimEventType.ShootoutStart or SimEventType.End
-                        or SimEventType.PenaltyGoal or SimEventType.PenaltyMiss))
+        bool live = e.Type is SimEventType.KickOff or SimEventType.Pass or SimEventType.Carry
+                            or SimEventType.Shot or SimEventType.Goal or SimEventType.Save
+                            or SimEventType.Post or SimEventType.Miss or SimEventType.Foul;
+
+        if (live)
         {
             _bx = e.BallX; _by = e.BallY;
+            _ballClass = e.Type is SimEventType.Shot or SimEventType.Goal ? "shot" : "";
+
             for (int t = 0; t < 2; t++)
             {
                 bool attacking = e.Team == t;
@@ -199,10 +224,12 @@
                 var baseP = t == 0 ? _homeBase : _awayBase;
                 for (int i = 0; i < 11; i++)
                 {
-                    double dx = _bx - baseP[i].x;
-                    double tx = baseP[i].x + dx * (attacking ? 0.30 : 0.12);
-                    double ty = baseP[i].y + (_by - baseP[i].y) * (attacking ? 0.20 : 0.08)
-                                + (_rng.NextDouble() - 0.5) * 0.03;
+                    // El arquero (i==0) casi no se mueve: se queda cerca de su arco.
+                    double follow = i == 0 ? 0.04 : (attacking ? 0.30 : 0.12);
+                    double followY = i == 0 ? 0.10 : (attacking ? 0.20 : 0.08);
+                    double jit = i == 0 ? 0 : (_rng.NextDouble() - 0.5) * 0.03;
+                    double tx = baseP[i].x + (_bx - baseP[i].x) * follow;
+                    double ty = baseP[i].y + (_by - baseP[i].y) * followY + jit;
                     bx[i] = Math.Clamp(tx, 0.02, 0.98);
                     by[i] = Math.Clamp(ty, 0.05, 0.95);
                 }
@@ -218,8 +245,13 @@
         switch (e.Type)
         {
             case SimEventType.Goal:
-                if (e.Team == 0) { _hs++; _flashHome = true; } else { _as++; _flashAway = true; }
+                if (e.Team == 0) _hs++; else _as++;
+                _goalId++; _goalText = "¡GOOOL!";
+                AddKey(SimEventType.Goal, e);
                 break;
+            case SimEventType.Yellow: AddKey(SimEventType.Yellow, e); break;
+            case SimEventType.Red: AddKey(SimEventType.Red, e); break;
+            case SimEventType.Injury: AddKey(SimEventType.Injury, e); break;
             case SimEventType.PenaltyGoal:
             case SimEventType.PenaltyMiss:
                 RegisterPen(e);
@@ -229,9 +261,24 @@
         _st = SnapshotStats(e);
 
         if (!string.IsNullOrEmpty(e.Text)) _ticker = e.Text;
-        if (e.Big || e.Type is SimEventType.HydrationBreak or SimEventType.HalfTime or SimEventType.ExtraTimeStart or SimEventType.ShootoutStart or SimEventType.FullTime)
+        if (e.Big || e.Type is SimEventType.HydrationBreak or SimEventType.HalfTime or SimEventType.ExtraTimeStart or SimEventType.ShootoutStart or SimEventType.FullTime or SimEventType.SecondHalf)
         { _banner = e.Text; _bannerId++; }
         else _banner = null;
+    }
+
+    private void AddKey(SimEventType type, SimEvent e)
+    {
+        string ico = type switch
+        {
+            SimEventType.Goal => "⚽",
+            SimEventType.Yellow => "🟨",
+            SimEventType.Red => "🟥",
+            SimEventType.Injury => "🚑",
+            _ => "•"
+        };
+        string side = e.Team == 0 ? "home" : "away";
+        _keyEvents.Insert(0, new KeyEv(DisplayMin(), ico, e.Text, side));
+        if (_keyEvents.Count > 12) _keyEvents.RemoveAt(_keyEvents.Count - 1);
     }
 
     private void RegisterPen(SimEvent e)
@@ -243,13 +290,27 @@
         list.Add(scored);
         _penScored = scored;
         _penTaker = takers.Count > 0 ? takers[kick % takers.Count] : (e.Team == 0 ? HomeName : AwayName);
+
+        string side = _rng.Next(2) == 0 ? "l" : "r";
+        if (scored)
+        {
+            _penBallClass = "in-" + side;
+            // el arquero suele volar al lado equivocado
+            _penKeeperClass = "dive-" + (_rng.Next(3) == 0 ? side : (side == "l" ? "r" : "l"));
+        }
+        else
+        {
+            // atajada: el arquero vuela al mismo lado y la frena
+            _penBallClass = "save-" + side;
+            _penKeeperClass = "dive-" + side;
+        }
         _penKickId++;
         UpdatePens(e.Text);
     }
 
     private MatchStats SnapshotStats(SimEvent e)
     {
-        double prog = Math.Clamp(_clockSec / (double)(120 * 60), 0, 1);
+        double prog = Math.Clamp(_clockSec / (double)(94 * 60), 0, 1);
         var f = Timeline.Stats;
         int S(int v) => (int)Math.Round(v * Math.Max(prog, 0.02));
         return new MatchStats
@@ -292,6 +353,31 @@
         return sq.OrderByDescending(p => p.Pos == Position.FWD ? 3 : p.Pos == Position.MID ? 2 : p.Pos == Position.DEF ? 1 : 0)
                  .ThenByDescending(p => p.Rating)
                  .Select(p => Short(p.Name)).ToList();
+    }
+
+    // ---- Reloj estilo TV: 45+X, 90+X ----
+    private int DisplayMin()
+    {
+        int m = Math.Max(1, _clockSec / 60 + (_clockSec % 60 > 0 ? 1 : 0));
+        return m;
+    }
+
+    private string ClockLabel
+    {
+        get
+        {
+            int m = DisplayMin();
+            return _phase switch
+            {
+                MatchPhase.First => m <= 45 ? $"{m}'" : $"45+{m - 45}'",
+                MatchPhase.Half => "ENT",
+                MatchPhase.Second => m <= 90 ? $"{m}'" : $"90+{m - 90}'",
+                MatchPhase.ExtraFirst => m <= 105 ? $"{m}'" : $"105+{m - 105}'",
+                MatchPhase.ExtraSecond => m <= 120 ? $"{m}'" : $"120+{m - 120}'",
+                MatchPhase.Shootout => "PEN",
+                _ => $"{m}'"
+            };
+        }
     }
 
     private string PhaseLabel => _phase switch

@@ -76,6 +76,12 @@ public static class MatchSimulator
 
         string ScorerName(int team) =>
             PickName(team == 0 ? homeStarters : awayStarters, rng);
+        string AttackerName(int team) =>
+            PickName(team == 0 ? homeStarters : awayStarters, rng);
+        string DefenderName(int team) =>
+            PickDefender(team == 0 ? homeStarters : awayStarters, rng);
+        string GkName(int team) =>
+            GoalkeeperName(team == 0 ? homeStarters : awayStarters);
 
         void Add(SimEvent e) => events.Add(e);
         double C01(double v) => Math.Clamp(v, 0.06, 0.94);
@@ -103,8 +109,8 @@ public static class MatchSimulator
                 double y = 0.2 + rng.NextDouble() * 0.6;
                 for (int s = 0; s < steps; s++)
                 {
-                    x = team == 0 ? Math.Min(0.92, x + 0.07 + rng.NextDouble() * 0.12)
-                                  : Math.Max(0.08, x - 0.07 - rng.NextDouble() * 0.12);
+                    x = team == 0 ? Math.Min(0.93, x + 0.10 + rng.NextDouble() * 0.14)
+                                  : Math.Max(0.07, x - 0.10 - rng.NextDouble() * 0.14);
                     y = C01(y + (rng.NextDouble() - 0.5) * 0.24);
                     Add(new SimEvent
                     {
@@ -114,43 +120,68 @@ public static class MatchSimulator
                     });
                 }
 
-                // Falta
+                // Falta — con nombres: quién la hizo y a quién
                 if (rng.NextDouble() < 0.14)
                 {
                     int foulTeam = 1 - team;
+                    string fouler = DefenderName(foulTeam);
+                    string victim = AttackerName(team);
                     if (foulTeam == 0) stats.FoulsHome++; else stats.FoulsAway++;
-                    Add(new SimEvent { Clock = t, Type = SimEventType.Foul, Team = foulTeam, BallX = x, BallY = y, Phase = ph, Dur = 0.7, Text = "Falta" });
+                    Add(new SimEvent { Clock = t, Type = SimEventType.Foul, Team = foulTeam, BallX = x, BallY = y, Phase = ph, Dur = 0.7, Text = $"Falta de {fouler} sobre {victim}" });
                     double cr = rng.NextDouble();
-                    if (cr < 0.03) { if (foulTeam == 0) stats.RedHome++; else stats.RedAway++; Add(new SimEvent { Clock = t, Type = SimEventType.Red, Team = foulTeam, BallX = x, BallY = y, Phase = ph, Dur = 1.1, Text = "🟥 ¡Roja!", Big = true }); }
-                    else if (cr < 0.25) { if (foulTeam == 0) stats.YellowHome++; else stats.YellowAway++; Add(new SimEvent { Clock = t, Type = SimEventType.Yellow, Team = foulTeam, BallX = x, BallY = y, Phase = ph, Dur = 0.9, Text = "🟨 Amarilla" }); }
+                    if (cr < 0.03) { if (foulTeam == 0) stats.RedHome++; else stats.RedAway++; Add(new SimEvent { Clock = t, Type = SimEventType.Red, Team = foulTeam, BallX = x, BallY = y, Phase = ph, Dur = 1.2, Big = true, Text = $"🟥 Roja a {fouler}" }); }
+                    else if (cr < 0.25) { if (foulTeam == 0) stats.YellowHome++; else stats.YellowAway++; Add(new SimEvent { Clock = t, Type = SimEventType.Yellow, Team = foulTeam, BallX = x, BallY = y, Phase = ph, Dur = 0.9, Text = $"🟨 Amarilla a {fouler}" }); }
+                    // Lesión ocasional del jugador que recibió la falta
+                    if (rng.NextDouble() < 0.06)
+                        Add(new SimEvent { Clock = t, Type = SimEventType.Injury, Team = team, BallX = x, BallY = y, Phase = ph, Dur = 1.1, Text = $"🚑 {victim} queda golpeado y necesita atención" });
                 }
 
                 bool finalThird = team == 0 ? x > 0.66 : x < 0.34;
                 double atk = us.Attack / (double)(us.Attack + them.Defense);
-                if (finalThird && rng.NextDouble() < 0.13 * atk + 0.05)
+                if (finalThird && rng.NextDouble() < 0.20 * atk + 0.06)
                 {
                     if (team == 0) stats.ShotsHome++; else stats.ShotsAway++;
-                    double goalY = 0.5 + (rng.NextDouble() - 0.5) * 0.20;
-                    double shotX = team == 0 ? 0.90 : 0.10;
-                    Add(new SimEvent { Clock = t, Type = SimEventType.Shot, Team = team, Player = rng.Next(11), BallX = shotX, BallY = goalY, Phase = ph, Dur = 0.5, Text = $"Remate de {usName}" });
+                    double goalY = 0.5 + (rng.NextDouble() - 0.5) * 0.18;   // dentro del arco
+                    double shotX = team == 0 ? 0.86 : 0.14;
+                    string shooter = ScorerName(team);
+                    Add(new SimEvent { Clock = t, Type = SimEventType.Shot, Team = team, Player = rng.Next(11), BallX = shotX, BallY = goalY, Phase = ph, Dur = 0.5, Text = $"Remate de {shooter} ({usName})" });
 
-                    double xg = Math.Clamp(0.06 + 0.17 * atk, 0.05, 0.42);
-                    double gx = team == 0 ? 0.99 : 0.01;
+                    double xg = Math.Clamp(0.07 + 0.19 * atk, 0.06, 0.45);
+                    double gx = team == 0 ? 0.985 : 0.015;                 // línea de gol
                     if (rng.NextDouble() < xg)
                     {
+                        // GOL: la pelota entra al arco
                         score[team]++;
                         if (team == 0) stats.OnTargetHome++; else stats.OnTargetAway++;
-                        string sc = ScorerName(team);
-                        goals.Add(new Goal(Min(t), sc, team == 0));
-                        Add(new SimEvent { Clock = t, Type = SimEventType.Goal, Team = team, Player = rng.Next(11), BallX = gx, BallY = goalY, Phase = ph, Dur = 1.4, Big = true, Text = $"⚽ ¡GOL! {sc}  ({score[0]}-{score[1]})" });
+                        goals.Add(new Goal(Min(t), shooter, team == 0));
+                        Add(new SimEvent { Clock = t, Type = SimEventType.Goal, Team = team, Player = rng.Next(11), BallX = gx, BallY = goalY, Phase = ph, Dur = 1.5, Big = true, Text = $"⚽ ¡GOOOL de {shooter}!  ({score[0]}-{score[1]})" });
                         poss = 1 - team;
                     }
                     else
                     {
                         double r = rng.NextDouble();
-                        if (r < 0.5) { if (team == 0) stats.OnTargetHome++; else stats.OnTargetAway++; Add(new SimEvent { Clock = t, Type = SimEventType.Save, Team = 1 - team, BallX = gx, BallY = goalY, Phase = ph, Dur = 0.8, Text = "🧤 ¡Gran atajada!" }); if (rng.NextDouble() < 0.5) { if (team == 0) stats.CornersHome++; else stats.CornersAway++; } }
-                        else if (r < 0.63) Add(new SimEvent { Clock = t, Type = SimEventType.Post, Team = team, BallX = gx, BallY = goalY, Phase = ph, Dur = 0.9, Text = "😱 ¡Al palo!" });
-                        else Add(new SimEvent { Clock = t, Type = SimEventType.Miss, Team = team, BallX = gx, BallY = goalY - 0.12, Phase = ph, Dur = 0.6, Text = "Desviado" });
+                        if (r < 0.5)
+                        {
+                            // ATAJADA: la pelota queda en el arquero, NO entra
+                            if (team == 0) stats.OnTargetHome++; else stats.OnTargetAway++;
+                            double keepX = team == 0 ? 0.91 : 0.09;
+                            Add(new SimEvent { Clock = t, Type = SimEventType.Save, Team = 1 - team, BallX = keepX, BallY = goalY, Phase = ph, Dur = 0.9, Text = $"🧤 ¡Atajó {GkName(1 - team)}!" });
+                            if (rng.NextDouble() < 0.5) { if (team == 0) stats.CornersHome++; else stats.CornersAway++; }
+                        }
+                        else if (r < 0.63)
+                        {
+                            // AL PALO: pega en el poste y sale
+                            double postX = team == 0 ? 0.95 : 0.05;
+                            double postY = goalY < 0.5 ? 0.40 : 0.60;
+                            Add(new SimEvent { Clock = t, Type = SimEventType.Post, Team = team, BallX = postX, BallY = postY, Phase = ph, Dur = 0.9, Text = $"😱 ¡{shooter} al palo!" });
+                        }
+                        else
+                        {
+                            // AFUERA: desviado, la pelota se va lejos del arco
+                            double wideX = team == 0 ? 0.97 : 0.03;
+                            double wideY = rng.NextDouble() < 0.5 ? 0.22 : 0.78;
+                            Add(new SimEvent { Clock = t, Type = SimEventType.Miss, Team = team, BallX = wideX, BallY = wideY, Phase = ph, Dur = 0.6, Text = $"Remate desviado de {shooter}" });
+                        }
                         poss = 1 - team;
                     }
                 }
@@ -158,19 +189,22 @@ public static class MatchSimulator
             }
         }
 
-        // Primer tiempo con pausa de hidratación al minuto 30
-        Period(0, 30 * 60, MatchPhase.First);
-        Add(new SimEvent { Clock = 30 * 60, Type = SimEventType.HydrationBreak, BallX = 0.5, BallY = 0.5, Phase = MatchPhase.First, Dur = 1.4, Text = "💧 Pausa de hidratación" });
-        Period(30 * 60, 45 * 60, MatchPhase.First);
+        // 1º TIEMPO — pausa de hidratación al minuto 22 (regla Mundial 2026)
+        Period(0, 22 * 60, MatchPhase.First);
+        Add(new SimEvent { Clock = 22 * 60, Type = SimEventType.HydrationBreak, BallX = 0.5, BallY = 0.5, Phase = MatchPhase.First, Dur = 1.4, Text = "💧 Pausa de hidratación (min 22)" });
+        Period(22 * 60, 45 * 60, MatchPhase.First);
+        int add1 = 1 + rng.Next(4);   // 1..4 min de añadido
+        Period(45 * 60, (45 + add1) * 60, MatchPhase.First);
+        Add(new SimEvent { Clock = (45 + add1) * 60, Type = SimEventType.HalfTime, BallX = 0.5, BallY = 0.5, Phase = MatchPhase.Half, Dur = 1.6, Big = true, Text = $"⏸ Entretiempo · {score[0]}-{score[1]}" });
 
-        Add(new SimEvent { Clock = 45 * 60, Type = SimEventType.HalfTime, BallX = 0.5, BallY = 0.5, Phase = MatchPhase.Half, Dur = 1.6, Big = true, Text = $"⏸ Entretiempo · {score[0]}-{score[1]}" });
+        // 2º TIEMPO — pausa de hidratación al minuto 67 (22' del 2T)
         Add(new SimEvent { Clock = 45 * 60, Type = SimEventType.SecondHalf, BallX = 0.5, BallY = 0.5, Phase = MatchPhase.Second, Dur = 0.8, Text = "Arranca el segundo tiempo" });
-
-        Period(45 * 60, 75 * 60, MatchPhase.Second);
-        Add(new SimEvent { Clock = 75 * 60, Type = SimEventType.HydrationBreak, BallX = 0.5, BallY = 0.5, Phase = MatchPhase.Second, Dur = 1.4, Text = "💧 Pausa de hidratación" });
-        Period(75 * 60, 90 * 60, MatchPhase.Second);
-
-        Add(new SimEvent { Clock = 90 * 60, Type = SimEventType.FullTime, BallX = 0.5, BallY = 0.5, Phase = MatchPhase.Second, Dur = 1.4, Big = true, Text = $"⏱ 90' · {score[0]}-{score[1]}" });
+        Period(45 * 60, 67 * 60, MatchPhase.Second);
+        Add(new SimEvent { Clock = 67 * 60, Type = SimEventType.HydrationBreak, BallX = 0.5, BallY = 0.5, Phase = MatchPhase.Second, Dur = 1.4, Text = "💧 Pausa de hidratación (min 67)" });
+        Period(67 * 60, 90 * 60, MatchPhase.Second);
+        int add2 = 2 + rng.Next(5);   // 2..6 min de añadido
+        Period(90 * 60, (90 + add2) * 60, MatchPhase.Second);
+        Add(new SimEvent { Clock = (90 + add2) * 60, Type = SimEventType.FullTime, BallX = 0.5, BallY = 0.5, Phase = MatchPhase.Second, Dur = 1.4, Big = true, Text = $"⏱ Final del partido · {score[0]}-{score[1]}" });
 
         bool extra = false, shootout = false;
         int homePens = 0, awayPens = 0;
@@ -191,32 +225,36 @@ public static class MatchSimulator
             double convH = 0.72 + (home.Overall - away.Overall) / 500.0;
             double convA = 0.72 + (away.Overall - home.Overall) / 500.0;
             int kh = 0, ka = 0;
+            var hTakers = TakerOrder(homeStarters, homeName);
+            var aTakers = TakerOrder(awayStarters, awayName);
 
-            SimEvent Pen(int team, bool scored, string name) => new()
+            SimEvent Pen(int team, bool scored, int kickIdx) => new()
             {
                 Clock = 120 * 60,
                 Type = scored ? SimEventType.PenaltyGoal : SimEventType.PenaltyMiss,
                 Team = team, BallX = team == 0 ? 0.99 : 0.01, BallY = 0.5,
-                Phase = MatchPhase.Shootout, Dur = 1.0, Big = scored,
-                Text = scored ? $"✅ {name} anota  ({homePens}-{awayPens})" : $"❌ {name} la falla  ({homePens}-{awayPens})",
+                Phase = MatchPhase.Shootout, Dur = 1.1, Big = scored,
+                Text = scored
+                    ? $"✅ {(team == 0 ? hTakers : aTakers)[kickIdx % (team == 0 ? hTakers : aTakers).Count]} anota  ({homePens}-{awayPens})"
+                    : $"❌ {GoalkeeperName(team == 0 ? awayStarters : homeStarters)} le ataja a {(team == 0 ? hTakers : aTakers)[kickIdx % (team == 0 ? hTakers : aTakers).Count]}  ({homePens}-{awayPens})",
             };
 
             bool done = false;
             for (int i = 0; i < 5 && !done; i++)
             {
-                bool s = rng.NextDouble() < convH; if (s) homePens++; kh++;
-                Add(Pen(0, s, homeName));
+                bool s = rng.NextDouble() < convH; if (s) homePens++; int ih = kh; kh++;
+                Add(Pen(0, s, ih));
                 if (homePens > awayPens + (5 - ka) || awayPens > homePens + (5 - kh)) { done = true; break; }
 
-                bool s2 = rng.NextDouble() < convA; if (s2) awayPens++; ka++;
-                Add(Pen(1, s2, awayName));
+                bool s2 = rng.NextDouble() < convA; if (s2) awayPens++; int ia = ka; ka++;
+                Add(Pen(1, s2, ia));
                 if (homePens > awayPens + (5 - ka) || awayPens > homePens + (5 - kh)) { done = true; break; }
             }
             int guard = 0;
             while (homePens == awayPens && guard++ < 20)
             {
-                bool s = rng.NextDouble() < convH; if (s) homePens++; kh++; Add(Pen(0, s, homeName));
-                bool s2 = rng.NextDouble() < convA; if (s2) awayPens++; ka++; Add(Pen(1, s2, awayName));
+                bool s = rng.NextDouble() < convH; if (s) homePens++; Add(Pen(0, s, kh)); kh++;
+                bool s2 = rng.NextDouble() < convA; if (s2) awayPens++; Add(Pen(1, s2, ka)); ka++;
             }
             if (homePens == awayPens) homePens++;
         }
@@ -252,5 +290,30 @@ public static class MatchSimulator
         double roll = rng.NextDouble() * total;
         foreach (var (p, w) in weighted) { roll -= w; if (roll <= 0) return p.Name; }
         return weighted[^1].p.Name;
+    }
+
+    // Un defensor/mediocampista (el que suele cometer la falta).
+    private static string PickDefender(IReadOnlyList<Player> starters, Random rng)
+    {
+        if (starters.Count == 0) return "N°4";
+        var pool = starters.Where(p => p.Pos is Position.DEF or Position.MID).ToList();
+        if (pool.Count == 0) pool = starters.ToList();
+        return pool[rng.Next(pool.Count)].Name;
+    }
+
+    private static string GoalkeeperName(IReadOnlyList<Player> starters)
+    {
+        var gk = starters.FirstOrDefault(p => p.Pos == Position.GK);
+        return gk?.Name ?? "el arquero";
+    }
+
+    // Orden de pateadores de penal: delanteros primero, luego mediocampistas.
+    private static List<string> TakerOrder(IReadOnlyList<Player> starters, string fallback)
+    {
+        if (starters is null || starters.Count == 0) return new() { fallback };
+        return starters
+            .OrderByDescending(p => p.Pos == Position.FWD ? 3 : p.Pos == Position.MID ? 2 : p.Pos == Position.DEF ? 1 : 0)
+            .ThenByDescending(p => p.Rating)
+            .Select(p => p.Name).ToList();
     }
 }

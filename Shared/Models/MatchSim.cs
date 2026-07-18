@@ -4,7 +4,7 @@ namespace OnceDeOro.Models;
 public enum SimEventType
 {
     KickOff, Pass, Carry, Tackle, Foul, Yellow, Red, Shot, Save, Post, Miss, Goal,
-    Corner, Offside, HydrationBreak, HalfTime, SecondHalf, FullTime,
+    Corner, Offside, Injury, HydrationBreak, HalfTime, SecondHalf, FullTime,
     ExtraTimeStart, ShootoutStart, PenaltyGoal, PenaltyMiss, End
 }
 
