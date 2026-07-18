@@ -330,6 +330,7 @@ a { color: inherit; text-decoration: none; }
    ============================================================ */
 .pitch {
     position: relative; aspect-ratio: 3 / 4; max-width: 480px; margin: 0 auto; border-radius: 20px; overflow: hidden;
+    container-type: inline-size;   /* los jugadores se dimensionan según el ANCHO real de la cancha */
     background:
         repeating-linear-gradient(0deg, rgba(255, 255, 255, .04) 0 8%, transparent 8% 16%),
         linear-gradient(180deg, #1c8a4d, #0e6034);
@@ -337,20 +338,21 @@ a { color: inherit; text-decoration: none; }
 }
 .pitch::before { content: ""; position: absolute; inset: 5%; border: 2px solid rgba(255, 255, 255, .25); border-radius: 8px; }
 .pitch::after { content: ""; position: absolute; left: 5%; right: 5%; top: 50%; height: 2px; background: rgba(255, 255, 255, .25); }
-.pitch__circle { position: absolute; left: 50%; top: 50%; width: 90px; height: 90px; transform: translate(-50%, -50%); border: 2px solid rgba(255, 255, 255, .25); border-radius: 50%; }
-.pitch__slot { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 4px; width: 76px; cursor: pointer; }
+.pitch__circle { position: absolute; left: 50%; top: 50%; width: 19cqw; height: 19cqw; transform: translate(-50%, -50%); border: 2px solid rgba(255, 255, 255, .25); border-radius: 50%; }
+/* ancho del slot = ~1/5.6 de la cancha → 5 en fila entran sin amontonarse ni recortarse */
+.pitch__slot { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 3px; width: 17.5cqw; max-width: 84px; cursor: pointer; }
 .dot-player {
-    width: 46px; height: 46px; border-radius: 50%; display: grid; place-content: center;
-    font-family: var(--font-display); font-size: 19px; color: #10140b;
+    width: clamp(30px, 10cqw, 48px); aspect-ratio: 1; border-radius: 50%; display: grid; place-content: center;
+    font-family: var(--font-display); font-size: clamp(13px, 4.1cqw, 20px); color: #10140b;
     background: linear-gradient(160deg, var(--gold-2), var(--gold) 65%, var(--gold-deep));
     border: 2px solid rgba(255, 255, 255, .55); box-shadow: 0 6px 16px -6px rgba(0, 0, 0, .7);
 }
-.dot-player.empty { background: rgba(0, 0, 0, .28); color: rgba(255, 255, 255, .55); border-style: dashed; font-size: 22px; font-family: var(--font-head); }
+.dot-player.empty { background: rgba(0, 0, 0, .28); color: rgba(255, 255, 255, .55); border-style: dashed; font-family: var(--font-head); }
 .dot-player.reserve { background: rgba(120, 140, 170, .35); color: #e6ecf4; border-style: dashed; border-color: rgba(255, 255, 255, .4); }
 .dot-player.silver { background: linear-gradient(160deg, #eef2f7, #b8c2d0 65%, #8794a5); }
 .dot-player.bronze { background: linear-gradient(160deg, #ffcfa0, #cd8a52 65%, #9c5a2c); }
-.pitch__name { font-family: var(--font-head); font-size: 11.5px; color: #fff; text-shadow: 0 1px 3px rgba(0, 0, 0, .8); white-space: nowrap; max-width: 84px; overflow: hidden; text-overflow: ellipsis; }
-.pitch__pos { font-family: var(--font-head); font-size: 9px; font-weight: 600; letter-spacing: .06em; padding: 1px 6px; border-radius: 5px; }
+.pitch__name { font-family: var(--font-head); font-size: clamp(9px, 2.6cqw, 12px); line-height: 1.05; color: #fff; text-shadow: 0 1px 3px rgba(0, 0, 0, .85); white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; text-align: center; }
+.pitch__pos { font-family: var(--font-head); font-size: clamp(7.5px, 2.1cqw, 9.5px); font-weight: 600; letter-spacing: .04em; padding: 1px 5px; border-radius: 5px; }
 .pitch__pos.pos--GK { color: #ffd76a; background: rgba(245, 197, 66, .22); }
 .pitch__pos.pos--DEF { color: #7fd1ff; background: rgba(78, 163, 255, .22); }
 .pitch__pos.pos--MID { color: #8ff0c8; background: rgba(52, 211, 177, .22); }

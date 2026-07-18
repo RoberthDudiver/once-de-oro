@@ -242,19 +242,39 @@ public sealed class GameService
         State.Money -= c.EntryFee;
         var run = new RunState { CompId = compId };
 
-        // Calendario: 3 rivales de grupo + un rival por ronda eliminatoria (más fuertes al final).
-        var pool = c.Rivals.OrderBy(_ => _rng.Next()).ToList();
-        for (int i = 0; i < 3; i++)
-            run.Schedule.Add(Snap(pool[i % pool.Count]));
-
-        var strong = c.Rivals.OrderByDescending(r => r.Strength).ToList();
+        // Fixture SIN repetir equipos: se sortea todo el torneo de un pool sin reemplazo.
+        // - Los MÁS FUERTES se reservan para las eliminatorias (dificultad creciente, final = el mejor).
+        // - El grupo se arma con rivales más accesibles del resto.
         int ko = c.KnockoutRounds.Length;
+        var byStrength = c.Rivals.OrderBy(r => r.Strength).ToList();
+
+        // Los 'ko' equipos más fuertes → una ronda cada uno (ascendente: primera ronda el más flojo, final el más fuerte).
+        int koTake = Math.Min(ko, Math.Max(0, byStrength.Count - 3));
+        var koTeams = byStrength.Skip(Math.Max(0, byStrength.Count - koTake)).ToList();
+        var koNames = koTeams.Select(t => t.Name).ToHashSet();
+
+        // Candidatos de grupo: el resto, barajado. Nunca reutiliza un rival de eliminatorias.
+        var groupPool = byStrength.Where(t => !koNames.Contains(t.Name))
+                                  .OrderBy(_ => _rng.Next()).ToList();
+
+        var used = new HashSet<string>();
+        void AddUnique(IEnumerable<RivalTeam> src)
+        {
+            foreach (var r in src)
+            {
+                if (used.Add(r.Name)) { run.Schedule.Add(Snap(r)); return; }
+            }
+        }
+
+        // 3 rivales de grupo, distintos entre sí.
+        for (int i = 0; i < 3; i++)
+            AddUnique(groupPool.Skip(i).Concat(groupPool));
+
+        // Un rival por ronda eliminatoria, del más flojo al más fuerte, sin repetir.
         for (int i = 0; i < ko; i++)
         {
-            // rondas más profundas → rivales más fuertes
-            int idx = Math.Min(strong.Count - 1, (ko - 1 - i));
-            var pick = strong[Math.Clamp(idx + _rng.Next(-1, 2), 0, strong.Count - 1)];
-            run.Schedule.Add(Snap(pick));
+            var order = koTeams.Skip(i).Concat(koTeams).Concat(groupPool);
+            AddUnique(order);
         }
 
         State.Run = run;
