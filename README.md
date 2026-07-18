@@ -1,6 +1,6 @@
 # ⚽ Once de Oro — Manager de Fútbol
 
-Juego web tipo **manager de fútbol** inspirado en [7a0.com.br](https://7a0.com.br), pero con un giro propio: **armás tu equipo desde cero con un presupuesto, comprás y vendés jugadores en el mercado, entrás a torneos, cobrás premios y reinvertís** para construir un equipo cada vez más fuerte.
+Juego web tipo **manager de fútbol** con un giro propio: **armás tu equipo desde cero con un presupuesto, comprás y vendés jugadores en el mercado, entrás a torneos, cobrás premios y reinvertís** para construir un equipo cada vez más fuerte.
 
 Estética **broadcast premium** (TV deportiva): dorados, glassmorphism, tipografía condensada, marcador animado y feed de goles en vivo.
 

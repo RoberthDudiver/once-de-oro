@@ -13,11 +13,12 @@
             <div class="topbar__sub">@Loc["Once de Oro · Manager"]</div>
         </div>
         <div class="topbar__spacer"></div>
-        <div class="lang" title="@(Loc["Idioma"])">
+        <div class="lang" title="@(Loc["Idioma"])" aria-label="@(Loc["Idioma"])">
             @foreach (var l in Loc.Languages)
             {
                 <button class="lang__btn @(Loc.Lang == l.Code ? "on" : "")"
-                        title="@l.Name" @onclick="() => ChangeLang(l.Code)">@l.Flag</button>
+                        title="@l.Name" aria-pressed="@(Loc.Lang == l.Code)"
+                        @onclick="() => ChangeLang(l.Code)">@l.Label</button>
             }
         </div>
         <div class="money" title="@Loc["Presupuesto disponible"]">

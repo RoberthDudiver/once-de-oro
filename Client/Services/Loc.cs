@@ -15,11 +15,15 @@ public sealed class Loc
     public string Lang { get; private set; } = "es";
     public event Action? Changed;
 
-    public static readonly (string Code, string Flag, string Name)[] Languages =
+    /// <summary>
+    /// Idiomas disponibles. Se muestra el CÓDIGO (ES/EN/PT) y no un emoji de bandera
+    /// porque Windows no dibuja las banderas: se veían como letras sueltas ilegibles.
+    /// </summary>
+    public static readonly (string Code, string Label, string Name)[] Languages =
     {
-        ("es", "🇪🇸", "Español"),
-        ("en", "🇬🇧", "English"),
-        ("pt", "🇧🇷", "Português"),
+        ("es", "ES", "Español"),
+        ("en", "EN", "English"),
+        ("pt", "PT", "Português"),
     };
 
     public async Task LoadAsync()
@@ -157,6 +161,7 @@ public sealed class Loc
         ["Grupos + eliminatorias"] = "Groups + knockout",
         ["Tabla de posiciones"] = "League table",
         ["Temporada terminada"] = "Season finished",
+        ["Fichado"] = "Taken",
         ["Liga Argentina"] = "Argentine League",
         ["Premier League"] = "Premier League",
         ["La Liga"] = "La Liga",
@@ -401,6 +406,7 @@ public sealed class Loc
         ["Grupos + eliminatorias"] = "Grupos + mata-mata",
         ["Tabla de posiciones"] = "Tabela de classificação",
         ["Temporada terminada"] = "Temporada encerrada",
+        ["Fichado"] = "Contratado",
         ["Liga Argentina"] = "Campeonato Argentino",
         ["Copa Argentina"] = "Copa Argentina",
         ["Copa del Rey"] = "Copa del Rey",

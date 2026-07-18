@@ -45,9 +45,18 @@ public sealed class DuelHub : Hub
 
     public async Task SubmitTeam(TeamDto team)
     {
-        _rooms.SetTeam(Context.ConnectionId, team);
+        var (ok, error) = _rooms.SetTeam(Context.ConnectionId, team);
         var room = _rooms.RoomOf(Context.ConnectionId);
         if (room is null) return;
+
+        if (!ok)
+        {
+            // Un rival ya fichó a alguno de esos jugadores: no se acepta el equipo.
+            await Clients.Caller.SendAsync("Error", error);
+            await _rooms.BroadcastState(room);
+            return;
+        }
+
         await _rooms.BroadcastState(room);
         await _rooms.MaybeRun(room);
     }

@@ -55,6 +55,12 @@ public sealed class RoomStateDto
     public string Title { get; set; } = "";         // p.ej. "Final", "Mejor de 3 (1-0)"
     public string? Pair0 { get; set; }              // ids del enfrentamiento actual
     public string? Pair1 { get; set; }
+
+    /// <summary>
+    /// Ids de jugadores ya fichados por algún rival: nadie más puede usarlos.
+    /// El cliente los muestra bloqueados y el servidor además lo hace cumplir.
+    /// </summary>
+    public List<string> TakenPlayerIds { get; set; } = new();
 }
 
 /// <summary>Datos de arranque de un partido dentro del bracket/serie.</summary>

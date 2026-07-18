@@ -145,7 +145,7 @@ else if (Mp.Room.Phase == "building")
     }
     else
     {
-        <DraftBuilder Budget="room.Config.Budget" OnConfirm="SubmitTeam" />
+        <DraftBuilder Budget="room.Config.Budget" Taken="room.TakenPlayerIds" OnConfirm="SubmitTeam" />
     }
 }
 else if (Mp.Room.Phase == "playing")

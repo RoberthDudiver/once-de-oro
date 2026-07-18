@@ -1,5 +1,6 @@
 @* Arma un XI desde cero con un presupuesto compartido (modo Draft online) *@
 @using OnceDeOro.Multiplayer
+@inject Loc Loc
 
 <div class="card card--pad mb">
     <div class="row wrap" style="justify-content:space-between;">
@@ -65,10 +66,18 @@
     @foreach (var p in Market())
     {
         var open = Picked.Count(x => x.Pos == p.Pos) < Form.SlotsFor(p.Pos);
-        var canAdd = open && Remaining >= p.Value;
+        var taken = Taken.Contains(p.Id);            // ya lo fichó un rival
+        var canAdd = open && !taken && Remaining >= p.Value;
         <PlayerCard P="p" Price="p.Value">
             <Actions>
-                <button class="icon-btn icon-btn--buy" disabled="@(!canAdd)" @onclick="() => Add(p)">＋</button>
+                @if (taken)
+                {
+                    <span class="pill" style="font-size:11px; color:var(--red); border-color:rgba(255,90,106,.4);">@Loc["Fichado"]</span>
+                }
+                else
+                {
+                    <button class="icon-btn icon-btn--buy" disabled="@(!canAdd)" @onclick="() => Add(p)">＋</button>
+                }
             </Actions>
         </PlayerCard>
     }
@@ -77,6 +86,9 @@
 @code {
     [Parameter, EditorRequired] public int Budget { get; set; }
     [Parameter] public EventCallback<TeamDto> OnConfirm { get; set; }
+
+    /// <summary>Jugadores que ya fichó un rival: no se pueden repetir en la sala.</summary>
+    [Parameter] public IReadOnlyCollection<string> Taken { get; set; } = Array.Empty<string>();
 
     private string FormationName = "4-3-3";
     private TeamStyle Style = TeamStyle.Equilibrado;

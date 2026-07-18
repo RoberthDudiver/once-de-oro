@@ -80,12 +80,39 @@ public sealed class RoomManager
         return (true, "");
     }
 
-    public void SetTeam(string connId, TeamDto team)
+    /// <summary>
+    /// Registra el equipo de un jugador. Un mismo futbolista NO puede estar en dos
+    /// equipos de la sala: si alguien ya lo fichó, se rechaza el envío y se avisa
+    /// cuáles están ocupados (el que llega primero se lo queda).
+    /// </summary>
+    public (bool ok, string? error) SetTeam(string connId, TeamDto team)
     {
         var room = RoomOf(connId);
         var m = room?.Members.FirstOrDefault(x => x.Id == connId);
-        if (m is not null) m.Team = team;
+        if (room is null || m is null) return (false, "No estás en una sala.");
+
+        var taken = TakenBy(room, exceptConnId: connId);
+        var clash = team.Starters
+                        .Where(s => !string.IsNullOrEmpty(s.Id) && taken.Contains(s.Id))
+                        .Select(s => s.Name)
+                        .Distinct()
+                        .ToList();
+
+        if (clash.Count > 0)
+            return (false, $"Ya los fichó tu rival: {string.Join(", ", clash)}. Elegí otros.");
+
+        m.Team = team;
+        return (true, null);
     }
+
+    /// <summary>Ids de jugadores ya tomados por los demás miembros de la sala.</summary>
+    private static HashSet<string> TakenBy(Room room, string? exceptConnId = null) =>
+        room.Members
+            .Where(x => x.Id != exceptConnId && x.Team is not null)
+            .SelectMany(x => x.Team!.Starters)
+            .Select(s => s.Id)
+            .Where(id => !string.IsNullOrEmpty(id))
+            .ToHashSet();
 
     public void Disconnect(string connId)
     {
@@ -121,6 +148,7 @@ public sealed class RoomManager
             SeriesWins = m.SeriesWins,
             Eliminated = m.Eliminated,
         }).ToList(),
+        TakenPlayerIds = TakenBy(room).ToList(),
     };
 
     public Task BroadcastState(Room room) =>
