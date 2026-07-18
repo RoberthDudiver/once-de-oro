@@ -19,6 +19,9 @@ else
     <div class="grid team-grid">
         <div>
             <div class="card card--pad mb">
+                <div class="muted" style="font-size:12px; letter-spacing:.2em; text-transform:uppercase; margin-bottom:8px;">Nombre del club</div>
+                <input class="search" style="margin:0 0 14px;" maxlength="26" placeholder="Nombre de tu equipo"
+                       value="@Game.State.ClubName" @onchange="OnNameChange" />
                 <div class="muted" style="font-size:12px; letter-spacing:.2em; text-transform:uppercase; margin-bottom:8px;">Formación</div>
                 <div class="seg wrap">
                     @foreach (var f in Formation.All)
@@ -42,8 +45,9 @@ else
                     <div class="pitch__slot" style="left:@(slot.X)%; top:@(slot.Y)%;"
                          @onclick="() => { if (slot.Player is Player sp && !Game.IsReserve(sp)) Game.ToggleStarter(sp.Id); }">
                         @{ var pl = slot.Player!; var res = Game.IsReserve(pl); }
+                        <div class="pitch__pos pos--@slot.Pos">@slot.Pos.Label()</div>
                         <div class="dot-player @(res ? "reserve" : Tier(pl))">@pl.Rating</div>
-                        <div class="pitch__name">@(res ? "Cantera" : Short(pl.Name))</div>
+                        <div class="pitch__name">@(res ? "libre" : Short(pl.Name))</div>
                     </div>
                 }
             </div>
@@ -103,6 +107,7 @@ else
 
 @code {
     private Position? PlantelPos;
+    private void OnNameChange(ChangeEventArgs e) => Game.SetClubName(e.Value?.ToString() ?? "");
     private record Slot(Position Pos, double X, double Y, Player? Player);
 
     private static readonly Dictionary<Position, double> LineY = new()

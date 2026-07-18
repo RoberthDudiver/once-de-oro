@@ -7,6 +7,11 @@
         <div class="goalflash" @key="_goalId"><span>@_goalText</span></div>
     }
 
+    @if (!string.IsNullOrEmpty(Round))
+    {
+        <div class="mf__round">@Round</div>
+    }
+
     <div class="mf__hud">
         <div class="mf__team">
             <span class="mf__flag">@HomeFlag</span>
@@ -27,6 +32,18 @@
         <span class="mf__min">@ClockLabel</span>
         @if (_pens is not null) { <span class="mf__pens">PEN @_pens</span> }
     </div>
+
+    @if (!_done)
+    {
+        <div class="mf__controls mf__controls--top">
+            <div class="seg">
+                <button class="@(_speed == 1.0 ? "on" : "")" @onclick="() => _speed = 1.0">1×</button>
+                <button class="@(_speed == 0.5 ? "on" : "")" @onclick="() => _speed = 0.5">2×</button>
+                <button class="@(_speed == 0.25 ? "on" : "")" @onclick="() => _speed = 0.25">4×</button>
+            </div>
+            <button class="btn btn--ghost" @onclick="() => _skip = true">⏩ Saltar al final</button>
+        </div>
+    }
 
     @if (_phase == MatchPhase.Shootout)
     {
@@ -119,18 +136,6 @@
             }
         </div>
     }
-
-    @if (!_done)
-    {
-        <div class="mf__controls">
-            <div class="seg">
-                <button class="@(_speed == 1.0 ? "on" : "")" @onclick="() => _speed = 1.0">1×</button>
-                <button class="@(_speed == 0.5 ? "on" : "")" @onclick="() => _speed = 0.5">2×</button>
-                <button class="@(_speed == 0.25 ? "on" : "")" @onclick="() => _speed = 0.25">4×</button>
-            </div>
-            <button class="btn btn--ghost" @onclick="() => _skip = true">⏩ Saltar al final</button>
-        </div>
-    }
 </div>
 
 @code {
@@ -143,6 +148,7 @@
     [Parameter] public string AwayFormationName { get; set; } = "4-3-3";
     [Parameter] public IReadOnlyList<Player>? HomeStarters { get; set; }
     [Parameter] public IReadOnlyList<Player>? AwayStarters { get; set; }
+    [Parameter] public string? Round { get; set; }
     [Parameter] public EventCallback OnFinished { get; set; }
 
     private readonly double[] _hx = new double[11], _hy = new double[11], _ax = new double[11], _ay = new double[11];

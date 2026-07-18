@@ -269,8 +269,27 @@ public sealed class GameService
         var r = State.Run!;
         var c = ActiveComp!;
         bool group = r.Stage < 3;
-        string name = group ? $"Fase de grupos · J{r.Stage + 1}" : c.KnockoutRounds[r.Stage - 3];
+        string name = group ? $"Fase de grupos · Jornada {r.Stage + 1}" : FullRound(c.KnockoutRounds[r.Stage - 3]);
         return (group, name, r.Stage, 3 + c.KnockoutRounds.Length);
+    }
+
+    /// <summary>Nombre completo de la ronda para que se lea claro.</summary>
+    public static string FullRound(string round) => round switch
+    {
+        "Octavos" => "OCTAVOS DE FINAL",
+        "Cuartos" => "CUARTOS DE FINAL",
+        "Semifinal" => "SEMIFINAL",
+        "Final" => "LA FINAL",
+        _ => round.ToUpperInvariant()
+    };
+
+    /// <summary>Cambia el nombre del club.</summary>
+    public void SetClubName(string name)
+    {
+        var clean = (name ?? "").Trim();
+        if (clean.Length == 0) clean = "Mi Equipo";
+        State.ClubName = clean.Length > 26 ? clean[..26] : clean;
+        Commit();
     }
 
     /// <summary>Simula el próximo partido SIN mutar el estado (para animar antes de aplicar).</summary>
@@ -437,11 +456,27 @@ public sealed class GameService
             ? $"{r.HomeGoals}-{r.AwayGoals} ({r.HomePens}-{r.AwayPens} pen)"
             : $"{r.HomeGoals}-{r.AwayGoals}";
 
-    /// <summary>Cierra el torneo terminado y limpia el estado para volver al mercado.</summary>
+    /// <summary>Cierra el torneo terminado, guarda el historial y limpia el estado.</summary>
     public void ConcludeTournament()
     {
+        if (State.Run is { } run)
+        {
+            var c = CompetitionDatabase.ById(run.CompId);
+            string outcome = run.Champion
+                ? (run.CleanRun ? "🏆 CAMPEÓN (invicto, sin recibir goles)" : "🏆 CAMPEÓN")
+                : $"eliminado en {StageReached(run, c)}";
+            State.History.Insert(0, $"{c.Emblem} {c.Name} — {outcome} · GF {run.GoalsFor}/GC {run.GoalsAgainst} · +${run.MoneyWon}M");
+            if (State.History.Count > 25) State.History.RemoveAt(State.History.Count - 1);
+        }
         State.Run = null;
         LastMatch = null;
         Commit();
+    }
+
+    private static string StageReached(RunState run, Competition c)
+    {
+        if (run.Stage < 3) return "fase de grupos";
+        int ko = run.Stage - 3;
+        return ko < c.KnockoutRounds.Length ? FullRound(c.KnockoutRounds[ko]).ToLowerInvariant() : "eliminatorias";
     }
 }

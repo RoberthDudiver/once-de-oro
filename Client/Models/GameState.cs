@@ -47,6 +47,7 @@ public sealed class GameState
     public int GoalsAgainst { get; set; }
     public int BestRatingReached { get; set; }
     public List<string> Honours { get; set; } = new();   // trofeos ganados
+    public List<string> History { get; set; } = new();    // historial de torneos jugados
     public bool AchievedSevenZero { get; set; }           // logro legendario
 
     public RunState? Run { get; set; }

@@ -87,6 +87,7 @@ else
                     HomeName="@Game.State.ClubName" HomeFlag="⚽" HomeFormationName="@Game.Formation.Name"
                     AwayName="@opp.Name" AwayFlag="@opp.Flag"
                     HomeStarters="Game.LastHomeStarters" AwayStarters="Game.LastAwaySquad"
+                    Round="@($"{comp.Emblem} {comp.Name} · {_stageLabel}")"
                     OnFinished="OnMatchFinished" />
     }
     else if (_phase == Phase.Done && _result is not null)
