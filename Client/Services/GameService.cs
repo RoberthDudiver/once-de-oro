@@ -15,6 +15,7 @@ public sealed class GameService
     private const string SaveKey = "once-de-oro:save:v1";
     private readonly IJSRuntime _js;
     private readonly MatchEngine _engine;
+    private readonly Loc _loc;
     private readonly Random _rng = new();
 
     private static readonly JsonSerializerOptions JsonOpts = new(JsonSerializerDefaults.Web)
@@ -29,10 +30,11 @@ public sealed class GameService
     /// <summary>Resultado del último partido jugado (para la pantalla de partido).</summary>
     public MatchResult? LastMatch { get; private set; }
 
-    public GameService(IJSRuntime js, MatchEngine engine)
+    public GameService(IJSRuntime js, MatchEngine engine, Loc loc)
     {
         _js = js;
         _engine = engine;
+        _loc = loc;
     }
 
     // ---------------------------------------------------------------- persistencia
@@ -269,11 +271,13 @@ public sealed class GameService
         var r = State.Run!;
         var c = ActiveComp!;
         bool group = r.Stage < 3;
-        string name = group ? $"Fase de grupos · Jornada {r.Stage + 1}" : FullRound(c.KnockoutRounds[r.Stage - 3]);
+        string name = group
+            ? string.Format(_loc["Fase de grupos · Jornada {0}"], r.Stage + 1)
+            : _loc[FullRound(c.KnockoutRounds[r.Stage - 3])];
         return (group, name, r.Stage, 3 + c.KnockoutRounds.Length);
     }
 
-    /// <summary>Nombre completo de la ronda para que se lea claro.</summary>
+    /// <summary>Nombre completo de la ronda (clave en español para localizar) para que se lea claro.</summary>
     public static string FullRound(string round) => round switch
     {
         "Octavos" => "OCTAVOS DE FINAL",

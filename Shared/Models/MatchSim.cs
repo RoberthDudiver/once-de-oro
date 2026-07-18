@@ -24,7 +24,12 @@ public sealed class SimEvent
     public int Player { get; set; } = -1;     // índice 0..10 del jugador en cuestión
     public double BallX { get; set; } = 0.5;
     public double BallY { get; set; } = 0.5;
-    public string Text { get; set; } = "";    // línea del relato
+    public string Text { get; set; } = "";    // línea del relato (español, fallback)
+    // Datos neutros para reconstruir el relato en cualquier idioma (nombres y marcador no se traducen):
+    public string Actor { get; set; } = "";   // jugador/equipo principal del evento
+    public string Target { get; set; } = "";  // jugador/equipo secundario (víctima, equipo, arquero…)
+    public int ScoreH { get; set; } = -1;      // marcador local al momento (o -1 si no aplica)
+    public int ScoreA { get; set; } = -1;      // marcador visitante al momento
     public MatchPhase Phase { get; set; } = MatchPhase.First;
     public bool Big { get; set; }             // resaltar (gol, tarjeta, penal)
 }

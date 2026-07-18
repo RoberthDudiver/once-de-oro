@@ -6,7 +6,7 @@
 
 <PageTitle>Online — Once de Oro</PageTitle>
 
-<div class="section-title"><span class="dot"></span> Duelo online · jugá contra amigos</div>
+<div class="section-title"><span class="dot"></span> @Loc["Duelo online · jugá contra amigos"]</div>
 
 @if (Mp.Error is not null)
 {
@@ -23,48 +23,48 @@
     @* ---------- Entrada: crear o unirse ---------- *@
     <div class="grid dash-grid">
         <div class="card card--pad">
-            <h3 style="font-size:20px;">Crear una sala</h3>
-            <label class="lbl">Tu nombre</label>
-            <input class="search" style="margin:6px 0 4px;" maxlength="18" placeholder="Tu apodo" @bind="Name" />
+            <h3 style="font-size:20px;">@Loc["Crear una sala"]</h3>
+            <label class="lbl">@Loc["Tu nombre"]</label>
+            <input class="search" style="margin:6px 0 4px;" maxlength="18" placeholder="@Loc["Tu apodo"]" @bind="Name" />
 
-            <label class="lbl">Equipos</label>
+            <label class="lbl">@Loc["Equipos"]</label>
             <div class="seg wrap" style="margin:6px 0 12px;">
-                <button class="@(Mode == TeamMode.Draft ? "on" : "")" @onclick="() => Mode = TeamMode.Draft">Draft parejo</button>
-                <button class="@(Mode == TeamMode.Career ? "on" : "")" @onclick="() => Mode = TeamMode.Career">Equipo de carrera</button>
+                <button class="@(Mode == TeamMode.Draft ? "on" : "")" @onclick="() => Mode = TeamMode.Draft">@Loc["Draft parejo"]</button>
+                <button class="@(Mode == TeamMode.Career ? "on" : "")" @onclick="() => Mode = TeamMode.Career">@Loc["Equipo de carrera"]</button>
             </div>
 
-            <label class="lbl">Formato</label>
+            <label class="lbl">@Loc["Formato"]</label>
             <div class="seg wrap" style="margin:6px 0 12px;">
-                <button class="@(Fmt == MatchFormat.Single ? "on" : "")" @onclick="() => Fmt = MatchFormat.Single">Único</button>
-                <button class="@(Fmt == MatchFormat.BestOf3 ? "on" : "")" @onclick="() => Fmt = MatchFormat.BestOf3">Mejor de 3</button>
-                <button class="@(Fmt == MatchFormat.MiniTournament ? "on" : "")" @onclick="() => Fmt = MatchFormat.MiniTournament">Mini-torneo</button>
+                <button class="@(Fmt == MatchFormat.Single ? "on" : "")" @onclick="() => Fmt = MatchFormat.Single">@Loc["Único"]</button>
+                <button class="@(Fmt == MatchFormat.BestOf3 ? "on" : "")" @onclick="() => Fmt = MatchFormat.BestOf3">@Loc["Mejor de 3"]</button>
+                <button class="@(Fmt == MatchFormat.MiniTournament ? "on" : "")" @onclick="() => Fmt = MatchFormat.MiniTournament">@Loc["Mini-torneo"]</button>
             </div>
 
             @if (Mode == TeamMode.Draft)
             {
-                <label class="lbl">Presupuesto por jugador: <b style="color:var(--gold-2)">$@BudgetVal M</b></label>
+                <label class="lbl">@Loc["Presupuesto por jugador:"] <b style="color:var(--gold-2)">$@BudgetVal M</b></label>
                 <input type="range" min="200" max="900" step="50" @bind="BudgetVal" @bind:event="oninput" style="width:100%; margin:8px 0;" />
             }
             @if (Fmt == MatchFormat.MiniTournament)
             {
-                <label class="lbl">Jugadores</label>
+                <label class="lbl">@Loc["Jugadores"]</label>
                 <div class="seg" style="margin:6px 0 4px;">
                     <button class="@(Cap == 3 ? "on" : "")" @onclick="() => Cap = 3">3</button>
                     <button class="@(Cap == 4 ? "on" : "")" @onclick="() => Cap = 4">4</button>
                 </div>
             }
 
-            <button class="btn btn--gold btn--block mt" @onclick="Create">🌐 Crear sala</button>
+            <button class="btn btn--gold btn--block mt" @onclick="Create">@Loc["🌐 Crear sala"]</button>
         </div>
 
         <div class="card card--pad">
-            <h3 style="font-size:20px;">Unirse a una sala</h3>
-            <label class="lbl">Tu nombre</label>
-            <input class="search" style="margin:6px 0 12px;" maxlength="18" placeholder="Tu apodo" @bind="Name" />
-            <label class="lbl">Código de sala</label>
+            <h3 style="font-size:20px;">@Loc["Unirse a una sala"]</h3>
+            <label class="lbl">@Loc["Tu nombre"]</label>
+            <input class="search" style="margin:6px 0 12px;" maxlength="18" placeholder="@Loc["Tu apodo"]" @bind="Name" />
+            <label class="lbl">@Loc["Código de sala"]</label>
             <input class="search code-input" style="margin:6px 0 12px;" maxlength="4" placeholder="ABCD" @bind="JoinCode" />
-            <button class="btn btn--ghost btn--block" @onclick="Join">Entrar</button>
-            <p class="muted mt" style="font-size:13px;">Pedile el código de 4 letras a tu amigo que creó la sala.</p>
+            <button class="btn btn--ghost btn--block" @onclick="Join">@Loc["Entrar"]</button>
+            <p class="muted mt" style="font-size:13px;">@Loc["Pedile el código de 4 letras a tu amigo que creó la sala."]</p>
         </div>
     </div>
 }
@@ -73,20 +73,20 @@ else if (Mp.Room.Phase == "lobby")
     @* ---------- Lobby ---------- *@
     var room = Mp.Room;
     <div class="board fade-up" style="text-align:center;">
-        <div class="board__comp">CÓDIGO DE SALA</div>
+        <div class="board__comp">@Loc["Código de sala"]</div>
         <div style="font-family:var(--font-display); font-size:64px; letter-spacing:.14em; color:var(--gold-2);">@room.Code</div>
         <div class="muted">@ModeLabel(room.Config) · @FormatLabel(room.Config)</div>
     </div>
 
-    <div class="section-title"><span class="dot"></span> Jugadores (@room.Members.Count/@room.Config.Capacity)</div>
+    <div class="section-title"><span class="dot"></span> @Loc["Jugadores"] (@room.Members.Count/@room.Config.Capacity)</div>
     <div class="grid grid--cards">
         @foreach (var m in room.Members)
         {
             <div class="pcard">
-                <div class="pcard__rating" data-tier="@(m.Id == room.HostId ? "gold" : "silver")">@(m.Id == Mp.MyId ? "TÚ" : "VS")</div>
+                <div class="pcard__rating" data-tier="@(m.Id == room.HostId ? "gold" : "silver")">@(m.Id == Mp.MyId ? Loc["TÚ"] : "VS")</div>
                 <div class="pcard__body">
                     <div class="pcard__name">@m.Name</div>
-                    <div class="pcard__meta">@(m.Id == room.HostId ? "👑 Anfitrión" : "Invitado")</div>
+                    <div class="pcard__meta">@(m.Id == room.HostId ? Loc["👑 Anfitrión"] : Loc["Invitado"])</div>
                 </div>
             </div>
         }
@@ -95,16 +95,16 @@ else if (Mp.Room.Phase == "lobby")
     @if (Mp.IsHost)
     {
         <button class="btn btn--gold btn--big btn--block mt" disabled="@(room.Members.Count < 2)" @onclick="Mp.StartEventAsync">
-            ▶ Empezar (@room.Members.Count listos)
+            @Loc["▶ Empezar"] (@room.Members.Count)
         </button>
         @if (room.Members.Count < 2)
         {
-            <p class="muted center mt">Esperando que se una al menos un amigo con el código <b>@room.Code</b>…</p>
+            <p class="muted center mt">@Loc["Esperando que se una al menos un amigo…"] <b>@room.Code</b></p>
         }
     }
     else
     {
-        <p class="muted center mt">Esperando que el anfitrión inicie la partida…</p>
+        <p class="muted center mt">@Loc["Esperando que el anfitrión inicie la partida…"]</p>
     }
 }
 else if (Mp.Room.Phase == "building")
@@ -115,14 +115,14 @@ else if (Mp.Room.Phase == "building")
     {
         <div class="card card--pad center">
             <div class="trophy" style="font-size:44px;">✅</div>
-            <h3 style="font-size:22px; margin-top:8px;">¡Equipo listo!</h3>
-            <p class="muted">Esperando al resto…</p>
+            <h3 style="font-size:22px; margin-top:8px;">@Loc["¡Equipo listo!"]</h3>
+            <p class="muted">@Loc["Esperando al resto…"]</p>
             <div class="grid mt" style="gap:8px;">
                 @foreach (var m in room.Members)
                 {
                     <div class="row" style="justify-content:space-between;">
-                        <span>@m.Name @(m.Id == Mp.MyId ? "(vos)" : "")</span>
-                        <span class="pill @(m.HasTeam ? "pill--green" : "")">@(m.HasTeam ? "LISTO ✓" : "armando…")</span>
+                        <span>@m.Name @(m.Id == Mp.MyId ? Loc["(vos)"] : "")</span>
+                        <span class="pill @(m.HasTeam ? "pill--green" : "")">@(m.HasTeam ? Loc["LISTO ✓"] : Loc["armando…"])</span>
                     </div>
                 }
             </div>
@@ -131,16 +131,16 @@ else if (Mp.Room.Phase == "building")
     else if (room.Config.TeamMode == TeamMode.Career)
     {
         <div class="card card--pad">
-            <h3 style="font-size:20px;">Tu equipo de carrera</h3>
+            <h3 style="font-size:20px;">@Loc["Tu equipo de carrera"]</h3>
             @{ var pw = Game.Power; }
             <div class="row wrap mt" style="gap:8px;">
                 <span class="pill pill--gold">GEN @pw.Overall</span>
                 <span class="pill">ATA @pw.Attack</span>
                 <span class="pill">DEF @pw.Defense</span>
                 <span class="pill">@Game.Formation.Name</span>
-                @if (Game.ReserveCount > 0) { <span class="pill">🎓 @Game.ReserveCount cantera</span> }
+                @if (Game.ReserveCount > 0) { <span class="pill">🎓 @Game.ReserveCount @Loc["Cantera"]</span> }
             </div>
-            <button class="btn btn--gold btn--block mt" @onclick="ConfirmCareer">✓ Usar este equipo y estar listo</button>
+            <button class="btn btn--gold btn--block mt" @onclick="ConfirmCareer">@Loc["✓ Usar este equipo y estar listo"]</button>
         </div>
     }
     else
@@ -157,8 +157,8 @@ else if (Mp.Room.Phase == "playing")
         <div class="goalflash" @key="Mp.FlashId"><span>@Mp.FlashText</span></div>
     }
     <div class="board fade-up">
-        <div class="board__comp">@(m?.Title ?? "Partido")</div>
-        <div class="board__stage">@(Mp.ShowResult ? "FINAL" : $"MINUTO {Mp.Minute}'")</div>
+        <div class="board__comp">@(m?.Title ?? Loc["Partido"])</div>
+        <div class="board__stage">@(Mp.ShowResult ? Loc["FINAL"] : $"{Loc["MINUTO"]} {Mp.Minute}'")</div>
         <div class="board__main">
             <div class="board__team">
                 <div class="board__flag">@(m?.HomeFlag ?? "⚽")</div>
@@ -181,7 +181,7 @@ else if (Mp.Room.Phase == "playing")
         <div class="clock"><div class="clock__bar"><div class="clock__fill" style="width:@(Mp.Minute / 90.0 * 100)%"></div></div></div>
         @if (m is not null && Mp.Room.Config.Format != MatchFormat.Single)
         {
-            <div class="center muted" style="margin-top:6px;">Serie: @m.HomeName @SeriesWins(m.HomeId) – @SeriesWins(m.AwayId) @m.AwayName</div>
+            <div class="center muted" style="margin-top:6px;">@Loc["Serie:"] @m.HomeName @SeriesWins(m.HomeId) – @SeriesWins(m.AwayId) @m.AwayName</div>
         }
     </div>
 
@@ -191,7 +191,7 @@ else if (Mp.Room.Phase == "playing")
         var iWon = r.WinnerId == Mp.MyId;
         var iPlayed = m?.HomeId == Mp.MyId || m?.AwayId == Mp.MyId;
         <div class="result-banner @(iWon ? "win" : (iPlayed ? "lose" : ""))">
-            <div class="result-banner__title">@(iPlayed ? (iWon ? "¡GANASTE!" : "PERDISTE") : $"{NameOf(r.WinnerId)} gana")</div>
+            <div class="result-banner__title">@(iPlayed ? (iWon ? Loc["¡GANASTE!"] : Loc["PERDISTE"]) : $"{NameOf(r.WinnerId)} {Loc["gana"]}")</div>
         </div>
     }
 
@@ -216,9 +216,9 @@ else if (Mp.Room.Phase == "done")
     <div class="card card--pad center fade-up" style="border-color:rgba(245,197,66,.5);">
         <div class="trophy">🏆</div>
         <h2 style="font-family:var(--font-display); font-size:38px; color:var(--gold-2); margin-top:6px;">@champ</h2>
-        <p class="muted">gana la contienda online.</p>
+        <p class="muted">@Loc["gana la contienda online."]</p>
         <div class="row wrap" style="justify-content:center; gap:10px; margin-top:16px;">
-            <button class="btn btn--gold" @onclick="Leave">Volver</button>
+            <button class="btn btn--gold" @onclick="Leave">@Loc["Volver"]</button>
         </div>
     </div>
 }
@@ -273,12 +273,12 @@ else if (Mp.Room.Phase == "done")
     private string NameOf(string id) => Mp.Room?.Members.FirstOrDefault(m => m.Id == id)?.Name ?? "—";
     private int SeriesWins(string id) => Mp.Room?.Members.FirstOrDefault(m => m.Id == id)?.SeriesWins ?? 0;
 
-    private static string ModeLabel(RoomConfig c) => c.TeamMode == TeamMode.Draft ? $"Draft ${c.Budget}M" : "Equipo de carrera";
-    private static string FormatLabel(RoomConfig c) => c.Format switch
+    private string ModeLabel(RoomConfig c) => c.TeamMode == TeamMode.Draft ? $"Draft ${c.Budget}M" : Loc["Equipo de carrera"];
+    private string FormatLabel(RoomConfig c) => c.Format switch
     {
-        MatchFormat.Single => "Partido único",
-        MatchFormat.BestOf3 => "Mejor de 3",
-        _ => $"Mini-torneo ({c.Capacity})"
+        MatchFormat.Single => Loc["Partido único"],
+        MatchFormat.BestOf3 => Loc["Mejor de 3"],
+        _ => $"{Loc["Mini-torneo"]} ({c.Capacity})"
     };
 
     public async ValueTask DisposeAsync()

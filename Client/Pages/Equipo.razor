@@ -4,14 +4,14 @@
 
 <PageTitle>Equipo — Once de Oro</PageTitle>
 
-<div class="section-title"><span class="dot"></span> Mi equipo</div>
+<div class="section-title"><span class="dot"></span> @Loc["Mi equipo"]</div>
 
 @if (!Game.Owned.Any())
 {
     <div class="empty">
         <div class="empty__ico">👕</div>
-        <p>No tenés jugadores todavía.</p>
-        <button class="btn btn--gold mt" @onclick='() => Nav.NavigateTo("mercado")'>💰 Ir al mercado</button>
+        <p>@Loc["No tenés jugadores todavía."]</p>
+        <button class="btn btn--gold mt" @onclick='() => Nav.NavigateTo("mercado")'>@Loc["💰 Ir al mercado"]</button>
     </div>
 }
 else
@@ -73,7 +73,7 @@ else
                     else
                     {
                         <span class="pill pill--gold" style="width:100%; justify-content:center; padding:9px;">
-                            🎓 @Game.ReserveCount de cantera cubren los huecos — igual podés jugar
+                            🎓 @Game.ReserveCount @Loc["de cantera cubren los huecos — igual podés jugar"]
                         </span>
                     }
                 </div>

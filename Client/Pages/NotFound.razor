@@ -1,9 +1,10 @@
 @page "/not-found"
 @layout MainLayout
+@inject Loc Loc
 
 <div class="empty" style="padding:80px 20px;">
     <div class="empty__ico">🧭</div>
-    <h2 style="font-family:var(--font-display); font-size:40px;">FUERA DE JUEGO</h2>
-    <p>La página que buscás no existe.</p>
-    <a class="btn btn--gold mt" href="">Volver al inicio</a>
+    <h2 style="font-family:var(--font-display); font-size:40px;">@Loc["FUERA DE JUEGO"]</h2>
+    <p>@Loc["La página que buscás no existe."]</p>
+    <a class="btn btn--gold mt" href="">@Loc["Volver al inicio"]</a>
 </div>

@@ -274,10 +274,42 @@
 
         _st = SnapshotStats(e);
 
-        if (!string.IsNullOrEmpty(e.Text)) _ticker = e.Text;
+        string line = Narrate(e);
+        if (!string.IsNullOrEmpty(line)) _ticker = line;
         if (e.Big || e.Type is SimEventType.HydrationBreak or SimEventType.HalfTime or SimEventType.ExtraTimeStart or SimEventType.ShootoutStart or SimEventType.FullTime or SimEventType.SecondHalf)
-        { _banner = e.Text; _bannerId++; }
+        { _banner = line; _bannerId++; }
         else _banner = null;
+    }
+
+    // Reconstruye el relato en el idioma activo a partir de los datos neutros del evento
+    // (nombres y marcador no se traducen). Cae al Text español si el tipo no está mapeado.
+    private string Narrate(SimEvent e)
+    {
+        string a = Short(e.Actor), tg = Short(e.Target);
+        string F(string es, params object[] args) => string.Format(Loc[es], args);
+        return e.Type switch
+        {
+            SimEventType.KickOff       => Loc["¡Comienza el partido!"],
+            SimEventType.Foul          => F("Falta de {0} sobre {1}", a, tg),
+            SimEventType.Yellow        => "🟨 " + F("Amarilla a {0}", a),
+            SimEventType.Red           => "🟥 " + F("Roja a {0}", a),
+            SimEventType.Injury        => "🚑 " + F("{0} queda golpeado y necesita atención", a),
+            SimEventType.Offside       => "🚩 " + F("Offside · posición adelantada de {0}", a),
+            SimEventType.Shot          => F("Remate de {0} ({1})", a, e.Target),
+            SimEventType.Goal          => "⚽ " + F("¡GOOOL de {0}!", a) + $"  ({e.ScoreH}-{e.ScoreA})",
+            SimEventType.Save          => "🧤 " + F("¡Atajó {0}!", a),
+            SimEventType.Post          => "😱 " + F("¡{0} al palo!", a),
+            SimEventType.Miss          => F("Remate desviado de {0}", a),
+            SimEventType.HydrationBreak=> "💧 " + F("Pausa de hidratación (min {0})", e.Actor),
+            SimEventType.HalfTime      => "⏸ " + Loc["Entretiempo"] + $" · {e.ScoreH}-{e.ScoreA}",
+            SimEventType.SecondHalf    => Loc["Arranca el segundo tiempo"],
+            SimEventType.FullTime      => "⏱ " + (e.Phase == MatchPhase.ExtraSecond ? "120'" : Loc["Final del partido"]) + $" · {e.ScoreH}-{e.ScoreA}",
+            SimEventType.ExtraTimeStart=> "⏳ " + Loc["¡Tiempo suplementario!"],
+            SimEventType.ShootoutStart => "🎯 " + Loc["¡Definición por penales!"],
+            SimEventType.PenaltyGoal   => "✅ " + F("{0} anota", a) + $"  ({e.ScoreH}-{e.ScoreA})",
+            SimEventType.PenaltyMiss   => "❌ " + F("{0} le ataja a {1}", a, tg) + $"  ({e.ScoreH}-{e.ScoreA})",
+            _ => e.Text,
+        };
     }
 
     private void AddKey(SimEventType type, SimEvent e)
@@ -292,7 +324,11 @@
             _ => "•"
         };
         string side = e.Team == 0 ? "home" : "away";
-        _keyEvents.Insert(0, new KeyEv(DisplayMin(), ico, e.Text, side));
+        // texto localizado sin el emoji inicial (la columna ya muestra su propio icono)
+        string txt = Narrate(e);
+        int sp = txt.IndexOf(' ');
+        if (sp > 0 && !char.IsLetter(txt[0]) && txt[0] != '¡') txt = txt[(sp + 1)..];
+        _keyEvents.Insert(0, new KeyEv(DisplayMin(), ico, txt, side));
         if (_keyEvents.Count > 12) _keyEvents.RemoveAt(_keyEvents.Count - 1);
     }
 

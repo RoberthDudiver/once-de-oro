@@ -8,8 +8,8 @@
 {
     <div class="empty">
         <div class="empty__ico">🏟️</div>
-        <p>No hay ningún torneo en curso.</p>
-        <button class="btn btn--gold mt" @onclick='() => Nav.NavigateTo("torneos")'>Elegir torneo</button>
+        <p>@Loc["No hay ningún torneo en curso."]</p>
+        <button class="btn btn--gold mt" @onclick='() => Nav.NavigateTo("torneos")'>@Loc["Elegir torneo"]</button>
     </div>
 }
 else
@@ -24,7 +24,7 @@ else
         var pw = Game.Power;
         var pred = Game.PredictNext();
         <div class="board fade-up">
-            <div class="board__comp">@comp.Emblem @comp.Name</div>
+            <div class="board__comp">@comp.Emblem @Loc[comp.Name]</div>
             <div class="board__stage">@info.stageName · @Loc["PREVIA"]</div>
             <div class="board__main">
                 <div class="board__team">
@@ -87,7 +87,7 @@ else
                     HomeName="@Game.State.ClubName" HomeFlag="⚽" HomeFormationName="@Game.Formation.Name"
                     AwayName="@opp.Name" AwayFlag="@opp.Flag"
                     HomeStarters="Game.LastHomeStarters" AwayStarters="Game.LastAwaySquad"
-                    Round="@($"{comp.Emblem} {comp.Name} · {_stageLabel}")"
+                    Round="@($"{comp.Emblem} {Loc[comp.Name]} · {_stageLabel}")"
                     OnFinished="OnMatchFinished" />
     }
     else if (_phase == Phase.Done)
@@ -97,8 +97,8 @@ else
             var win = _result.HomeWon;
             var draw = !_result.WentToPenalties && _result.HomeGoals == _result.AwayGoals;
             <div class="board fade-up">
-                <div class="board__comp">@comp.Emblem @comp.Name</div>
-                <div class="board__stage">@_stageLabel · FINAL</div>
+                <div class="board__comp">@comp.Emblem @Loc[comp.Name]</div>
+                <div class="board__stage">@_stageLabel · @Loc["FINAL"]</div>
                 <div class="board__main">
                     <div class="board__team"><div class="board__flag">⚽</div><div class="board__tname">@Game.State.ClubName</div></div>
                     <div class="board__score">
@@ -106,7 +106,7 @@ else
                     </div>
                     <div class="board__team"><div class="board__flag">@_result.AwayFlag</div><div class="board__tname">@_result.AwayName</div></div>
                 </div>
-                @if (_result.WentToPenalties) { <div class="board__pens">PENALES · @_result.HomePens – @_result.AwayPens</div> }
+                @if (_result.WentToPenalties) { <div class="board__pens">@Loc["PENALES"] · @_result.HomePens – @_result.AwayPens</div> }
             </div>
 
             <div class="result-banner @(win ? "win" : "lose")">
@@ -122,7 +122,7 @@ else
                 <div class="card card--pad center" style="margin-top:16px; border-color:rgba(245,197,66,.6); position:relative; z-index:2;">
                     <div class="trophy champ-cele__trophy">🏆</div>
                     <h2 style="font-family:var(--font-display); font-size:38px; color:var(--gold-2); margin-top:6px;">@Loc["¡CAMPEÓN!"]</h2>
-                    <p class="muted">@comp.Name</p>
+                    <p class="muted">@Loc[comp.Name]</p>
                     @if (run.CleanRun) { <div class="pill pill--gold" style="margin-top:8px; padding:8px 14px;">@Loc["⭐ CAMPEÓN INVICTO SIN RECIBIR GOLES"]</div> }
                     <div class="mt"><button class="btn btn--gold btn--big" @onclick="Conclude">@Loc["Cobrar y volver"]</button></div>
                 </div>
@@ -132,7 +132,7 @@ else
         {
             <div class="card card--pad center" style="margin-top:16px;">
                 <div style="font-size:50px;">🚪</div>
-                <h2 style="font-family:var(--font-head); font-size:26px; margin-top:6px;">@comp.Name</h2>
+                <h2 style="font-family:var(--font-head); font-size:26px; margin-top:6px;">@Loc[comp.Name]</h2>
                 <p class="muted">@Loc["Reforzá el equipo y volvé más fuerte."]</p>
                 <div class="mt"><button class="btn btn--gold btn--big" @onclick="Conclude">@Loc["Volver al mercado"]</button></div>
             </div>
@@ -153,7 +153,7 @@ else
 
     @if (run.Timeline.Count > 0 && _phase != Phase.Playing)
     {
-        <div class="section-title"><span class="dot"></span> Recorrido en la @comp.Name</div>
+        <div class="section-title"><span class="dot"></span> @Loc["Recorrido en la"] @Loc[comp.Name]</div>
         <div class="grid" style="gap:8px;">
             @foreach (var line in run.Timeline)
             {

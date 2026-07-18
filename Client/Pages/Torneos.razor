@@ -13,7 +13,7 @@
             <div class="row">
                 <span style="font-size:34px;">@ac.Emblem</span>
                 <div>
-                    <div style="font-family:var(--font-head); font-size:19px;">@Loc["Torneo en curso"] · @ac.Name</div>
+                    <div style="font-family:var(--font-head); font-size:19px;">@Loc["Torneo en curso"] · @Loc[ac.Name]</div>
                     <div class="muted">@Game.StageInfo().stageName</div>
                 </div>
             </div>
@@ -26,8 +26,8 @@
 {
     <div class="card card--pad mb" style="border-color: rgba(245,197,66,.35);">
         <div class="row wrap" style="justify-content:space-between;">
-            <span class="muted">🎓 Tu XI tiene @Game.ReserveCount juvenil@(Game.ReserveCount == 1 ? "" : "es") de cantera cubriendo huecos. Podés competir igual, pero fichá refuerzos para rendir mejor.</span>
-            <button class="btn btn--ghost" @onclick='() => Nav.NavigateTo("mercado")'>Ir al mercado</button>
+            <span class="muted">🎓 @Loc["Tu XI tiene juveniles de cantera cubriendo huecos. Podés competir igual, pero fichá refuerzos para rendir mejor."]</span>
+            <button class="btn btn--ghost" @onclick='() => Nav.NavigateTo("mercado")'>@Loc["Ir al mercado"]</button>
         </div>
     </div>
 }
@@ -44,14 +44,14 @@
             <div class="row" style="justify-content:space-between; align-items:flex-start;">
                 <div>
                     <div class="comp__emblem">@c.Emblem</div>
-                    <div class="comp__name">@c.Name</div>
-                    <div class="comp__sub">@c.Subtitle</div>
+                    <div class="comp__name">@Loc[c.Name]</div>
+                    <div class="comp__sub">@Loc[c.Subtitle]</div>
                 </div>
                 <span class="pill" style="position:relative;">@Loc["Nivel"] @c.Tier</span>
             </div>
 
             <div class="row wrap" style="gap:8px; margin-top:14px; position:relative;">
-                <span class="pill">🎯 Rec. @c.RecommendedStrength</span>
+                <span class="pill">🎯 @Loc["Rec."] @c.RecommendedStrength</span>
                 <span class="pill @(gap >= 0 ? "pill--green" : "")" style="@(gap < 0 ? "color:var(--red);border-color:rgba(255,90,106,.4);" : "")">
                     @Loc["Tu fuerza"] @myPower
                 </span>
@@ -77,7 +77,7 @@
             @if (gap < -6)
             {
                 <div class="muted" style="font-size:12.5px; margin-top:10px; position:relative;">
-                    💡 Tu equipo está por debajo del nivel — ganá plata en torneos menores y reforzá antes.
+                    💡 @Loc["Tu equipo está por debajo del nivel — ganá plata en torneos menores y reforzá antes."]
                 </div>
             }
         </div>
