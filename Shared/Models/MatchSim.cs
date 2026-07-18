@@ -5,7 +5,9 @@ public enum SimEventType
 {
     KickOff, Pass, Carry, Tackle, Foul, Yellow, Red, Shot, Save, Post, Miss, Goal,
     Corner, Offside, Injury, HydrationBreak, HalfTime, SecondHalf, FullTime,
-    ExtraTimeStart, ShootoutStart, PenaltyGoal, PenaltyMiss, End
+    ExtraTimeStart, ShootoutStart, PenaltyGoal, PenaltyMiss, End,
+    /// <summary>Penal cobrado DURANTE el partido (distinto de la tanda final).</summary>
+    PenaltyAwarded
 }
 
 /// <summary>Fase del partido (para el reloj y los rótulos).</summary>

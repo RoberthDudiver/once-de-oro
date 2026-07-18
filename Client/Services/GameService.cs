@@ -592,14 +592,25 @@ public sealed class GameService
     {
         var run = State.Run!;
         var opp = CurrentOpponent!;
-        bool group = run.Stage < 3;
+
+        // Si el partido es a matar o morir se define sí o sí: prórroga y penales.
+        // OJO: no alcanza con mirar la etapa, porque en una LIGA la etapa 3 es la
+        // fecha 4 (y ahí no hay penales) y en una COPA pura la etapa 0 ya es
+        // eliminación directa (y ahí sí tiene que haberlos).
+        var comp = ActiveComp!;
+        bool knockout = comp.Format switch
+        {
+            CompetitionFormat.League => false,
+            CompetitionFormat.Knockout => true,
+            _ => run.Stage >= 3,
+        };
 
         var home = EffectiveStarters;
         var away = RivalSquad(opp);
         var tl = MatchSimulator.Simulate(
             State.ClubName, "⚽", Power, home,
             opp.Name, opp.Flag, TeamPower.Flat(opp.Strength), away,
-            knockout: !group, seed: _rng.Next());
+            knockout: knockout, seed: _rng.Next());
 
         LastMatch = tl.Result;
         LastTimeline = tl;

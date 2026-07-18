@@ -217,7 +217,8 @@
 
         bool live = e.Type is SimEventType.KickOff or SimEventType.Pass or SimEventType.Carry
                             or SimEventType.Shot or SimEventType.Goal or SimEventType.Save
-                            or SimEventType.Post or SimEventType.Miss or SimEventType.Foul;
+                            or SimEventType.Post or SimEventType.Miss or SimEventType.Foul
+                            or SimEventType.PenaltyAwarded;
 
         if (live)
         {
@@ -266,6 +267,7 @@
             case SimEventType.Red: AddKey(SimEventType.Red, e); break;
             case SimEventType.Injury: AddKey(SimEventType.Injury, e); break;
             case SimEventType.Offside: AddKey(SimEventType.Offside, e); break;
+            case SimEventType.PenaltyAwarded: AddKey(SimEventType.PenaltyAwarded, e); break;
             case SimEventType.PenaltyGoal:
             case SimEventType.PenaltyMiss:
                 RegisterPen(e);
@@ -306,6 +308,7 @@
             SimEventType.FullTime      => "⏱ " + (e.Phase == MatchPhase.ExtraSecond ? "120'" : Loc["Final del partido"]) + $" · {e.ScoreH}-{e.ScoreA}",
             SimEventType.ExtraTimeStart=> "⏳ " + Loc["¡Tiempo suplementario!"],
             SimEventType.ShootoutStart => "🎯 " + Loc["¡Definición por penales!"],
+            SimEventType.PenaltyAwarded => "🎯 " + F("¡PENAL! Lo patea {0}", a),
             SimEventType.PenaltyGoal   => "✅ " + F("{0} anota", a) + $"  ({e.ScoreH}-{e.ScoreA})",
             SimEventType.PenaltyMiss   => "❌ " + F("{0} le ataja a {1}", a, tg) + $"  ({e.ScoreH}-{e.ScoreA})",
             _ => e.Text,
@@ -321,6 +324,7 @@
             SimEventType.Red => "🟥",
             SimEventType.Injury => "🚑",
             SimEventType.Offside => "🚩",
+            SimEventType.PenaltyAwarded => "🎯",
             _ => "•"
         };
         string side = e.Team == 0 ? "home" : "away";

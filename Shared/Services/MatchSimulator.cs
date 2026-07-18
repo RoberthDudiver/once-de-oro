@@ -127,7 +127,7 @@ public static class MatchSimulator
                 }
 
                 // Falta — con nombres: quién la hizo y a quién
-                if (rng.NextDouble() < 0.14)
+                if (rng.NextDouble() < 0.10)   // ~23 faltas por partido
                 {
                     int foulTeam = 1 - team;
                     string fouler = DefenderName(foulTeam);
@@ -140,6 +140,51 @@ public static class MatchSimulator
                     // Lesión ocasional del jugador que recibió la falta
                     if (rng.NextDouble() < 0.06)
                         Add(new SimEvent { Clock = t, Type = SimEventType.Injury, Team = team, BallX = x, BallY = y, Phase = ph, Dur = 1.1, Actor = victim, Text = $"🚑 {victim} queda golpeado y necesita atención" });
+
+                    // ¿La falta fue DENTRO DEL ÁREA? Entonces es PENAL.
+                    bool inBox = team == 0 ? x > 0.82 : x < 0.18;
+                    if (inBox && rng.NextDouble() < 0.035)   // ~0,25 penales por partido, como en la realidad
+                    {
+                        string taker = ScorerName(team);
+                        string keeper = GkName(1 - team);
+                        double spotX = team == 0 ? 0.88 : 0.12;
+
+                        Add(new SimEvent
+                        {
+                            Clock = t, Type = SimEventType.PenaltyAwarded, Team = team,
+                            BallX = spotX, BallY = 0.5, Phase = ph, Dur = 1.3, Big = true,
+                            Actor = taker, Target = keeper,
+                            Text = $"🎯 ¡PENAL para {usName}! Lo patea {taker}",
+                        });
+
+                        if (team == 0) stats.ShotsHome++; else stats.ShotsAway++;
+
+                        if (rng.NextDouble() < 0.76)   // conversión real de penales ~76%
+                        {
+                            score[team]++;
+                            if (team == 0) stats.OnTargetHome++; else stats.OnTargetAway++;
+                            goals.Add(new Goal(Min(t), taker, team == 0));
+                            Add(new SimEvent
+                            {
+                                Clock = t, Type = SimEventType.Goal, Team = team, Player = 1 + rng.Next(10),
+                                BallX = team == 0 ? 0.985 : 0.015, BallY = 0.5 + (rng.NextDouble() - 0.5) * 0.16,
+                                Phase = ph, Dur = 2.2, Big = true,
+                                Actor = taker, ScoreH = score[0], ScoreA = score[1],
+                                Text = $"⚽ ¡GOOOL de penal de {taker}!  ({score[0]}-{score[1]})",
+                            });
+                        }
+                        else
+                        {
+                            if (team == 0) stats.OnTargetHome++; else stats.OnTargetAway++;
+                            Add(new SimEvent
+                            {
+                                Clock = t, Type = SimEventType.Save, Team = 1 - team,
+                                BallX = team == 0 ? 0.91 : 0.09, BallY = 0.5,
+                                Phase = ph, Dur = 1.2, Big = true, Actor = keeper,
+                                Text = $"🧤 ¡{keeper} le ataja el penal a {taker}!",
+                            });
+                        }
+                    }
                 }
 
                 bool finalThird = team == 0 ? x > 0.66 : x < 0.34;
@@ -160,7 +205,10 @@ public static class MatchSimulator
                     string shooter = ScorerName(team);
                     Add(new SimEvent { Clock = t, Type = SimEventType.Shot, Team = team, Player = 1 + rng.Next(10), BallX = shotX, BallY = goalY, Phase = ph, Dur = 0.5, Actor = shooter, Target = usName, Text = $"Remate de {shooter} ({usName})" });
 
-                    double xg = Math.Clamp(0.05 + 0.42 * edge, 0.03, 0.55);
+                    // Conversión realista: ~11% al parejo. Antes era 26% y daba
+                    // 8 goles por partido, así que casi nunca había empates
+                    // (ni prórroga ni tanda de penales).
+                    double xg = Math.Clamp(0.02 + 0.19 * edge, 0.02, 0.32);
                     double gx = team == 0 ? 0.985 : 0.015;                 // línea de gol
                     if (rng.NextDouble() < xg)
                     {
