@@ -125,13 +125,32 @@ else
             var players = Game.Starters.Where(p => p.Pos == pos).ToList();
             for (int i = 0; i < count; i++)
             {
-                // Mantener a los jugadores dentro de la cancha (sin cortarse en los bordes)
-                double x = 15 + (i + 1) / (double)(count + 1) * 70;
                 var p = i < players.Count ? players[i] : GameService.ReserveFor(pos, i);
-                result.Add(new Slot(pos, x, LineY[pos], p));
+                result.Add(new Slot(pos, LineX(i, count), LineY[pos], p));
             }
         }
         return result;
+    }
+
+    /// <summary>
+    /// Reparto horizontal de una línea (en % del ancho de la cancha).
+    /// La línea se ABRE según cuántos jugadores tiene, como una formación real:
+    /// los laterales de una defensa de 4/5 van pegados a la banda y los delanteros
+    /// de una dupla quedan centrados. El slot mide 17.5% del ancho (8.75% a cada lado),
+    /// así que el borde mínimo (12%) deja ~3% de aire y nunca se recorta.
+    /// </summary>
+    private static double LineX(int i, int count)
+    {
+        if (count <= 1) return 50;
+        double halfWidth = count switch
+        {
+            2 => 16,   // dupla de ataque: centrada  → 34 / 66
+            3 => 28,   // línea de 3               → 22 / 50 / 78
+            4 => 37,   // línea de 4: laterales abiertos → 13 / 37.7 / 62.3 / 87
+            _ => 38,   // 5 o más: banda a banda   → 12 / 31 / 50 / 69 / 88
+        };
+        double start = 50 - halfWidth;
+        return start + i * (2 * halfWidth / (count - 1));
     }
 
     private static string Tier(Player p) => p.Rating >= 85 ? "" : p.Rating >= 75 ? "silver" : "bronze";
