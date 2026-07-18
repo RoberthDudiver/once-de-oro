@@ -12,8 +12,10 @@ public static class MatchSimulator
     // ---------------------------------------------------------------- PREDICCIÓN
     private const double HomeEdge = 0.12;
 
+    // El divisor tiene que ir de la mano del simulador: con /16 el pronóstico
+    // prometía ~4,2 goles donde el partido termina dando ~3, y quedaba en ridículo.
     public static double Lambda(int attack, int defense)
-        => Math.Clamp(1.35 * Math.Exp((attack - defense) / 16.0), 0.18, 4.6);
+        => Math.Clamp(1.35 * Math.Exp((attack - defense) / 22.0), 0.18, 3.6);
 
     private static double Poisson(double lambda, int k)
     {
@@ -197,7 +199,9 @@ public static class MatchSimulator
                     // Offside: la jugada se corta por posición adelantada
                     Add(new SimEvent { Clock = t, Type = SimEventType.Offside, Team = team, BallX = x, BallY = y, Phase = ph, Dur = 0.9, Actor = ScorerName(team), Text = $"🚩 Offside · posición adelantada de {ScorerName(team)}" });
                 }
-                else if (finalThird && rng.NextDouble() < 0.05 + 0.28 * edge)
+                // La superioridad se nota sobre todo en QUIÉN gana, no en goleadas
+                // absurdas: la ventaja pesa menos sobre la cantidad de remates.
+                else if (finalThird && rng.NextDouble() < 0.09 + 0.17 * edge)
                 {
                     if (team == 0) stats.ShotsHome++; else stats.ShotsAway++;
                     double goalY = 0.5 + (rng.NextDouble() - 0.5) * 0.18;   // dentro del arco
@@ -205,10 +209,10 @@ public static class MatchSimulator
                     string shooter = ScorerName(team);
                     Add(new SimEvent { Clock = t, Type = SimEventType.Shot, Team = team, Player = 1 + rng.Next(10), BallX = shotX, BallY = goalY, Phase = ph, Dur = 0.5, Actor = shooter, Target = usName, Text = $"Remate de {shooter} ({usName})" });
 
-                    // Conversión realista: ~11% al parejo. Antes era 26% y daba
-                    // 8 goles por partido, así que casi nunca había empates
-                    // (ni prórroga ni tanda de penales).
-                    double xg = Math.Clamp(0.02 + 0.19 * edge, 0.02, 0.32);
+                    // Conversión realista (~11% al parejo) y TOPE BAJO: aunque un
+                    // equipo sea muy superior, no convierte cada llegada. Sin este
+                    // techo aparecían 6, 8 y hasta 10 goles en un partido.
+                    double xg = Math.Clamp(0.05 + 0.12 * edge, 0.04, 0.20);
                     double gx = team == 0 ? 0.985 : 0.015;                 // línea de gol
                     if (rng.NextDouble() < xg)
                     {
