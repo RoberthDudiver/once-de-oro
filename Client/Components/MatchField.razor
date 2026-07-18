@@ -161,6 +161,7 @@
     private double _speed = 0.5, _stepSec = 0.4;
     private MatchStats _st = new();
     private readonly Random _rng = new();
+    private readonly int[] _possCount = new int[2];
 
     private record KeyEv(int Min, string Ico, string Txt, string Side);
     private readonly List<KeyEv> _keyEvents = new();
@@ -224,22 +225,26 @@
                 var baseP = t == 0 ? _homeBase : _awayBase;
                 for (int i = 0; i < 11; i++)
                 {
-                    // El arquero (i==0) casi no se mueve: se queda cerca de su arco.
-                    double follow = i == 0 ? 0.04 : (attacking ? 0.30 : 0.12);
-                    double followY = i == 0 ? 0.10 : (attacking ? 0.20 : 0.08);
-                    double jit = i == 0 ? 0 : (_rng.NextDouble() - 0.5) * 0.03;
+                    // El arquero (i==0) NO se mueve del arco. El resto mantiene la forma
+                    // de la formación y sólo se corre un poco hacia la pelota (sin amontonarse).
+                    double follow = i == 0 ? 0.0 : (attacking ? 0.16 : 0.07);
+                    double followY = i == 0 ? 0.03 : (attacking ? 0.11 : 0.05);
+                    double jit = i == 0 ? 0 : (_rng.NextDouble() - 0.5) * 0.02;
                     double tx = baseP[i].x + (_bx - baseP[i].x) * follow;
                     double ty = baseP[i].y + (_by - baseP[i].y) * followY + jit;
                     bx[i] = Math.Clamp(tx, 0.02, 0.98);
                     by[i] = Math.Clamp(ty, 0.05, 0.95);
                 }
             }
-            if (e.Team is 0 or 1 && e.Player is >= 0 and < 11 && e.Type is SimEventType.Pass or SimEventType.Carry or SimEventType.Shot or SimEventType.Goal)
+            // El jugador en posesión (nunca el arquero, índice 0) se para en la pelota.
+            if (e.Team is 0 or 1 && e.Player is >= 1 and < 11 && e.Type is SimEventType.Pass or SimEventType.Carry or SimEventType.Shot or SimEventType.Goal)
             {
                 var bx = e.Team == 0 ? _hx : _ax;
                 var by = e.Team == 0 ? _hy : _ay;
                 bx[e.Player] = _bx; by[e.Player] = _by;
             }
+            if (e.Type is SimEventType.Pass or SimEventType.Carry && e.Team is 0 or 1)
+                _possCount[e.Team]++;
         }
 
         switch (e.Type)
@@ -252,6 +257,7 @@
             case SimEventType.Yellow: AddKey(SimEventType.Yellow, e); break;
             case SimEventType.Red: AddKey(SimEventType.Red, e); break;
             case SimEventType.Injury: AddKey(SimEventType.Injury, e); break;
+            case SimEventType.Offside: AddKey(SimEventType.Offside, e); break;
             case SimEventType.PenaltyGoal:
             case SimEventType.PenaltyMiss:
                 RegisterPen(e);
@@ -274,6 +280,7 @@
             SimEventType.Yellow => "🟨",
             SimEventType.Red => "🟥",
             SimEventType.Injury => "🚑",
+            SimEventType.Offside => "🚩",
             _ => "•"
         };
         string side = e.Team == 0 ? "home" : "away";
@@ -313,9 +320,11 @@
         double prog = Math.Clamp(_clockSec / (double)(94 * 60), 0, 1);
         var f = Timeline.Stats;
         int S(int v) => (int)Math.Round(v * Math.Max(prog, 0.02));
+        int totPoss = _possCount[0] + _possCount[1];
+        int poss = totPoss < 6 ? 50 : (int)Math.Round(100.0 * _possCount[0] / totPoss);
         return new MatchStats
         {
-            PossHome = f.PossHome,
+            PossHome = poss,
             ShotsHome = S(f.ShotsHome), ShotsAway = S(f.ShotsAway),
             FoulsHome = S(f.FoulsHome), FoulsAway = S(f.FoulsAway),
             YellowHome = S(f.YellowHome), YellowAway = S(f.YellowAway),

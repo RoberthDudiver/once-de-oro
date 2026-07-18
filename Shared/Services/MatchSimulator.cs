@@ -89,18 +89,23 @@ public static class MatchSimulator
 
         Add(new SimEvent { Clock = 0, Type = SimEventType.KickOff, BallX = 0.5, BallY = 0.5, Text = "¡Comienza el partido!", Big = true, Dur = 0.8 });
 
+        // Reparto de posesión sesgado por fuerza (acumulado para la estadística real)
+        var possSecs = new double[2];
+        double homeShare = Math.Pow(home.Overall, 1.7) / (Math.Pow(home.Overall, 1.7) + Math.Pow(away.Overall, 1.7));
+
         void Period(int startSec, int endSec, MatchPhase ph)
         {
             int t = startSec;
-            int poss = rng.Next(2);
             while (t < endSec)
             {
-                int team = poss;
+                // el equipo más fuerte tiene la pelota más seguido
+                int team = rng.NextDouble() < homeShare ? 0 : 1;
                 var us = team == 0 ? home : away;
                 var them = team == 0 ? away : home;
                 string usName = team == 0 ? homeName : awayName;
 
-                t += 12 + rng.Next(28);
+                int dur = 12 + rng.Next(28);
+                t += dur; possSecs[team] += dur;
                 if (t > endSec) t = endSec;
 
                 // Construcción de juego: pases/corridas hacia el arco rival
@@ -116,7 +121,7 @@ public static class MatchSimulator
                     {
                         Clock = t,
                         Type = s == 0 ? SimEventType.Pass : SimEventType.Carry,
-                        Team = team, Player = rng.Next(11), BallX = x, BallY = y, Phase = ph, Dur = 0.45,
+                        Team = team, Player = 1 + rng.Next(10), BallX = x, BallY = y, Phase = ph, Dur = 0.45,
                     });
                 }
 
@@ -137,16 +142,24 @@ public static class MatchSimulator
                 }
 
                 bool finalThird = team == 0 ? x > 0.66 : x < 0.34;
-                double atk = us.Attack / (double)(us.Attack + them.Defense);
-                if (finalThird && rng.NextDouble() < 0.20 * atk + 0.06)
+                // "ventaja" 0..1 según la diferencia de fuerza (logística): pesa MUCHO,
+                // así un equipo débil casi no genera peligro contra uno fuerte.
+                double edge = 1.0 / (1.0 + Math.Exp(-(us.Attack - them.Defense) / 9.0));
+
+                if (finalThird && rng.NextDouble() < 0.055)
+                {
+                    // Offside: la jugada se corta por posición adelantada
+                    Add(new SimEvent { Clock = t, Type = SimEventType.Offside, Team = team, BallX = x, BallY = y, Phase = ph, Dur = 0.9, Text = $"🚩 Offside · posición adelantada de {ScorerName(team)}" });
+                }
+                else if (finalThird && rng.NextDouble() < 0.05 + 0.28 * edge)
                 {
                     if (team == 0) stats.ShotsHome++; else stats.ShotsAway++;
                     double goalY = 0.5 + (rng.NextDouble() - 0.5) * 0.18;   // dentro del arco
                     double shotX = team == 0 ? 0.86 : 0.14;
                     string shooter = ScorerName(team);
-                    Add(new SimEvent { Clock = t, Type = SimEventType.Shot, Team = team, Player = rng.Next(11), BallX = shotX, BallY = goalY, Phase = ph, Dur = 0.5, Text = $"Remate de {shooter} ({usName})" });
+                    Add(new SimEvent { Clock = t, Type = SimEventType.Shot, Team = team, Player = 1 + rng.Next(10), BallX = shotX, BallY = goalY, Phase = ph, Dur = 0.5, Text = $"Remate de {shooter} ({usName})" });
 
-                    double xg = Math.Clamp(0.07 + 0.19 * atk, 0.06, 0.45);
+                    double xg = Math.Clamp(0.05 + 0.42 * edge, 0.03, 0.55);
                     double gx = team == 0 ? 0.985 : 0.015;                 // línea de gol
                     if (rng.NextDouble() < xg)
                     {
@@ -154,8 +167,7 @@ public static class MatchSimulator
                         score[team]++;
                         if (team == 0) stats.OnTargetHome++; else stats.OnTargetAway++;
                         goals.Add(new Goal(Min(t), shooter, team == 0));
-                        Add(new SimEvent { Clock = t, Type = SimEventType.Goal, Team = team, Player = rng.Next(11), BallX = gx, BallY = goalY, Phase = ph, Dur = 1.5, Big = true, Text = $"⚽ ¡GOOOL de {shooter}!  ({score[0]}-{score[1]})" });
-                        poss = 1 - team;
+                        Add(new SimEvent { Clock = t, Type = SimEventType.Goal, Team = team, Player = 1 + rng.Next(10), BallX = gx, BallY = goalY, Phase = ph, Dur = 2.2, Big = true, Text = $"⚽ ¡GOOOL de {shooter}!  ({score[0]}-{score[1]})" });
                     }
                     else
                     {
@@ -182,10 +194,8 @@ public static class MatchSimulator
                             double wideY = rng.NextDouble() < 0.5 ? 0.22 : 0.78;
                             Add(new SimEvent { Clock = t, Type = SimEventType.Miss, Team = team, BallX = wideX, BallY = wideY, Phase = ph, Dur = 0.6, Text = $"Remate desviado de {shooter}" });
                         }
-                        poss = 1 - team;
                     }
                 }
-                else poss = 1 - team;
             }
         }
 
@@ -258,6 +268,9 @@ public static class MatchSimulator
             }
             if (homePens == awayPens) homePens++;
         }
+
+        double totPoss = possSecs[0] + possSecs[1];
+        if (totPoss > 0) stats.PossHome = (int)Math.Round(100 * possSecs[0] / totPoss);
 
         var result = new MatchResult
         {

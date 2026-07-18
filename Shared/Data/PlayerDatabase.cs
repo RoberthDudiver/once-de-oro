@@ -374,6 +374,57 @@ public static class PlayerDatabase
             P("Eduard Bello", "Venezuela", VE, Position.FWD, 73, 2026),
         });
 
+        const string GE = "🇬🇪", TR = "🇹🇷";
+
+        // ============================================================
+        //  ESTRELLAS DEL MUNDIAL 2026 + más leyendas por país/años
+        // ============================================================
+        l.AddRange(new[]
+        {
+            // ---- Cracks del Mundial 2026 ----
+            P("Khvicha Kvaratskhelia", "Georgia", GE, Position.FWD, 87, 2026, true),
+            P("Victor Osimhen", "Nigeria", NG, Position.FWD, 87, 2026, true),
+            P("Désiré Doué", "Francia", FR, Position.FWD, 84, 2026),
+            P("João Neves", "Portugal", PT, Position.MID, 85, 2026),
+            P("Arda Güler", "Turquía", TR, Position.MID, 84, 2026),
+            P("Warren Zaïre-Emery", "Francia", FR, Position.MID, 82, 2026),
+            P("Estêvão", "Brasil", BR, Position.FWD, 83, 2026),
+            P("Nico Paz", "Argentina", AR, Position.MID, 83, 2026),
+            P("Alejandro Garnacho", "Argentina", AR, Position.FWD, 83, 2026),
+            P("Pau Cubarsí", "España", ES, Position.DEF, 83, 2026),
+            P("Kobbie Mainoo", "Inglaterra", EN, Position.MID, 82, 2026),
+            P("Rasmus Højlund", "Dinamarca", DK, Position.FWD, 82, 2026),
+            P("Mohammed Kudus", "Ghana", GH, Position.MID, 84, 2026),
+            P("Florian Wirtz", "Alemania", DE, Position.MID, 87, 2026),
+
+            // ---- Venezuela ----
+            P("Juan Arango", "Venezuela", VE, Position.MID, 85, 2010, true),
+            P("Roberto Rosales", "Venezuela", VE, Position.DEF, 75, 2018),
+            P("Giancarlo Maldonado", "Venezuela", VE, Position.FWD, 74, 2010),
+
+            // ---- Más leyendas por país / años ----
+            P("Paulo Roberto Falcão", "Brasil", BR, Position.MID, 87, 1982, true),
+            P("Raí", "Brasil", BR, Position.MID, 85, 1994),
+            P("Ricardo Bochini", "Argentina", AR, Position.MID, 85, 1986),
+            P("Claudio Caniggia", "Argentina", AR, Position.FWD, 84, 1990),
+            P("Gigi Riva", "Italia", IT, Position.FWD, 87, 1970, true),
+            P("Sandro Mazzola", "Italia", IT, Position.MID, 85, 1970),
+            P("Uwe Seeler", "Alemania", DE, Position.FWD, 85, 1970),
+            P("Sepp Maier", "Alemania", DE, Position.GK, 84, 1974),
+            P("Alan Shearer", "Inglaterra", EN, Position.FWD, 86, 1996, true),
+            P("Andoni Zubizarreta", "España", ES, Position.GK, 84, 1994),
+            P("Marius Trésor", "Francia", FR, Position.DEF, 83, 1978),
+            P("Nani", "Portugal", PT, Position.FWD, 83, 2010),
+            P("Obdulio Varela", "Uruguay", UY, Position.DEF, 85, 1950, true),
+            P("Álvaro Recoba", "Uruguay", UY, Position.MID, 83, 2002),
+            P("Faustino Asprilla", "Colombia", CO, Position.FWD, 84, 1994),
+            P("Freddy Rincón", "Colombia", CO, Position.MID, 83, 1990),
+            P("Cuauhtémoc Blanco", "México", MX, Position.MID, 83, 1998),
+            P("Jorge Campos", "México", MX, Position.GK, 82, 1994),
+            P("Marcelo Salas", "Chile", CL, Position.FWD, 84, 1998),
+            P("Elías Figueroa", "Chile", CL, Position.DEF, 85, 1974, true),
+        });
+
         // ---------- AGENTES LIBRES (baratos, para armar de cero) ----------
         string[] fn = { "M. Delgado", "R. Ferreira", "K. Novak", "J. Silva", "A. Costa",
                         "D. Petrov", "L. Moreau", "T. Andersen", "S. Kovač", "P. Rossi",

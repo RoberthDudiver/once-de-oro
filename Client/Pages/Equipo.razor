@@ -77,9 +77,16 @@ else
         </div>
     </div>
 
-    <div class="section-title"><span class="dot"></span> Plantel · tocá para poner/sacar del XI</div>
+    <div class="section-title"><span class="dot"></span> Plantel (@Game.Owned.Count()) · tocá para poner/sacar del XI</div>
+    <div class="seg wrap mb">
+        <button class="@(PlantelPos is null ? "on" : "")" @onclick="() => PlantelPos = null">Todos</button>
+        <button class="@(PlantelPos == Position.GK ? "on" : "")" @onclick="() => PlantelPos = Position.GK">POR (@Game.Owned.Count(p => p.Pos == Position.GK))</button>
+        <button class="@(PlantelPos == Position.DEF ? "on" : "")" @onclick="() => PlantelPos = Position.DEF">DEF (@Game.Owned.Count(p => p.Pos == Position.DEF))</button>
+        <button class="@(PlantelPos == Position.MID ? "on" : "")" @onclick="() => PlantelPos = Position.MID">MED (@Game.Owned.Count(p => p.Pos == Position.MID))</button>
+        <button class="@(PlantelPos == Position.FWD ? "on" : "")" @onclick="() => PlantelPos = Position.FWD">DEL (@Game.Owned.Count(p => p.Pos == Position.FWD))</button>
+    </div>
     <div class="grid grid--cards">
-        @foreach (var p in Game.Owned.OrderByDescending(x => Game.IsStarter(x.Id)).ThenByDescending(x => x.Rating))
+        @foreach (var p in Game.Owned.Where(x => PlantelPos is null || x.Pos == PlantelPos).OrderByDescending(x => Game.IsStarter(x.Id)).ThenByDescending(x => x.Rating))
         {
             <PlayerCard P="p" ShowPrice="false">
                 <Actions>
@@ -95,6 +102,7 @@ else
 }
 
 @code {
+    private Position? PlantelPos;
     private record Slot(Position Pos, double X, double Y, Player? Player);
 
     private static readonly Dictionary<Position, double> LineY = new()
@@ -112,7 +120,8 @@ else
             var players = Game.Starters.Where(p => p.Pos == pos).ToList();
             for (int i = 0; i < count; i++)
             {
-                double x = (i + 1) / (double)(count + 1) * 100;
+                // Mantener a los jugadores dentro de la cancha (sin cortarse en los bordes)
+                double x = 15 + (i + 1) / (double)(count + 1) * 70;
                 var p = i < players.Count ? players[i] : GameService.ReserveFor(pos, i);
                 result.Add(new Slot(pos, x, LineY[pos], p));
             }
