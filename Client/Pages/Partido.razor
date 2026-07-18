@@ -90,36 +90,42 @@ else
                     Round="@($"{comp.Emblem} {comp.Name} · {_stageLabel}")"
                     OnFinished="OnMatchFinished" />
     }
-    else if (_phase == Phase.Done && _result is not null)
+    else if (_phase == Phase.Done)
     {
-        var win = _result.HomeWon;
-        var draw = !_result.WentToPenalties && _result.HomeGoals == _result.AwayGoals;
-        <div class="board fade-up">
-            <div class="board__comp">@comp.Emblem @comp.Name</div>
-            <div class="board__stage">@_stageLabel · FINAL</div>
-            <div class="board__main">
-                <div class="board__team"><div class="board__flag">⚽</div><div class="board__tname">@Game.State.ClubName</div></div>
-                <div class="board__score">
-                    <span class="board__num">@_result.HomeGoals</span><span class="sep">–</span><span class="board__num">@_result.AwayGoals</span>
+        @if (_result is not null)
+        {
+            var win = _result.HomeWon;
+            var draw = !_result.WentToPenalties && _result.HomeGoals == _result.AwayGoals;
+            <div class="board fade-up">
+                <div class="board__comp">@comp.Emblem @comp.Name</div>
+                <div class="board__stage">@_stageLabel · FINAL</div>
+                <div class="board__main">
+                    <div class="board__team"><div class="board__flag">⚽</div><div class="board__tname">@Game.State.ClubName</div></div>
+                    <div class="board__score">
+                        <span class="board__num">@_result.HomeGoals</span><span class="sep">–</span><span class="board__num">@_result.AwayGoals</span>
+                    </div>
+                    <div class="board__team"><div class="board__flag">@_result.AwayFlag</div><div class="board__tname">@_result.AwayName</div></div>
                 </div>
-                <div class="board__team"><div class="board__flag">@_result.AwayFlag</div><div class="board__tname">@_result.AwayName</div></div>
+                @if (_result.WentToPenalties) { <div class="board__pens">PENALES · @_result.HomePens – @_result.AwayPens</div> }
             </div>
-            @if (_result.WentToPenalties) { <div class="board__pens">PENALES · @_result.HomePens – @_result.AwayPens</div> }
-        </div>
 
-        <div class="result-banner @(win ? "win" : "lose")">
-            <div class="result-banner__title">@(win ? "¡VICTORIA!" : draw ? "EMPATE" : "DERROTA")</div>
-            @if (_reward > 0) { <div class="result-banner__reward">+ $@_reward M en premios 💰</div> }
-        </div>
+            <div class="result-banner @(win ? "win" : "lose")">
+                <div class="result-banner__title">@(win ? "¡VICTORIA!" : draw ? "EMPATE" : "DERROTA")</div>
+                @if (_reward > 0) { <div class="result-banner__reward">+ $@_reward M en premios 💰</div> }
+            </div>
+        }
 
         @if (run.Champion)
         {
-            <div class="card card--pad center" style="margin-top:16px; border-color:rgba(245,197,66,.5);">
-                <div class="trophy">🏆</div>
-                <h2 style="font-family:var(--font-display); font-size:34px; color:var(--gold-2); margin-top:6px;">¡CAMPEÓN!</h2>
-                <p class="muted">Ganaste la @comp.Name.</p>
-                @if (run.CleanRun) { <div class="pill pill--gold" style="margin-top:8px; padding:8px 14px;">⭐ INVICTO Y SIN RECIBIR GOLES — MARCA LEGENDARIA</div> }
-                <div class="mt"><button class="btn btn--gold btn--big" @onclick="Conclude">Cobrar y volver</button></div>
+            <div class="champ-cele">
+                <div class="champ-cele__confetti">@for (int i = 0; i < 40; i++) { <span style="--i:@i"></span> }</div>
+                <div class="card card--pad center" style="margin-top:16px; border-color:rgba(245,197,66,.6); position:relative; z-index:2;">
+                    <div class="trophy champ-cele__trophy">🏆</div>
+                    <h2 style="font-family:var(--font-display); font-size:38px; color:var(--gold-2); margin-top:6px;">¡CAMPEÓN!</h2>
+                    <p class="muted">Ganaste la @comp.Name.</p>
+                    @if (run.CleanRun) { <div class="pill pill--gold" style="margin-top:8px; padding:8px 14px;">⭐ INVICTO Y SIN RECIBIR GOLES — MARCA LEGENDARIA</div> }
+                    <div class="mt"><button class="btn btn--gold btn--big" @onclick="Conclude">Cobrar y volver</button></div>
+                </div>
             </div>
         }
         else if (run.Eliminated)
@@ -131,10 +137,16 @@ else
                 <div class="mt"><button class="btn btn--gold btn--big" @onclick="Conclude">Volver al mercado</button></div>
             </div>
         }
-        else
+        else if (_result is not null)
         {
             <div class="center" style="margin-top:16px;">
                 <button class="btn btn--gold btn--big" @onclick="NextMatch">Siguiente: @Game.StageInfo().stageName ▶</button>
+            </div>
+        }
+        else
+        {
+            <div class="center" style="margin-top:16px;">
+                <button class="btn btn--gold btn--big" @onclick="Conclude">Volver</button>
             </div>
         }
     }

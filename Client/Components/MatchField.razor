@@ -238,8 +238,9 @@
                     double jit = i == 0 ? 0 : (_rng.NextDouble() - 0.5) * 0.02;
                     double tx = baseP[i].x + (_bx - baseP[i].x) * follow;
                     double ty = baseP[i].y + (_by - baseP[i].y) * followY + jit;
-                    bx[i] = Math.Clamp(tx, 0.02, 0.98);
-                    by[i] = Math.Clamp(ty, 0.05, 0.95);
+                    // los jugadores nunca se pegan al borde (para que no se salgan / se corte el nombre)
+                    bx[i] = Math.Clamp(tx, 0.09, 0.91);
+                    by[i] = Math.Clamp(ty, 0.10, 0.90);
                 }
             }
             // El jugador en posesión (nunca el arquero, índice 0) se para en la pelota.
@@ -346,7 +347,7 @@
 
     private (double x, double y)[] BasePositions(Formation f, bool home)
     {
-        double[] xl = home ? new[] { 0.06, 0.22, 0.40, 0.60 } : new[] { 0.94, 0.78, 0.60, 0.40 };
+        double[] xl = home ? new[] { 0.10, 0.25, 0.42, 0.60 } : new[] { 0.90, 0.75, 0.58, 0.40 };
         var res = new List<(double, double)>();
         var lines = new[] { (0, 1), (1, f.Def), (2, f.Mid), (3, f.Fwd) };
         foreach (var (li, count) in lines)

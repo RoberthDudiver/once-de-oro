@@ -21,9 +21,32 @@
 
 <input class="search" placeholder="🔎 Buscar jugador o selección…" @bind="Search" @bind:event="oninput" />
 
+<div class="row wrap mb" style="gap:10px;">
+    <select class="mkt-select" @bind="Country">
+        <option value="">🌍 Todos los países</option>
+        @foreach (var n in Countries)
+        {
+            <option value="@n">@n</option>
+        }
+    </select>
+    <select class="mkt-select" @bind="Decade">
+        <option value="0">📅 Todas las épocas</option>
+        @foreach (var d in Decades)
+        {
+            <option value="@d">@d — @(d + 9)</option>
+        }
+    </select>
+    @if (Country is not null || Decade != 0 || Pos is not null || !string.IsNullOrWhiteSpace(Search))
+    {
+        <button class="btn btn--ghost" style="padding:10px 16px;" @onclick="ClearFilters">✕ Limpiar</button>
+    }
+</div>
+
 @{
     var list = (Tab == "buy" ? Game.Market : Game.Owned)
         .Where(p => Pos is null || p.Pos == Pos)
+        .Where(p => string.IsNullOrEmpty(Country) || p.Nation == Country)
+        .Where(p => Decade == 0 || p.Era / 10 * 10 == Decade)
         .Where(p => string.IsNullOrWhiteSpace(Search)
                  || p.Name.Contains(Search, StringComparison.OrdinalIgnoreCase)
                  || p.Nation.Contains(Search, StringComparison.OrdinalIgnoreCase))
@@ -66,4 +89,13 @@ else
     private string Tab = "buy";
     private Position? Pos;
     private string Search = "";
+    private string Country = "";
+    private int Decade;
+
+    private static readonly List<string> Countries =
+        PlayerDatabase.All.Select(p => p.Nation).Distinct().OrderBy(n => n).ToList();
+    private static readonly List<int> Decades =
+        PlayerDatabase.All.Select(p => p.Era / 10 * 10).Distinct().OrderByDescending(d => d).ToList();
+
+    private void ClearFilters() { Country = ""; Decade = 0; Pos = null; Search = ""; }
 }
