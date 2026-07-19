@@ -12,8 +12,12 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@300;400;500;600;700&family=Barlow:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="css/app.css" />
-    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
-    <link rel="alternate icon" type="image/png" href="favicon.png" />
+    <!-- El ?v= obliga al navegador a soltar el favicon viejo, que cachea con mucha insistencia -->
+    <!-- El PNG va PRIMERO: si el navegador no dibuja el emoji del SVG, igual ve la pelota -->
+
+    <link rel="icon" type="image/png" sizes="64x64" href="favicon.png?v=3" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg?v=3" />
+    <link rel="apple-touch-icon" href="icon-192.png?v=3" />
     <link href="OnceDeOro.styles.css" rel="stylesheet" />
     <script type="importmap"></script>
 </head>
