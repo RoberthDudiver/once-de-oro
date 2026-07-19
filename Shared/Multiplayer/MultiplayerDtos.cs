@@ -57,10 +57,13 @@ public sealed class RoomStateDto
     public string? Pair1 { get; set; }
 
     /// <summary>
-    /// Ids de jugadores ya fichados por algún rival: nadie más puede usarlos.
+    /// NOMBRES de los jugadores ya fichados por algún rival: nadie más puede
+    /// usarlos. Se comparan por nombre y no por Id porque el nombre es lo que
+    /// identifica a la carta — "Lionel Messi" y "Lionel Messi (Prime 2012)" son
+    /// dos jugadores distintos y pueden jugar uno en cada equipo.
     /// El cliente los muestra bloqueados y el servidor además lo hace cumplir.
     /// </summary>
-    public List<string> TakenPlayerIds { get; set; } = new();
+    public List<string> TakenPlayers { get; set; } = new();
 }
 
 /// <summary>Datos de arranque de un partido dentro del bracket/serie.</summary>

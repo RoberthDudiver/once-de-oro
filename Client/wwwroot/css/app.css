@@ -997,3 +997,12 @@ a { color: inherit; text-decoration: none; }
     display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
 }
 .fuse__txt { font-size: 12.5px; flex: 1 1 220px; }
+
+/* ---------------------------------------------------------------- choque online */
+.clash {
+    padding: 12px 14px; border-radius: 12px;
+    border: 1px solid rgba(255, 90, 60, .5);
+    background: linear-gradient(135deg, rgba(255, 90, 60, .10), transparent 70%);
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+}
+.clash__txt { font-size: 12.5px; flex: 1 1 240px; }

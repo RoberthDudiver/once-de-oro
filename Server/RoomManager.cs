@@ -93,7 +93,7 @@ public sealed class RoomManager
 
         var taken = TakenBy(room, exceptConnId: connId);
         var clash = team.Starters
-                        .Where(s => !string.IsNullOrEmpty(s.Id) && taken.Contains(s.Id))
+                        .Where(s => !EsCantera(s) && taken.Contains(s.Name))
                         .Select(s => s.Name)
                         .Distinct()
                         .ToList();
@@ -105,13 +105,29 @@ public sealed class RoomManager
         return (true, null);
     }
 
-    /// <summary>Ids de jugadores ya tomados por los demás miembros de la sala.</summary>
+    /// <summary>
+    /// Los juveniles de cantera que rellenan huecos son los mismos para todos (el
+    /// Id se genera igual en cada partida), así que NO pueden considerarse fichados
+    /// por nadie: si no, dos jugadores con el plantel incompleto se bloqueaban
+    /// mutuamente y no había forma de destrabarlo.
+    /// </summary>
+    private static bool EsCantera(PlayerLite s) =>
+        string.IsNullOrEmpty(s.Id) || s.Id.StartsWith("res-", StringComparison.Ordinal);
+
+    /// <summary>
+    /// Jugadores ya tomados por los demás, por NOMBRE y no por Id. El nombre es lo
+    /// que identifica a la carta: "Lionel Messi" y "Lionel Messi (Prime 2012)" son
+    /// dos jugadores distintos y pueden estar uno en cada equipo, mientras que dos
+    /// copias del mismo prime (que tienen Ids distintos porque salieron de cajas
+    /// distintas) sí se pisan.
+    /// </summary>
     private static HashSet<string> TakenBy(Room room, string? exceptConnId = null) =>
         room.Members
             .Where(x => x.Id != exceptConnId && x.Team is not null)
             .SelectMany(x => x.Team!.Starters)
-            .Select(s => s.Id)
-            .Where(id => !string.IsNullOrEmpty(id))
+            .Where(s => !EsCantera(s))
+            .Select(s => s.Name)
+            .Where(n => !string.IsNullOrEmpty(n))
             .ToHashSet();
 
     public void Disconnect(string connId)
@@ -148,7 +164,7 @@ public sealed class RoomManager
             SeriesWins = m.SeriesWins,
             Eliminated = m.Eliminated,
         }).ToList(),
-        TakenPlayerIds = TakenBy(room).ToList(),
+        TakenPlayers = TakenBy(room).ToList(),
     };
 
     public Task BroadcastState(Room room) =>

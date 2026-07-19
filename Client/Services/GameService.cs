@@ -749,16 +749,36 @@ public sealed class GameService
         };
     }
 
+    /// <summary>
+    /// Nombres bloqueados por la sala online: el rival ya los fichó y no pueden
+    /// estar en los dos equipos. NO se guarda con la partida — vale sólo mientras
+    /// estás en la sala, y la pantalla de Online lo limpia al salir. Si esto
+    /// quedara colgado, tu equipo de carrera jugaría debilitado sin explicación.
+    /// </summary>
+    public HashSet<string> BlockedNames { get; private set; } = new();
+
+    public void SetBlockedNames(IEnumerable<string> nombres)
+    {
+        var nuevo = nombres.ToHashSet();
+        if (nuevo.SetEquals(BlockedNames)) return;
+        BlockedNames = nuevo;
+        Changed?.Invoke();
+    }
+
+    public void ClearBlockedNames() => SetBlockedNames(Array.Empty<string>());
+
+    private bool Blocked(Player p) => BlockedNames.Count > 0 && BlockedNames.Contains(p.Name);
+
     /// <summary>No puede jugar: está lesionado o concentrado descansando.</summary>
     public bool IsOut(string id) => IsInjured(id) || IsResting(id);
 
     /// <summary>Titulares disponibles: los lesionados y los que descansan no juegan.</summary>
     public IReadOnlyList<Player> AvailableStarters =>
-        Starters.Where(p => !IsOut(p.Id)).ToList();
+        Starters.Where(p => !IsOut(p.Id) && !Blocked(p)).ToList();
 
     /// <summary>Suplentes disponibles que podrían entrar.</summary>
     public IReadOnlyList<Player> AvailableBench =>
-        Owned.Where(p => !State.StartingIds.Contains(p.Id) && !IsOut(p.Id))
+        Owned.Where(p => !State.StartingIds.Contains(p.Id) && !IsOut(p.Id) && !Blocked(p))
              .OrderByDescending(EffectiveRating).ThenByDescending(p => p.Rating).ToList();
 
     /// <summary>El XI real, con los puestos vacíos completados por juveniles de cantera.</summary>
@@ -928,6 +948,28 @@ public sealed class GameService
     }
 
     public void AutoFillXI() { RebuildBestXI(); Commit(); }
+
+    /// <summary>
+    /// Rearma el mejor XI posible SIN usar a los jugadores de esos nombres. Se usa
+    /// en el online cuando el rival ya fichó a alguien tuyo: sacarlo a mano no
+    /// alcanzaba, porque el hueco lo volvía a tapar el mismo jugador desde el banco.
+    /// </summary>
+    public void RebuildAvoiding(ISet<string> nombresProhibidos)
+    {
+        var f = Formation;
+        var chosen = new List<string>();
+        foreach (var pos in new[] { Position.GK, Position.DEF, Position.MID, Position.FWD })
+        {
+            var best = Owned.Where(p => p.Pos == pos && !IsOut(p.Id) && !nombresProhibidos.Contains(p.Name))
+                            .OrderByDescending(EffectiveRating)
+                            .ThenByDescending(p => p.Rating)
+                            .Take(f.SlotsFor(pos))
+                            .Select(p => p.Id);
+            chosen.AddRange(best);
+        }
+        State.StartingIds = chosen;
+        Commit();
+    }
 
     // ---------------------------------------------------------------- academia
     // Crear y entrenar jugadores propios. Entrenar cuesta cada vez más caro, así

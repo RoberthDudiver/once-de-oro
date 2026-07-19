@@ -140,12 +140,28 @@ else if (Mp.Room.Phase == "building")
                 <span class="pill">@Game.Formation.Name</span>
                 @if (Game.ReserveCount > 0) { <span class="pill">🎓 @Game.ReserveCount @Loc["Cantera"]</span> }
             </div>
-            <button class="btn btn--gold btn--block mt" @onclick="ConfirmCareer">@Loc["✓ Usar este equipo y estar listo"]</button>
+            @* Antes esto te lo decía el servidor RECIÉN al confirmar, con un error
+               rojo y sin forma de arreglarlo: había que irse a Equipo, sacarlos a
+               mano y volver. Ahora quedan bloqueados desde que el rival los ficha,
+               el XI se rearma solo con los que sí podés usar, y acá se explica por
+               qué tu equipo bajó de fuerza en vez de que pase en silencio. *@
+            @{ var tomados = MiosTomados(room); }
+            @if (tomados.Count > 0)
+            {
+                <div class="clash mt">
+                    <div class="clash__txt">
+                        ⚠️ @Loc["Tu rival ya fichó a"] <b>@string.Join(", ", tomados.Select(p => p.Name))</b>.
+                        @Loc["No pueden jugar los dos con la misma carta, así que tu equipo se armó sin ellos."]
+                    </div>
+                </div>
+            }
+            <button class="btn btn--gold btn--block mt"
+                    @onclick="ConfirmCareer">@Loc["✓ Usar este equipo y estar listo"]</button>
         </div>
     }
     else
     {
-        <DraftBuilder Budget="room.Config.Budget" Taken="room.TakenPlayerIds" OnConfirm="SubmitTeam" />
+        <DraftBuilder Budget="room.Config.Budget" Taken="room.TakenPlayers" OnConfirm="SubmitTeam" />
     }
 }
 else if (Mp.Room.Phase == "playing")
@@ -238,7 +254,13 @@ else if (Mp.Room.Phase == "done")
         if (string.IsNullOrEmpty(Name)) Name = Game.State.ClubName.Replace(" FC", "");
     }
 
-    private void OnMp() => InvokeAsync(StateHasChanged);
+    private void OnMp()
+    {
+        // Los que fichó el rival quedan bloqueados en TODO el armado del equipo
+        // (XI, banco, Auto XI) mientras dure la sala.
+        Game.SetBlockedNames(Mp.Room?.TakenPlayers ?? (IEnumerable<string>)Array.Empty<string>());
+        InvokeAsync(StateHasChanged);
+    }
 
     private async Task Create()
     {
@@ -254,6 +276,14 @@ else if (Mp.Room.Phase == "done")
 
     private Task SubmitTeam(TeamDto dto) => Mp.SubmitTeamAsync(dto);
 
+    /// <summary>Jugadores TUYOS que el rival ya fichó y por eso no vas a poder usar.</summary>
+    private List<Player> MiosTomados(RoomStateDto room)
+    {
+        if (room.TakenPlayers.Count == 0) return new();
+        var ocupados = room.TakenPlayers.ToHashSet();
+        return Game.Owned.Where(p => ocupados.Contains(p.Name)).ToList();
+    }
+
     private Task ConfirmCareer()
     {
         var dto = new TeamDto
@@ -268,7 +298,11 @@ else if (Mp.Room.Phase == "done")
         return Mp.SubmitTeamAsync(dto);
     }
 
-    private void Leave() => Mp.Reset();
+    private void Leave()
+    {
+        Game.ClearBlockedNames();
+        Mp.Reset();
+    }
 
     private string NameOf(string id) => Mp.Room?.Members.FirstOrDefault(m => m.Id == id)?.Name ?? "—";
     private int SeriesWins(string id) => Mp.Room?.Members.FirstOrDefault(m => m.Id == id)?.SeriesWins ?? 0;
@@ -284,6 +318,9 @@ else if (Mp.Room.Phase == "done")
     public async ValueTask DisposeAsync()
     {
         Mp.Changed -= OnMp;
+        // Si el bloqueo quedara puesto, tu equipo de carrera jugaría los torneos
+        // debilitado y sin ninguna explicación en pantalla.
+        Game.ClearBlockedNames();
         Dispose();
         await Task.CompletedTask;
     }
