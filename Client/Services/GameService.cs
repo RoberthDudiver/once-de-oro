@@ -205,6 +205,7 @@ public sealed class GameService
         {
             Id = p.Id, Name = p.Name, Nation = p.Nation, Flag = p.Flag, Pos = p.Pos,
             Rating = Math.Min(MaxRating, p.Rating + up), IsLegend = p.IsLegend, Era = p.Era,
+            Boxed = p.Boxed, Troll = p.Troll,
         };
     }
 
@@ -348,6 +349,118 @@ public sealed class GameService
         ("Francia", "🇫🇷"), ("Portugal", "🇵🇹"), ("Nigeria", "🇳🇬"), ("Senegal", "🇸🇳"),
     };
 
+    // ---------------------------------------------------------------- cajas sorpresa
+    // Sumidero de dinero con suerte de por medio. Todas las cajas están calibradas
+    // para dar MENOS plata de la que cuestan si revendés lo que sale (los jugadores
+    // de caja se revenden a precio de saldo): se abren para buscar un crack, no para
+    // hacer negocio. Si dieran ganancia, alcanzaría con abrir y vender en bucle.
+
+    /// <summary>Un tramo de fuerza con su peso relativo dentro de la caja.</summary>
+    public sealed record LootBand(int Min, int Max, double Weight);
+
+    public sealed record LootBox(string Key, string Name, string Emoji, int Cost,
+                                 string Desc, LootBand[] Bands)
+    {
+        public double Total => Bands.Sum(b => b.Weight);
+        /// <summary>Probabilidad real de un tramo, en % (para mostrarla sin mentir).</summary>
+        public double ChanceOf(LootBand b) => b.Weight / Total * 100;
+    }
+
+    /// <summary>El payaso: la caja que garantiza un 110 y te estafa con una sonrisa.</summary>
+    public const string ClownBox = "payaso";
+    public const int TrollRating = 110;
+    /// <summary>Lo que el payaso rinde DE VERDAD en la cancha.</summary>
+    public const int TrollPlays = 45;
+
+    public static readonly LootBox[] LootBoxes =
+    {
+        new("basica", "Caja Básica", "📦", 18,
+            "Casi siempre un relleno. Casi.",
+            new LootBand[] { new(60, 69, 560), new(70, 79, 330), new(80, 89, 90),
+                             new(90, 98, 18), new(99, 99, 1.5), new(100, 109, 0.5) }),
+
+        new("plata", "Caja de Plata", "🥈", 70,
+            "El termino medio: sale un titular decente.",
+            new LootBand[] { new(60, 69, 200), new(70, 79, 420), new(80, 89, 280),
+                             new(90, 98, 90), new(99, 99, 7), new(100, 109, 3) }),
+
+        new("oro", "Caja de Oro", "🥇", 200,
+            "Acá ya se sueña con una figura.",
+            new LootBand[] { new(60, 69, 30), new(70, 79, 220), new(80, 89, 430),
+                             new(90, 98, 280), new(99, 99, 28), new(100, 109, 12) }),
+
+        new("leyenda", "Caja de Leyenda", "💎", 500,
+            "Cara como pocas cosas. Y todavía puede salirte un 79.",
+            new LootBand[] { new(70, 79, 50), new(80, 89, 300), new(90, 98, 530),
+                             new(99, 99, 80), new(100, 109, 40) }),
+
+        new(ClownBox, "Caja del Payaso", "🤡", 300,
+            "GARANTIZADO: un jugador de 110. Palabra de payaso.",
+            new LootBand[] { new(TrollRating, TrollRating, 1000) }),
+    };
+
+    public bool CanOpenBox(LootBox b) => State.Money >= b.Cost;
+
+    private static readonly string[] ClownNames =
+    {
+        "Cristiano Ronaldiño", "Lionel Messias", "Zlatan Ibrahimovich", "Neymarcito da Silva",
+        "Kylian M'Bapé", "Erling Jaland", "Robertinho Levangolski", "Diego Armando Mandarina",
+    };
+
+    /// <summary>
+    /// Abre una caja: descuenta la plata, sortea el tramo, genera al jugador y te lo
+    /// pone en el plantel. Devuelve al que salió (null si no te alcanzaba).
+    /// </summary>
+    public Player? OpenBox(LootBox box)
+    {
+        if (!CanOpenBox(box)) return null;
+        State.Money -= box.Cost;
+
+        bool payaso = box.Key == ClownBox;
+
+        // Ruleta ponderada sobre los tramos de la caja.
+        double tiro = _rng.NextDouble() * box.Total, acum = 0;
+        var band = box.Bands[^1];
+        foreach (var b in box.Bands)
+        {
+            acum += b.Weight;
+            if (tiro <= acum) { band = b; break; }
+        }
+
+        int rating = _rng.Next(band.Min, band.Max + 1);
+        var (nation, flag) = ProspectHome[_rng.Next(ProspectHome.Length)];
+
+        var loot = new LootPlayer
+        {
+            Id = $"box-{Guid.NewGuid():N}"[..12],
+            Name = payaso
+                ? ClownNames[_rng.Next(ClownNames.Length)]
+                : $"{ProspectFirst[_rng.Next(ProspectFirst.Length)]} {ProspectLast[_rng.Next(ProspectLast.Length)]}",
+            Nation = payaso ? "Circo FC" : nation,
+            Flag = payaso ? "🤡" : flag,
+            Pos = payaso ? Position.FWD : (Position)_rng.Next(4),
+            Rating = rating,
+            Troll = payaso,
+            BoxName = box.Name,
+        };
+
+        State.Loot.Add(loot);
+        State.OwnedIds.Add(loot.Id);
+        var p = ToPlayer(loot);
+        AutoAssignIfSlotFree(p);
+        Commit();
+        return p;
+    }
+
+    /// <summary>Materializa un jugador de caja como <see cref="Player"/> jugable.</summary>
+    public static Player ToPlayer(LootPlayer l) => new()
+    {
+        Id = l.Id, Name = l.Name, Nation = l.Nation, Flag = l.Flag,
+        Pos = l.Pos, Rating = l.Rating, Era = 2026,
+        IsLegend = !l.Troll && l.Rating >= 99,
+        Boxed = true, Troll = l.Troll,
+    };
+
     public bool CanScout(Scout s) => State.Money >= s.Cost;
 
     /// <summary>Contrata un ojeador: te trae 3 promesas para elegir.</summary>
@@ -439,11 +552,16 @@ public sealed class GameService
     public Player Effective(Player p)
     {
         int pen = FatiguePenalty(FatigueOf(p.Id));
-        if (pen <= 0) return p;
+        // El payaso cotiza 110 pero juega como un 45: acá se cae la careta, y como
+        // TODO el juego pasa por Effective (fuerza del equipo, Auto XI, simulación),
+        // la broma vale en la cancha y no sólo en la carta.
+        if (pen <= 0 && !p.Troll) return p;
+        int baseRating = p.Troll ? TrollPlays : p.Rating;
         return new Player
         {
             Id = p.Id, Name = p.Name, Nation = p.Nation, Flag = p.Flag, Pos = p.Pos,
-            Rating = Math.Max(35, p.Rating - pen), IsLegend = p.IsLegend, Era = p.Era,
+            Rating = Math.Max(35, baseRating - pen), IsLegend = p.IsLegend, Era = p.Era,
+            Boxed = p.Boxed, Troll = p.Troll,
         };
     }
 
@@ -503,7 +621,14 @@ public sealed class GameService
 
     // ---------------------------------------------------------------- mercado
     public int BuyPrice(Player p) => p.Value;
-    public int SellPrice(Player p) => Math.Max(1, (int)Math.Round(p.Value * 0.9));
+
+    /// <summary>
+    /// Lo que te dan por venderlo. Los jugadores de caja se revenden a precio de
+    /// saldo (30%): si te devolvieran el 90% como los del mercado, abrir cajas
+    /// baratas y vender lo que sale sería una impresora de billetes.
+    /// </summary>
+    public int SellPrice(Player p) =>
+        Math.Max(1, (int)Math.Round(p.Value * (p.Boxed ? 0.30 : 0.9)));
 
     public bool Owns(string id) => State.OwnedIds.Contains(id);
 
@@ -631,7 +756,8 @@ public sealed class GameService
 
     /// <summary>Todos los jugadores existentes: los del mercado más los tuyos de academia.</summary>
     public IEnumerable<Player> AllPlayers =>
-        PlayerDatabase.All.Concat(State.Academy.Select(ToPlayer));
+        PlayerDatabase.All.Concat(State.Academy.Select(ToPlayer))
+                          .Concat(State.Loot.Select(ToPlayer));
 
     /// <summary>Cuánto cuesta la próxima sesión de entrenamiento (sube con la fuerza).</summary>
     public static int TrainingCost(int rating)

@@ -121,6 +121,13 @@
                 }
             </div>
 
+            @if (p.Troll)
+            {
+                <div class="real-note" style="border-color:rgba(255,120,180,.5);">
+                    🤡 @Loc["Cotiza 110 y remata como nadie, pero adentro de la cancha rinde como un 45. Te vendieron humo."]
+                </div>
+            }
+
             @* ---------- Lo de abajo solo aplica a jugadores TUYOS ---------- *@
             @if (!esMio && !tieneHistorial)
             {
@@ -218,6 +225,17 @@
     {
         var nombres = Skills[p.Pos];
         var result = new List<(string, int)>();
+
+        // El payaso: lo que tiene que ver con atacar, al mango; todo lo demás, por
+        // el piso. Por eso la carta dice 110 y el equipo igual juega peor con él.
+        if (p.Troll)
+        {
+            var ataque = new[] { "Definición", "Remate", "Velocidad" };
+            foreach (var n in nombres)
+                result.Add((n, ataque.Contains(n) ? 99 : 31));
+            return result;
+        }
+
         for (int i = 0; i < nombres.Length; i++)
         {
             // Variación determinística por jugador y atributo (-5 a +5)

@@ -9,6 +9,7 @@
     <div class="seg">
         <button class="@(Tab == "buy" ? "on" : "")" @onclick='() => Tab = "buy"'>@Loc["💰 Comprar"]</button>
         <button class="@(Tab == "own" ? "on" : "")" @onclick='() => Tab = "own"'>@Loc["👕 Mi plantel"] (@Game.Owned.Count())</button>
+        <button class="@(Tab == "box" ? "on" : "")" @onclick='() => Tab = "box"'>@Loc["🎁 Cajas"]</button>
     </div>
     <div class="seg">
         <button class="@(Pos is null ? "on" : "")" @onclick="() => Pos = null">@Loc["Todos"]</button>
@@ -19,6 +20,58 @@
     </div>
 </div>
 
+@if (Tab == "box")
+{
+    <div class="faint mb" style="font-size:12.5px;">
+        @Loc["Pagás, tirás la moneda y sale lo que sale. Ojo: lo que salga de una caja se revende a precio de saldo, así que no es negocio abrirlas para vender."]
+    </div>
+
+    @if (_premio is not null)
+    {
+        <div class="loot-reveal @(_premio.Troll ? "loot-reveal--troll" : _premio.Rating >= 99 ? "loot-reveal--epic" : "")">
+            <div class="loot-reveal__top">
+                @if (_premio.Troll) { <span>🤡 @Loc["¡GARANTIZADO!"] 🤡</span> }
+                else if (_premio.Rating >= 99) { <span>✨ @Loc["¡SE ROMPIÓ LA CAJA!"] ✨</span> }
+                else { <span>@Loc["Salió de la caja"]</span> }
+            </div>
+            <PlayerCard P="_premio" ShowPrice="false" OnOpen="Abrir" />
+            @if (_premio.Troll)
+            {
+                <div class="loot-reveal__joke">@Loc["Un 110 de verdad. Lástima que juegue como un 45."]</div>
+            }
+            <button class="btn btn--ghost mt" @onclick="() => _premio = null">@Loc["Listo"]</button>
+        </div>
+    }
+
+    <div class="grid" style="gap:12px;">
+        @foreach (var caja in GameService.LootBoxes)
+        {
+            var payaso = caja.Key == GameService.ClownBox;
+            <div class="lootbox @(payaso ? "lootbox--troll" : "")">
+                <div class="lootbox__ico">@caja.Emoji</div>
+                <div class="lootbox__body">
+                    <div class="lootbox__name">@Loc[caja.Name]</div>
+                    <div class="lootbox__desc">@Loc[caja.Desc]</div>
+                    <div class="lootbox__odds">
+                        @foreach (var b in caja.Bands)
+                        {
+                            <span class="odd" title="@Odds(caja, b)">
+                                <b>@(b.Min == b.Max ? $"{b.Min}" : $"{b.Min}–{b.Max}")</b> @Odds(caja, b)
+                            </span>
+                        }
+                    </div>
+                </div>
+                <button class="btn btn--gold lootbox__btn"
+                        disabled="@(!Game.CanOpenBox(caja))"
+                        @onclick="() => Abrir(caja)">
+                    @Loc["Abrir"] · $@caja.Cost M
+                </button>
+            </div>
+        }
+    </div>
+}
+else
+{
 <input class="search" placeholder="@Loc["🔎 Buscar jugador o selección…"]" @bind="Search" @bind:event="oninput" />
 
 <div class="row wrap mb" style="gap:10px;">
@@ -42,19 +95,7 @@
     }
 </div>
 
-@{
-    var list = (Tab == "buy" ? Game.Market : Game.Owned)
-        .Where(p => Pos is null || p.Pos == Pos)
-        .Where(p => string.IsNullOrEmpty(Country) || p.Nation == Country)
-        .Where(p => Decade == 0 || p.Era / 10 * 10 == Decade)
-        .Where(p => string.IsNullOrWhiteSpace(Search)
-                 || p.Name.Contains(Search, StringComparison.OrdinalIgnoreCase)
-                 || p.Nation.Contains(Search, StringComparison.OrdinalIgnoreCase))
-        .OrderByDescending(p => p.Rating)
-        .ToList();
-}
-
-@if (list.Count == 0)
+@if (Lista().Count == 0)
 {
     <div class="empty">
         <div class="empty__ico">@(Tab == "buy" ? "🔍" : "👕")</div>
@@ -64,7 +105,7 @@
 else
 {
     <div class="grid grid--cards">
-        @foreach (var p in list)
+        @foreach (var p in Lista())
         {
             <PlayerCard P="p" Price="@(Tab == "buy" ? Game.BuyPrice(p) : Game.SellPrice(p))" OnOpen="Abrir">
                 <Actions>
@@ -84,12 +125,41 @@ else
         }
     </div>
 }
+}
 
 <PlayerDetail P="_ficha" OnClose="() => _ficha = null" />
 
 @code {
     private Player? _ficha;
     private void Abrir(Player p) => _ficha = p;
+
+    /// <summary>Los jugadores que se ven con los filtros puestos.</summary>
+    private List<Player> Lista() =>
+        (Tab == "buy" ? Game.Market : Game.Owned)
+            .Where(p => Pos is null || p.Pos == Pos)
+            .Where(p => string.IsNullOrEmpty(Country) || p.Nation == Country)
+            .Where(p => Decade == 0 || p.Era / 10 * 10 == Decade)
+            .Where(p => string.IsNullOrWhiteSpace(Search)
+                     || p.Name.Contains(Search, StringComparison.OrdinalIgnoreCase)
+                     || p.Nation.Contains(Search, StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(p => p.Rating)
+            .ToList();
+
+    /// <summary>Lo último que salió de una caja, para mostrarlo grande.</summary>
+    private Player? _premio;
+
+    private void Abrir(GameService.LootBox caja)
+    {
+        var p = Game.OpenBox(caja);
+        if (p is not null) _premio = p;
+    }
+
+    /// <summary>Probabilidad del tramo, redondeada sin achatar las chances chicas.</summary>
+    private static string Odds(GameService.LootBox caja, GameService.LootBand b)
+    {
+        double pc = caja.ChanceOf(b);
+        return pc >= 10 ? $"{pc:0}%" : pc >= 1 ? $"{pc:0.0}%" : $"{pc:0.00}%";
+    }
 
     private string Tab = "buy";
     private Position? Pos;

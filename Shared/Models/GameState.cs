@@ -33,6 +33,24 @@ public sealed class AcademyPlayer
 }
 
 /// <summary>
+/// Un jugador que te salió de una caja sorpresa. No existe en la base del mercado:
+/// se genera al abrir la caja y vive acá, guardado con tu partida.
+/// </summary>
+public sealed class LootPlayer
+{
+    public string Id { get; set; } = "";
+    public string Name { get; set; } = "";
+    public string Nation { get; set; } = "";
+    public string Flag { get; set; } = "🎁";
+    public Position Pos { get; set; }
+    public int Rating { get; set; }
+    /// <summary>El 🤡 de la caja garantizada: 110 de cartel, un desastre jugando.</summary>
+    public bool Troll { get; set; }
+    /// <summary>De qué caja salió (se muestra en su ficha).</summary>
+    public string BoxName { get; set; } = "";
+}
+
+/// <summary>
 /// Estado físico e historial de UN jugador tuyo: lo que se acumula partido a partido.
 /// </summary>
 public sealed class PlayerCondition
@@ -132,6 +150,9 @@ public sealed class GameState
 
     /// <summary>Tokens de mejora disponibles para subir de nivel a cualquier jugador.</summary>
     public int Tokens { get; set; }
+
+    /// <summary>Jugadores que te salieron de las cajas sorpresa.</summary>
+    public List<LootPlayer> Loot { get; set; } = new();
 
     /// <summary>Promesas que encontraron tus ojeadores y todavía podés fichar.</summary>
     public List<Prospect> Prospects { get; set; } = new();

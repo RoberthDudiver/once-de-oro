@@ -39,11 +39,23 @@ public sealed class Player
     public bool IsLegend { get; init; }                 // sello dorado
     public int Era { get; init; }                       // año/mundial de referencia
 
+    /// <summary>Salió de una caja sorpresa. Los clubes desconfían: se revende barato.</summary>
+    public bool Boxed { get; init; }
+
+    /// <summary>
+    /// El payaso 🤡: cotiza 110 y sus números de ataque son los mejores del juego,
+    /// pero adentro de la cancha es un desastre. Es la broma de la caja garantizada.
+    /// </summary>
+    public bool Troll { get; init; }
+
     /// <summary>Valor de mercado en millones, derivado de la fuerza y el aura de leyenda.</summary>
     public int Value
     {
         get
         {
+            // Al payaso no lo quiere nadie: 110 en la carta, cero en el mercado.
+            if (Troll) return 1;
+
             // Curva exponencial calibrada:  60→~3M · 70→~23M · 80→~77M · 90→~178M · 95→~254M
             double baseVal = 0.0034 * Math.Pow(Math.Max(1, Rating - 50), 2.95);
             if (IsLegend) baseVal *= 1.3;
