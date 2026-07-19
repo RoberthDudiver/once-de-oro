@@ -6,7 +6,10 @@
 
 @if (P is not null)
 {
-    var p = P;
+    // Si es tuyo se lee SIEMPRE del estado vivo y no del parámetro: al fusionar
+    // cambia la fuerza, y el padre vuelve a pasarnos la carta vieja en el próximo
+    // render, así que quedarse con P dejaba la ficha mostrando el número anterior.
+    var p = Game.Owned.FirstOrDefault(x => x.Id == P.Id) ?? P;
     var c = Game.Cond(p.Id);
     var fat = c.Fatigue;
     var pen = GameService.FatiguePenalty(fat);
@@ -122,6 +125,37 @@
                 }
             </div>
 
+            @* ---------- Fusión: la versión común mejora al prime ---------- *@
+            @if (esMio && PrimeDatabase.IsPrimeName(p.Name) && p.Rating < GameService.PrimeMax)
+            {
+                var fuente = Game.FuseSource(p);
+                <div class="fuse">
+                    @if (fuente is not null)
+                    {
+                        <div class="fuse__txt">
+                            ⬆️ @Loc["Podés sacrificar a"] <b>@fuente.Name (@fuente.Rating)</b>
+                            @Loc["para que este suba a"] <b>@(p.Rating + 1)</b>.
+                        </div>
+                        <button class="btn btn--gold" @onclick="() => Fusionar(p.Id)">
+                            @Loc["Mejorar"] · @(p.Rating) → @(p.Rating + 1)
+                        </button>
+                    }
+                    else if (Game.IsFused(p.Id))
+                    {
+                        <div class="fuse__txt faint">
+                            ✓ @Loc["Ya lo mejoraste. Se puede una sola vez por jugador."]
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="fuse__txt faint">
+                            @Loc["Conseguí a"] <b>@PrimeDatabase.BaseName(p.Name)</b>
+                            @Loc["en el mercado y lo podés sacrificar para subirle un punto a este."]
+                        </div>
+                    }
+                </div>
+            }
+
             @if (p.Troll)
             {
                 <div class="real-note" style="border-color:rgba(255,120,180,.5);">
@@ -200,6 +234,12 @@
     [Parameter] public EventCallback OnClose { get; set; }
 
     private Task Close() => OnClose.InvokeAsync();
+
+    /// <summary>
+    /// Fusiona y refresca la ficha: el prime que se está mostrando cambió de fuerza,
+    /// así que hay que volver a leerlo o la pantalla sigue mostrando el número viejo.
+    /// </summary>
+    private void Fusionar(string primeId) => Game.Fuse(primeId);
 
     private static string Tier(int r) => r >= 85 ? "" : r >= 75 ? "silver" : "bronze";
 

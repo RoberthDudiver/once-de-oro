@@ -502,6 +502,53 @@ public sealed class GameService
     /// <summary>true si ya tenés esa versión prime (se comparan por nombre).</summary>
     public bool OwnsPrime(Player prime) => Owned.Any(p => p.Name == prime.Name);
 
+    // ---------------------------------------------------------------- fusión
+    // Tener la versión común de un prime sirve para mejorarlo: sacrificás al Pelé
+    // de 96 del mercado y el Pelé (Prime 1970) sube de 108 a 109. Una sola vez por
+    // prime, y con techo 109: el 110 sigue siendo exclusivo del payaso.
+
+    public const int PrimeMax = 109;
+
+    /// <summary>
+    /// La versión común que podés sacrificar para mejorar a este prime, o null si
+    /// no se puede (no es prime tuyo, ya lo fusionaste, está en el techo, o no
+    /// tenés al jugador común).
+    /// </summary>
+    public Player? FuseSource(Player prime)
+    {
+        var loot = State.Loot.FirstOrDefault(l => l.Id == prime.Id);
+        if (loot is null || loot.Troll || loot.Fused || loot.Rating >= PrimeMax) return null;
+        if (!PrimeDatabase.IsPrimeName(loot.Name)) return null;
+
+        var comun = PrimeDatabase.BaseName(loot.Name);
+        return Owned.FirstOrDefault(p => p.Name == comun && p.Id != prime.Id);
+    }
+
+    public bool CanFuse(Player prime) => FuseSource(prime) is not null;
+
+    /// <summary>true si a ese prime ya se lo mejoró con su versión común.</summary>
+    public bool IsFused(string id) => State.Loot.FirstOrDefault(l => l.Id == id)?.Fused == true;
+
+    /// <summary>Sacrifica la versión común: el prime sube un punto y ella se va.</summary>
+    public bool Fuse(string primeId)
+    {
+        var loot = State.Loot.FirstOrDefault(l => l.Id == primeId);
+        if (loot is null) return false;
+
+        var fuente = FuseSource(ToPlayer(loot));
+        if (fuente is null) return false;
+
+        State.OwnedIds.Remove(fuente.Id);
+        State.StartingIds.Remove(fuente.Id);
+        State.Conditions.Remove(fuente.Id);
+        State.Upgrades.Remove(fuente.Id);
+
+        loot.Rating = Math.Min(PrimeMax, loot.Rating + 1);
+        loot.Fused = true;
+        Commit();
+        return true;
+    }
+
     /// <summary>Materializa un jugador de caja como <see cref="Player"/> jugable.</summary>
     public static Player ToPlayer(LootPlayer l) => new()
     {

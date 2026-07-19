@@ -48,6 +48,9 @@ public sealed class LootPlayer
     public bool Troll { get; set; }
     /// <summary>De qué caja salió (se muestra en su ficha).</summary>
     public string BoxName { get; set; } = "";
+
+    /// <summary>Ya se lo mejoró con su versión común. Se puede una sola vez.</summary>
+    public bool Fused { get; set; }
 }
 
 /// <summary>
