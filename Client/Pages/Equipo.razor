@@ -100,10 +100,13 @@ else
         {
             <PlayerCard P="p" ShowPrice="false" OnOpen="Abrir">
                 <Actions>
+                    @* Al lesionado sólo se lo puede sacar, nunca poner: no puede jugar. *@
                     <button class="icon-btn @(Game.IsStarter(p.Id) ? "icon-btn--sell" : "icon-btn--buy")"
-                            title="@(Game.IsStarter(p.Id) ? "Sacar del XI" : "Poner en el XI")"
+                            disabled="@(!Game.IsStarter(p.Id) && Game.IsInjured(p.Id))"
+                            title="@(Game.IsStarter(p.Id) ? Loc["Sacar del XI"]
+                                     : Game.IsInjured(p.Id) ? Loc["Lesionado: no puede jugar"] : Loc["Poner en el XI"])"
                             @onclick="() => Game.ToggleStarter(p.Id)">
-                        @(Game.IsStarter(p.Id) ? "−" : "＋")
+                        @(Game.IsStarter(p.Id) ? "−" : Game.IsInjured(p.Id) ? "🚑" : "＋")
                     </button>
                 </Actions>
             </PlayerCard>

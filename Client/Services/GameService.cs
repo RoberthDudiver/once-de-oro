@@ -454,7 +454,7 @@ public sealed class GameService
     /// <summary>Suplentes sanos que podrían entrar.</summary>
     public IReadOnlyList<Player> AvailableBench =>
         Owned.Where(p => !State.StartingIds.Contains(p.Id) && !IsInjured(p.Id))
-             .OrderByDescending(p => p.Rating).ToList();
+             .OrderByDescending(EffectiveRating).ThenByDescending(p => p.Rating).ToList();
 
     /// <summary>El XI real, con los puestos vacíos completados por juveniles de cantera.</summary>
     public IReadOnlyList<Player> EffectiveStarters
@@ -465,10 +465,24 @@ public sealed class GameService
             var result = new List<Player>();
             // Los LESIONADOS no entran, y los cansados rinden menos.
             var disponibles = AvailableStarters;
+            var banco = AvailableBench;
             foreach (var pos in new[] { Position.GK, Position.DEF, Position.MID, Position.FWD })
             {
                 var reals = disponibles.Where(p => p.Pos == pos).Take(f.SlotsFor(pos)).ToList();
+
+                // Si un titular se lesionó, el puesto lo tapa el mejor suplente SANO
+                // de esa posición. Antes salía un juvenil de 53 aunque tuvieras un 90
+                // sentado en el banco: el equipo se debilitaba sin razón.
+                foreach (var s in banco.Where(p => p.Pos == pos)
+                                       .OrderByDescending(EffectiveRating))
+                {
+                    if (reals.Count >= f.SlotsFor(pos)) break;
+                    if (reals.Any(r => r.Id == s.Id)) continue;
+                    reals.Add(s);
+                }
+
                 result.AddRange(reals.Select(Effective));
+                // Recién si no queda NADIE sano en el plantel para ese puesto, cantera.
                 for (int i = reals.Count; i < f.SlotsFor(pos); i++)
                     result.Add(ReserveFor(pos, i));
             }
@@ -552,6 +566,10 @@ public sealed class GameService
         }
         else
         {
+            // Un lesionado no puede entrar al XI: si lo dejábamos, ocupaba el puesto
+            // y después no jugaba, que es justo el hueco que queríamos evitar.
+            if (IsInjured(id)) return;
+
             var f = Formation;
             int used = Starters.Count(s => s.Pos == p.Pos);
             if (used >= f.SlotsFor(p.Pos))
