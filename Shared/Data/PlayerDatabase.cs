@@ -38,7 +38,7 @@ public static class PlayerDatabase
         var l = new List<Player>
         {
             // ---------- BRASIL ----------
-            P("Pelé", "Brasil", BR, Position.FWD, 96, 1970, true),
+            P("Pelé", "Brasil", BR, Position.FWD, 109, 1970, true),
             P("Garrincha", "Brasil", BR, Position.FWD, 92, 1962, true),
             P("Ronaldo", "Brasil", BR, Position.FWD, 94, 2002, true),
             P("Romário", "Brasil", BR, Position.FWD, 91, 1994, true),
@@ -60,7 +60,7 @@ public static class PlayerDatabase
             P("Thiago Silva", "Brasil", BR, Position.DEF, 86, 2014),
 
             // ---------- ARGENTINA ----------
-            P("Diego Maradona", "Argentina", AR, Position.MID, 96, 1986, true),
+            P("Diego Maradona", "Argentina", AR, Position.MID, 109, 1986, true),
             P("Lionel Messi", "Argentina", AR, Position.FWD, 96, 2022, true),
             P("Alfredo Di Stéfano", "Argentina", AR, Position.FWD, 93, 1958, true),
             P("Mario Kempes", "Argentina", AR, Position.FWD, 88, 1978, true),

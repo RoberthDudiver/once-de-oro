@@ -135,6 +135,11 @@ public sealed class Loc
         ["Caja de Leyenda"] = "Legend Box",
         ["Caja Élite"] = "Elite Box",
         ["Piso 90. Acá no hay relleno."] = "90 floor. No filler in here.",
+        ["📖 Catálogo"] = "📖 Catalogue",
+        ["Todos los jugadores que existen en el juego, tengas o no. Tocá uno para ver su ficha completa."]
+            = "Every player in the game, owned or not. Tap one to see his full profile.",
+        ["Lo tenés"] = "Owned",
+        ["Ver más"] = "Show more",
         ["Caja Olimpo"] = "Olympus Box",
         ["Sólo dioses: del 100 para arriba, garantizado."] = "Gods only: 100 or above, guaranteed.",
         ["Caja del Payaso"] = "Clown Box",
@@ -539,6 +544,11 @@ public sealed class Loc
         ["Caja de Leyenda"] = "Caixa de Lenda",
         ["Caja Élite"] = "Caixa Elite",
         ["Piso 90. Acá no hay relleno."] = "Piso 90. Aqui não tem enchimento.",
+        ["📖 Catálogo"] = "📖 Catálogo",
+        ["Todos los jugadores que existen en el juego, tengas o no. Tocá uno para ver su ficha completa."]
+            = "Todos os jogadores que existem no jogo, tendo ou não. Toque em um para ver a ficha completa.",
+        ["Lo tenés"] = "Você tem",
+        ["Ver más"] = "Ver mais",
         ["Caja Olimpo"] = "Caixa Olimpo",
         ["Sólo dioses: del 100 para arriba, garantizado."] = "Só deuses: do 100 para cima, garantido.",
         ["Caja del Payaso"] = "Caixa do Palhaço",

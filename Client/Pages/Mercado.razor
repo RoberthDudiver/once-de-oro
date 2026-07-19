@@ -11,6 +11,7 @@
         <button class="@(Tab == "buy" ? "on" : "")" @onclick='() => Tab = "buy"'>@Loc["💰 Comprar"]</button>
         <button class="@(Tab == "own" ? "on" : "")" @onclick='() => Tab = "own"'>@Loc["👕 Mi plantel"] (@Game.Owned.Count())</button>
         <button class="@(Tab == "box" ? "on" : "")" @onclick='() => Tab = "box"'>@Loc["🎁 Cajas"]</button>
+        <button class="@(Tab == "all" ? "on" : "")" @onclick='() => Tab = "all"'>@Loc["📖 Catálogo"]</button>
     </div>
     <div class="seg">
         <button class="@(Pos is null ? "on" : "")" @onclick="() => Pos = null">@Loc["Todos"]</button>
@@ -123,21 +124,43 @@ else
     }
 </div>
 
+@if (Tab == "all")
+{
+    <div class="faint mb" style="font-size:12.5px;">
+        @Loc["Todos los jugadores que existen en el juego, tengas o no. Tocá uno para ver su ficha completa."]
+        · <b>@Lista().Count</b> / @PlayerDatabase.All.Count
+    </div>
+}
+
 @if (Lista().Count == 0)
 {
     <div class="empty">
-        <div class="empty__ico">@(Tab == "buy" ? "🔍" : "👕")</div>
-        <p>@(Tab == "buy" ? Loc["No hay jugadores con ese filtro."] : Loc["Tu plantel está vacío. Andá a Comprar para fichar."])</p>
+        <div class="empty__ico">@(Tab == "own" ? "👕" : "🔍")</div>
+        <p>@(Tab == "own" ? Loc["Tu plantel está vacío. Andá a Comprar para fichar."] : Loc["No hay jugadores con ese filtro."])</p>
     </div>
 }
 else
 {
     <div class="grid grid--cards">
-        @foreach (var p in Lista())
+        @foreach (var p in Lista().Take(_verHasta))
         {
-            <PlayerCard P="p" Price="@(Tab == "buy" ? Game.BuyPrice(p) : Game.SellPrice(p))" OnOpen="Abrir">
+            <PlayerCard P="p" ShowPrice="@(Tab != "all")"
+                        Price="@(Tab == "buy" ? Game.BuyPrice(p) : Game.SellPrice(p))" OnOpen="Abrir">
                 <Actions>
-                    @if (Tab == "buy")
+                    @if (Tab == "all")
+                    {
+                        @* En el catálogo no se compra ni se vende: se mira. Lo único que
+                           agrega es si ya lo tenés y cuánto sale. *@
+                        @if (Game.Owns(p.Id))
+                        {
+                            <span class="pill pill--gold" style="white-space:nowrap;">✓ @Loc["Lo tenés"]</span>
+                        }
+                        else
+                        {
+                            <span class="pill" style="white-space:nowrap;">$@Game.BuyPrice(p) M</span>
+                        }
+                    }
+                    else if (Tab == "buy")
                     {
                         <button class="icon-btn icon-btn--buy" title="Fichar por @Game.BuyPrice(p) M"
                                 disabled="@(Game.State.Money < Game.BuyPrice(p))"
@@ -152,6 +175,15 @@ else
             </PlayerCard>
         }
     </div>
+
+    @if (Lista().Count > _verHasta)
+    {
+        <div class="center mt">
+            <button class="btn btn--ghost" @onclick="() => _verHasta += Pagina">
+                @Loc["Ver más"] (@(Lista().Count - _verHasta))
+            </button>
+        </div>
+    }
 }
 }
 
@@ -163,7 +195,12 @@ else
 
     /// <summary>Los jugadores que se ven con los filtros puestos.</summary>
     private List<Player> Lista() =>
-        (Tab == "buy" ? Game.Market : Game.Owned)
+        (Tab switch
+        {
+            "buy" => Game.Market,             // los que podés fichar ahora
+            "own" => Game.Owned,              // tu plantel
+            _ => PlayerDatabase.All,          // catálogo: TODOS los que existen
+        })
             .Where(p => Pos is null || p.Pos == Pos)
             .Where(p => string.IsNullOrEmpty(Country) || p.Nation == Country)
             .Where(p => Decade == 0 || p.Era / 10 * 10 == Decade)
@@ -277,11 +314,31 @@ else
         return pc >= 10 ? $"{pc:0}%" : pc >= 1 ? $"{pc:0.0}%" : $"{pc:0.00}%";
     }
 
-    private string Tab = "buy";
-    private Position? Pos;
-    private string Search = "";
-    private string Country = "";
-    private int Decade;
+    // El catálogo son 442 cartas: dibujarlas todas de una hace una página de 20.000px
+    // que en un teléfono se arrastra. Se muestran de a tandas.
+    private const int Pagina = 60;
+    private int _verHasta = Pagina;
+
+    private string Tab
+    {
+        get => _tab;
+        set { _tab = value; _verHasta = Pagina; }   // cambiar de pestaña empieza de nuevo
+    }
+    private string _tab = "buy";
+
+    // Cada filtro vuelve a la primera tanda: si no, filtrás y seguís viendo el
+    // botón "Ver más" de la búsqueda anterior.
+    private Position? Pos { get => _pos; set { _pos = value; _verHasta = Pagina; } }
+    private Position? _pos;
+
+    private string Search { get => _search; set { _search = value; _verHasta = Pagina; } }
+    private string _search = "";
+
+    private string Country { get => _country; set { _country = value; _verHasta = Pagina; } }
+    private string _country = "";
+
+    private int Decade { get => _decade; set { _decade = value; _verHasta = Pagina; } }
+    private int _decade;
 
     private static readonly List<string> Countries =
         PlayerDatabase.All.Select(p => p.Nation).Distinct().OrderBy(n => n).ToList();
