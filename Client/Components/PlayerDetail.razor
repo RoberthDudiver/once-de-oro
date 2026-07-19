@@ -10,6 +10,9 @@
     var fat = c.Fatigue;
     var pen = GameService.FatiguePenalty(fat);
     var aca = Game.State.Academy.FirstOrDefault(a => a.Id == p.Id);
+    var esMio = Game.State.OwnedIds.Contains(p.Id);
+    // Si alguna vez jugó para vos, el historial sigue teniendo sentido aunque lo hayas vendido.
+    var tieneHistorial = c.Matches > 0;
 
     <div class="modal" @onclick="Close">
         <div class="modal__box" @onclick:stopPropagation="true">
@@ -34,7 +37,29 @@
                 </div>
             </div>
 
-            @* ---------- Estado físico ---------- *@
+            @* ---------- Atributos propios del jugador ---------- *@
+            <div class="section-title" style="margin:20px 0 12px;"><span class="dot"></span> @Loc["Atributos"]</div>
+            <div class="attrs">
+                @foreach (var (etiqueta, valor) in Attributes(p))
+                {
+                    <div class="attr">
+                        <span class="attr__lbl">@Loc[etiqueta]</span>
+                        <div class="attr__bar"><span class="@BarClass(valor)" style="width:@(valor)%"></span></div>
+                        <span class="attr__num">@valor</span>
+                    </div>
+                }
+            </div>
+
+            @* ---------- Lo de abajo solo aplica a jugadores TUYOS ---------- *@
+            @if (!esMio && !tieneHistorial)
+            {
+                <div class="muted mt" style="font-size:12.5px; text-align:center;">
+                    @Loc["No está en tu equipo. Fichalo para verlo rendir y llevarle las estadísticas."]
+                </div>
+            }
+
+            @if (esMio)
+            {
             <div class="section-title" style="margin:20px 0 12px;"><span class="dot"></span> @Loc["Estado físico"]</div>
 
             @if (c.Injured)
@@ -62,8 +87,11 @@
                     @Loc["Descansa cuando no juega. Jugar fundido aumenta el riesgo de lesión."]
                 </div>
             </div>
+            }
 
-            @* ---------- Estadísticas con vos ---------- *@
+            @* ---------- Estadísticas con vos (solo si jugó o es tuyo) ---------- *@
+            @if (esMio || tieneHistorial)
+            {
             <div class="section-title" style="margin:20px 0 12px;"><span class="dot"></span> @Loc["Con tu equipo"]</div>
             <div class="stat-grid">
                 <div class="stat-cell"><b>@c.Matches</b><span>@Loc["Partidos"]</span></div>
@@ -73,6 +101,7 @@
                 <div class="stat-cell"><b>@c.Injuries</b><span>🚑 @Loc["Lesiones"]</span></div>
                 <div class="stat-cell"><b>@Ratio(c)</b><span>@Loc["Goles/partido"]</span></div>
             </div>
+            }
 
             @if (aca is not null)
             {
@@ -97,4 +126,46 @@
 
     private static string Ratio(PlayerCondition c) =>
         c.Matches == 0 ? "—" : (c.Goals / (double)c.Matches).ToString("0.00");
+
+    private static string BarClass(int v) => v >= 85 ? "top" : v >= 70 ? "mid" : "low";
+
+    /// <summary>Atributos por puesto. Cada jugador tiene su perfil propio.</summary>
+    private static readonly Dictionary<Position, string[]> Skills = new()
+    {
+        [Position.GK]  = new[] { "Reflejos", "Achique", "Manos", "Juego aéreo", "Distribución" },
+        [Position.DEF] = new[] { "Marca", "Quite", "Juego aéreo", "Fuerza", "Salida" },
+        [Position.MID] = new[] { "Pase", "Visión", "Regate", "Resistencia", "Recuperación" },
+        [Position.FWD] = new[] { "Definición", "Velocidad", "Regate", "Remate", "Desmarque" },
+    };
+
+    /// <summary>
+    /// Perfil del jugador derivado de su fuerza y su puesto. Es ESTABLE: depende
+    /// de su Id, así que siempre muestra lo mismo. No son datos reales de su
+    /// carrera (no los tenemos), sino sus cualidades dentro del juego.
+    /// </summary>
+    private static List<(string, int)> Attributes(Player p)
+    {
+        var nombres = Skills[p.Pos];
+        var result = new List<(string, int)>();
+        for (int i = 0; i < nombres.Length; i++)
+        {
+            // Variación determinística por jugador y atributo (-5 a +5)
+            int h = Hash(p.Id + "|" + nombres[i]);
+            int delta = (h % 11) - 5;
+            // El primer atributo es el fuerte del puesto
+            if (i == 0) delta += 3;
+            result.Add((nombres[i], Math.Clamp(p.Rating + delta, 30, 99)));
+        }
+        return result;
+    }
+
+    private static int Hash(string s)
+    {
+        unchecked
+        {
+            int h = 17;
+            foreach (char ch in s) h = h * 31 + ch;
+            return Math.Abs(h);
+        }
+    }
 }
