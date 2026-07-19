@@ -155,7 +155,10 @@
     [Parameter] public EventCallback OnFinished { get; set; }
 
     private readonly double[] _hx = new double[11], _hy = new double[11], _ax = new double[11], _ay = new double[11];
-    private readonly string[] _homeNames = new string[11], _awayNames = new string[11];
+    // Arrancan VACÍOS, nunca null: el componente puede renderizarse antes de que
+    // OnInitializedAsync termine (basta un await), y el render lee .Length.
+    private readonly string[] _homeNames = Enumerable.Repeat("", 11).ToArray();
+    private readonly string[] _awayNames = Enumerable.Repeat("", 11).ToArray();
     private (double x, double y)[] _homeBase = default!, _awayBase = default!;
     private double _bx = 0.5, _by = 0.5;
     private string _ballClass = "";
@@ -192,8 +195,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await Sfx.LoadAsync();
-        _sonido = Sfx.On;
+        // TODO lo sincrónico va PRIMERO: el primer await cede el control y Blazor
+        // renderiza, así que el estado que usa el render ya tiene que estar listo.
         _homeBase = BasePositions(Formation.All.FirstOrDefault(f => f.Name == HomeFormationName) ?? Formation.F433, true);
         _awayBase = BasePositions(Formation.All.FirstOrDefault(f => f.Name == AwayFormationName) ?? Formation.F433, false);
         for (int i = 0; i < 11; i++)
@@ -204,6 +207,9 @@
         }
         _homeTakers = Takers(HomeStarters, HomeName);
         _awayTakers = Takers(AwayStarters, AwayName);
+
+        await Sfx.LoadAsync();
+        _sonido = Sfx.On;
         await Play();
     }
 

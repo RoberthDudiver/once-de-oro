@@ -240,20 +240,23 @@ public sealed class GameService
 
     public const int YouthSquadSize = 5;
 
+    // El fútbol juvenil NO da plata: se juega para formar, y cada torneo CUESTA.
+    // Antes la Copa Barrial era gratis y repartía premio, así que alcanzaba con
+    // apretar el botón mil veces para hacerse millonario y subir a todos gratis.
     public sealed record YouthCup(string Name, int Cost, int RivalStrength, int Matches,
-                                  int XpWin, int XpPlay, int Prize, string Desc);
+                                  int XpWin, int XpPlay, string Desc);
 
     public static readonly YouthCup[] YouthCups =
     {
-        new("Copa Barrial",        0, 54, 3, 130,  50,   6, "Potreros del barrio. Entrada libre, ideal para empezar."),
-        new("Torneo Sub-19",       8, 64, 3, 220,  85,  22, "Categorías juveniles federadas. Ya se juega en serio."),
-        new("Copa Federal Juvenil",22, 74, 4, 340, 130,  60, "Lo mejor de las inferiores del país."),
-        new("Mundialito Juvenil",  55, 84, 4, 520, 200, 150, "El torneo donde se miran todos los ojeadores del mundo."),
+        new("Copa Barrial",         4, 54, 3, 130,  50, "Potreros del barrio. Barata, ideal para empezar."),
+        new("Torneo Sub-19",       12, 64, 3, 220,  85, "Categorías juveniles federadas. Ya se juega en serio."),
+        new("Copa Federal Juvenil",30, 74, 4, 340, 130, "Lo mejor de las inferiores del país."),
+        new("Mundialito Juvenil",  70, 84, 4, 520, 200, "El torneo donde se miran todos los ojeadores del mundo."),
     };
 
     public sealed record YouthMatch(string Rival, int Us, int Them);
     public sealed record YouthResult(string CupName, List<YouthMatch> Matches, int Won,
-                                     int Xp, int Prize, bool Champion, List<string> LeveledUp);
+                                     int Xp, bool Champion, List<string> LeveledUp);
 
     /// <summary>Último torneo juvenil jugado, para mostrarlo en pantalla.</summary>
     public YouthResult? LastYouth { get; private set; }
@@ -311,11 +314,9 @@ public sealed class GameService
             if (a.Rating > antes) subieron.Add($"{a.Name} {antes}→{a.Rating}");
         }
 
+        // Sin premio en efectivo: la recompensa es la experiencia de los pibes.
         bool campeon = ganados == cup.Matches;
-        int premio = cup.Prize * ganados + (campeon ? cup.Prize * 2 : 0);
-        State.Money += premio;
-
-        LastYouth = new YouthResult(cup.Name, partidos, ganados, xp, premio, campeon, subieron);
+        LastYouth = new YouthResult(cup.Name, partidos, ganados, xp, campeon, subieron);
         Commit();
         return LastYouth;
     }

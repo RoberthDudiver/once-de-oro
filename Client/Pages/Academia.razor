@@ -71,7 +71,7 @@
 {
     <div class="section-title"><span class="dot"></span> @Loc["Copa juvenil"] · 5 vs 5</div>
     <p class="muted" style="margin:0 0 14px; font-size:13.5px;">
-        @Loc["Torneos de formación para tu cantera: dan mucha experiencia y poco dinero. No cansan ni lesionan."]
+        @Loc["Torneos de formación para tu cantera: cuestan plata y NO dan premio. Lo que ganás es experiencia. No cansan ni lesionan."]
     </p>
 
     @if (Game.State.Academy.Count < GameService.YouthSquadSize)
@@ -117,13 +117,13 @@
                     <div class="row wrap mt" style="gap:6px;">
                         <span class="pill">@cup.Matches @Loc["partidos"]</span>
                         <span class="pill pill--gold">+@cup.XpWin XP @Loc["por victoria"]</span>
-                        <span class="pill">$@cup.Prize M</span>
+                        <span class="pill">+@cup.XpPlay XP @Loc["por jugar"]</span>
                     </div>
                     <div class="mt">
                         <button class="btn btn--gold" style="width:100%; padding:11px;"
                                 disabled="@(!Game.CanPlayYouth(cup, Elegidos))"
                                 @onclick="() => Jugar(cup)">
-                            @(cup.Cost == 0 ? Loc["Jugar · Gratis"] : $"{Loc["Jugar"]} · ${cup.Cost}M")
+                            @Loc["Jugar"] · $@cup.Cost M
                         </button>
                     </div>
                 </div>
@@ -149,8 +149,7 @@
                 }
                 <div class="row wrap mt" style="gap:8px;">
                     <span class="pill pill--green">@r.Won/@r.Matches.Count @Loc["ganados"]</span>
-                    <span class="pill pill--gold">+@r.Xp XP</span>
-                    <span class="pill">+$@r.Prize M</span>
+                    <span class="pill pill--gold">+@r.Xp XP @Loc["a cada juvenil"]</span>
                 </div>
                 @if (r.LeveledUp.Count > 0)
                 {
