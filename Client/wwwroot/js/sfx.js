@@ -264,6 +264,55 @@
         m.bus.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
     }
 
+    // ---------------------------------------------------------------- CASINO
+    /** Tic del rodillo: un click seco, como el diente de una ruleta. */
+    function tick(t0, agudo = 1) {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'square';
+        o.frequency.setValueAtTime(1800 * agudo, t0);
+        o.frequency.exponentialRampToValueAtTime(700 * agudo, t0 + 0.03);
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(0.10, t0 + 0.003);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.05);
+        o.connect(g).connect(master);
+        o.start(t0); o.stop(t0 + 0.06);
+    }
+
+    /**
+     * El rodillo girando: muchos tics al principio y cada vez más separados,
+     * siguiendo la misma desaceleración que hace la animación en pantalla.
+     * Sin esto el giro se ve rápido pero se escucha parejo, y no engancha.
+     */
+    function reel(ms) {
+        if (!enabled || !audio()) return;
+        const t0 = now(), dur = ms / 1000;
+        // La animación usa un ease-out fuerte: avanza como 1-(1-x)^3.
+        // Repartimos los tics por DISTANCIA recorrida, no por tiempo.
+        const N = 34;
+        for (let i = 1; i <= N; i++) {
+            const avance = i / N;                        // 0..1 de recorrido
+            const x = 1 - Math.pow(1 - avance, 1 / 3);    // cuándo pasa por ahí
+            tick(t0 + x * dur, 1 + (1 - avance) * 0.35);
+        }
+    }
+
+    /** Premio gordo: fanfarria ascendente + estallido. */
+    function jackpot() {
+        if (!enabled || !audio()) return;
+        const t = now();
+        const notas = [523.25, 659.25, 783.99, 1046.5, 1318.5];
+        notas.forEach((f, i) => tone(f, t + i * 0.09, 0.5, 'sawtooth', 0.16));
+        [523.25, 783.99, 1046.5].forEach(f => tone(f, t + 0.5, 1.4, 'sawtooth', 0.13));
+        roar(1.3);
+    }
+
+    /** Sale un fiasco: trombón de la desgracia. */
+    function fail() {
+        if (!enabled || !audio()) return;
+        const t = now();
+        [311.13, 293.66, 277.18, 233.08].forEach((f, i) => tone(f, t + i * 0.14, 0.5, 'triangle', 0.13));
+    }
+
     window.odoSfx = {
         play(name) {
             switch (name) {
@@ -276,8 +325,11 @@
                 case 'red': card(true); break;
                 case 'boo': boo(); break;
                 case 'roar': roar(1); break;
+                case 'jackpot': jackpot(); break;
+                case 'fail': fail(); break;
             }
         },
+        reel,
         crowdStart, crowdStop,
         musicStart, musicStop,
         isOn: () => enabled,

@@ -144,6 +144,8 @@ public sealed class Loc
         ["Salió de la caja"] = "Out of the box",
         ["¡GARANTIZADO!"] = "GUARANTEED!",
         ["¡SE ROMPIÓ LA CAJA!"] = "THE BOX BROKE!",
+        ["Girando…"] = "Spinning…",
+        ["¡FUERA DE ESCALA!"] = "OFF THE CHARTS!",
         ["Un 110 de verdad. Lástima que juegue como un 45."] = "A real 110. Shame he plays like a 45.",
         ["Pagás, tirás la moneda y sale lo que sale. Ojo: lo que salga de una caja se revende a precio de saldo, así que no es negocio abrirlas para vender."]
             = "You pay, you roll the dice, you get what you get. Careful: anything out of a box resells for peanuts, so opening them to sell is no business.",
@@ -542,6 +544,8 @@ public sealed class Loc
         ["Salió de la caja"] = "Saiu da caixa",
         ["¡GARANTIZADO!"] = "GARANTIDO!",
         ["¡SE ROMPIÓ LA CAJA!"] = "A CAIXA QUEBROU!",
+        ["Girando…"] = "Girando…",
+        ["¡FUERA DE ESCALA!"] = "FORA DE ESCALA!",
         ["Un 110 de verdad. Lástima que juegue como un 45."] = "Um 110 de verdade. Pena que joga como um 45.",
         ["Pagás, tirás la moneda y sale lo que sale. Ojo: lo que salga de una caja se revende a precio de saldo, así que no es negocio abrirlas para vender."]
             = "Você paga, joga a moeda e sai o que sair. Atenção: o que sai de uma caixa é revendido a preço de banana, então não vale a pena abrir para vender.",

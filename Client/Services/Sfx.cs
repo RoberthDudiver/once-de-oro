@@ -23,6 +23,9 @@ public sealed class Sfx
     public void CrowdStart() => Fire("odoSfx.crowdStart");
     public void CrowdStop() => Fire("odoSfx.crowdStop");
 
+    /// <summary>Tics del rodillo de la caja, desacelerando junto con la animación.</summary>
+    public void Reel(int ms) => Fire("odoSfx.reel", ms);
+
     /// <summary>Loop de hinchada para el modo rápido (reemplaza a los efectos).</summary>
     public void MusicStart() => Fire("odoSfx.musicStart");
     public void MusicStop() => Fire("odoSfx.musicStop");

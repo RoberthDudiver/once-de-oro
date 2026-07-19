@@ -1,5 +1,6 @@
 @page "/mercado"
 @inherits GamePageBase
+@inject Sfx Sfx
 
 <PageTitle>Mercado — Once de Oro</PageTitle>
 
@@ -26,20 +27,47 @@
         @Loc["Pagás, tirás la moneda y sale lo que sale. Ojo: lo que salga de una caja se revende a precio de saldo, así que no es negocio abrirlas para vender."]
     </div>
 
-    @if (_premio is not null)
+    @* ---------------- El rodillo: gira, frena y cae en el premio ---------------- *@
+    @if (_tira.Count > 0)
     {
-        <div class="loot-reveal @(_premio.Troll ? "loot-reveal--troll" : _premio.Rating >= 99 ? "loot-reveal--epic" : "")">
-            <div class="loot-reveal__top">
-                @if (_premio.Troll) { <span>🤡 @Loc["¡GARANTIZADO!"] 🤡</span> }
-                else if (_premio.Rating >= 99) { <span>✨ @Loc["¡SE ROMPIÓ LA CAJA!"] ✨</span> }
-                else { <span>@Loc["Salió de la caja"]</span> }
+        <div class="case @(_premio is not null ? "case--done " + Rare(_premio) : "")">
+            <div class="case__title">
+                @if (_girando) { <span>@Loc["Girando…"]</span> }
+                else if (_premio is not null)
+                {
+                    @if (_premio.Troll) { <span>🤡 @Loc["¡GARANTIZADO!"] 🤡</span> }
+                    else if (_premio.Rating >= 100) { <span>🔥 @Loc["¡FUERA DE ESCALA!"] 🔥</span> }
+                    else if (_premio.Rating >= 99) { <span>✨ @Loc["¡SE ROMPIÓ LA CAJA!"] ✨</span> }
+                    else { <span>@Loc["Salió de la caja"]</span> }
+                }
             </div>
-            <PlayerCard P="_premio" ShowPrice="false" OnOpen="Abrir" />
-            @if (_premio.Troll)
+
+            <div class="case__window">
+                <div class="case__needle"></div>
+                <div class="case__strip" style="transform:translateX(-@(_offset)px); transition-duration:@(_girando ? SpinMs : 0)ms;">
+                    @foreach (var (p, i) in _tira.Select((p, i) => (p, i)))
+                    {
+                        <div class="case__item @Rare(p) @(!_girando && i == PremioIdx ? "case__item--win" : "")">
+                            <span class="case__rat">@p.Rating</span>
+                            <span class="case__pos">@p.Pos.Label()</span>
+                        </div>
+                    }
+                </div>
+                <div class="case__fade case__fade--l"></div>
+                <div class="case__fade case__fade--r"></div>
+            </div>
+
+            @if (_premio is not null)
             {
-                <div class="loot-reveal__joke">@Loc["Un 110 de verdad. Lástima que juegue como un 45."]</div>
+                <div class="case__prize">
+                    <PlayerCard P="_premio" ShowPrice="false" OnOpen="Abrir" />
+                    @if (_premio.Troll)
+                    {
+                        <div class="loot-reveal__joke">@Loc["Un 110 de verdad. Lástima que juegue como un 45."]</div>
+                    }
+                    <button class="btn btn--ghost mt" @onclick="Cerrar">@Loc["Listo"]</button>
+                </div>
             }
-            <button class="btn btn--ghost mt" @onclick="() => _premio = null">@Loc["Listo"]</button>
         </div>
     }
 
@@ -62,7 +90,7 @@
                     </div>
                 </div>
                 <button class="btn btn--gold lootbox__btn"
-                        disabled="@(!Game.CanOpenBox(caja))"
+                        disabled="@(_girando || !Game.CanOpenBox(caja))"
                         @onclick="() => Abrir(caja)">
                     @Loc["Abrir"] · $@caja.Cost M
                 </button>
@@ -145,14 +173,102 @@ else
             .OrderByDescending(p => p.Rating)
             .ToList();
 
-    /// <summary>Lo último que salió de una caja, para mostrarlo grande.</summary>
-    private Player? _premio;
+    // ---- El rodillo de casino ----
+    // El premio ya está decidido ANTES de que empiece a girar (lo sortea OpenBox):
+    // la animación no decide nada, sólo lo cuenta. Por eso se arma una tira larga
+    // con el ganador clavado en una posición fija y se desplaza hasta ahí.
 
-    private void Abrir(GameService.LootBox caja)
+    private const int SpinMs = 4600;      // lo que dura el giro
+    private const int ItemW = 104;        // 96 del casillero + 8 de separación (fijado en app.css)
+    private const int PremioIdx = 42;     // dónde va el ganador dentro de la tira
+    private const int TiraLargo = 48;
+
+    private List<Player> _tira = new();
+    private Player? _premio;
+    private bool _girando;
+    private int _offset;
+
+    private async Task Abrir(GameService.LootBox caja)
     {
+        if (_girando) return;
+
         var p = Game.OpenBox(caja);
-        if (p is not null) _premio = p;
+        if (p is null) return;
+
+        _premio = null;
+        _tira = ArmarTira(caja, p);
+
+        // Primer pintado con la tira en cero y SIN transición: si no, el navegador
+        // no tiene un estado inicial desde el cual animar y el rodillo aparece
+        // directamente en el premio.
+        _girando = false;
+        _offset = 0;
+        StateHasChanged();
+        await Task.Delay(60);
+
+        // Ahora sí: se prende la transición y se manda al premio.
+        _girando = true;
+        // Un desvío chico para que no frene siempre clavado en el centro.
+        _offset = PremioIdx * ItemW + ItemW / 2 + Random.Shared.Next(-28, 29);
+        Sfx.Reel(SpinMs);
+        StateHasChanged();
+
+        await Task.Delay(SpinMs + 120);
+        _girando = false;
+        _premio = p;
+        Sfx.Play(p.Troll ? "fail" : p.Rating >= 99 ? "jackpot" : p.Rating >= 90 ? "goal" : "whistle");
+        StateHasChanged();
     }
+
+    private void Cerrar()
+    {
+        _premio = null;
+        _tira = new();
+    }
+
+    /// <summary>
+    /// La tira que se ve girando: relleno sorteado con las MISMAS probabilidades
+    /// de la caja (así lo que desfila es creíble para esa caja) y el ganador real
+    /// clavado en su posición.
+    /// </summary>
+    private static List<Player> ArmarTira(GameService.LootBox caja, Player premio)
+    {
+        var tira = new List<Player>();
+        for (int i = 0; i < TiraLargo; i++)
+        {
+            if (i == PremioIdx) { tira.Add(premio); continue; }
+            tira.Add(Falso(caja, i));
+        }
+        return tira;
+    }
+
+    /// <summary>Un casillero de relleno: sólo se le ven la fuerza y el puesto.</summary>
+    private static Player Falso(GameService.LootBox caja, int i)
+    {
+        double tiro = Random.Shared.NextDouble() * caja.Total, acum = 0;
+        var band = caja.Bands[^1];
+        foreach (var b in caja.Bands)
+        {
+            acum += b.Weight;
+            if (tiro <= acum) { band = b; break; }
+        }
+        return new Player
+        {
+            Id = $"spin-{i}", Name = "", Nation = "", Flag = "",
+            Pos = (Position)Random.Shared.Next(4),
+            Rating = Random.Shared.Next(band.Min, band.Max + 1),
+        };
+    }
+
+    /// <summary>Color del casillero según lo que salió. Es todo el golpe de efecto.</summary>
+    private static string Rare(Player p) =>
+        p.Troll ? "r-troll"
+        : p.Rating >= 100 ? "r-myth"
+        : p.Rating >= 99 ? "r-gold"
+        : p.Rating >= 90 ? "r-epic"
+        : p.Rating >= 80 ? "r-rare"
+        : p.Rating >= 70 ? "r-good"
+        : "r-comun";
 
     /// <summary>Probabilidad del tramo, redondeada sin achatar las chances chicas.</summary>
     private static string Odds(GameService.LootBox caja, GameService.LootBand b)

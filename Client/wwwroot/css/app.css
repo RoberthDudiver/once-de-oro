@@ -902,3 +902,89 @@ a { color: inherit; text-decoration: none; }
 @media (max-width: 560px) {
     .rest__bar { flex-basis: 56px; }
 }
+
+/* ---------------------------------------------------------------- rodillo de casino */
+/* Rarezas: el color es todo el golpe de efecto, así que se ve de lejos qué salió. */
+.r-comun { --r: #6f7683; }
+.r-good  { --r: #35c17a; }
+.r-rare  { --r: #4ea3ff; }
+.r-epic  { --r: #9b6bff; }
+.r-gold  { --r: #f5c542; }
+.r-myth  { --r: #ff5a3c; }
+.r-troll { --r: #ff5fae; }
+
+.case {
+    border: 1px solid var(--line); border-radius: 16px;
+    padding: 14px; margin-bottom: 16px; background: var(--panel);
+}
+.case__title {
+    text-align: center; font-family: var(--font-head); letter-spacing: .06em;
+    color: var(--gold-2); margin-bottom: 10px; min-height: 20px;
+}
+
+.case__window {
+    position: relative; overflow: hidden;
+    height: 116px; border-radius: 12px;
+    background: linear-gradient(180deg, rgba(0,0,0,.35), rgba(255,255,255,.03));
+    border: 1px solid var(--line);
+}
+
+/* La tira arranca en el centro de la ventana: así basta con correrla hacia la
+   izquierda la distancia del casillero premiado para dejarlo justo en la aguja,
+   sin tener que saber cuánto mide la ventana. */
+.case__strip {
+    position: absolute; top: 10px; left: 50%;
+    display: flex; gap: 8px;
+    transition-property: transform;
+    transition-timing-function: cubic-bezier(.08, .72, .12, 1);
+}
+
+.case__item {
+    flex: 0 0 96px; height: 96px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    border-radius: 10px; border: 1px solid var(--r);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--r) 26%, transparent), transparent);
+    box-shadow: inset 0 -3px 0 var(--r);
+}
+.case__rat { font-family: var(--font-display); font-size: 30px; line-height: 1; color: var(--r); }
+.case__pos { font-size: 10px; letter-spacing: .12em; color: var(--ink-dim); }
+
+/* El casillero ganador, ya frenado */
+.case__item--win { animation: caseWin .5s ease-out 3; }
+@keyframes caseWin {
+    50% { transform: scale(1.08); box-shadow: inset 0 -3px 0 var(--r), 0 0 26px var(--r); }
+}
+
+/* La aguja marca dónde se lee el resultado */
+.case__needle {
+    position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; z-index: 3;
+    transform: translateX(-1px);
+    background: var(--gold-2); box-shadow: 0 0 12px var(--gold-2);
+}
+.case__needle::before, .case__needle::after {
+    content: ''; position: absolute; left: 50%; transform: translateX(-50%);
+    border-left: 6px solid transparent; border-right: 6px solid transparent;
+}
+.case__needle::before { top: 0; border-top: 8px solid var(--gold-2); }
+.case__needle::after { bottom: 0; border-bottom: 8px solid var(--gold-2); }
+
+/* Los bordes se desvanecen: refuerza la sensación de que la tira sigue girando */
+.case__fade { position: absolute; top: 0; bottom: 0; width: 70px; z-index: 2; pointer-events: none; }
+.case__fade--l { left: 0; background: linear-gradient(90deg, var(--panel), transparent); }
+.case__fade--r { right: 0; background: linear-gradient(270deg, var(--panel), transparent); }
+
+.case__prize { text-align: center; margin-top: 14px; animation: lootPop .4s cubic-bezier(.2,1.4,.4,1); }
+
+/* Cuando frena, todo el panel se tiñe del color de lo que salió */
+.case--done { border-color: var(--r); box-shadow: 0 0 34px color-mix(in srgb, var(--r) 45%, transparent); }
+.case--done .case__title { color: var(--r); }
+.case--done.r-myth, .case--done.r-gold, .case--done.r-troll { animation: caseFlash .6s ease-out 2; }
+@keyframes caseFlash { 50% { box-shadow: 0 0 60px var(--r); } }
+
+/* OJO: el ancho del casillero (96 + 8 de separación) está replicado en Mercado.razor
+   como ItemW para calcular dónde frenar. Si cambia acá, cambia allá — y por eso NO
+   se achica en móvil: bastaría con eso para que la aguja frene fuera del premio. */
+@media (max-width: 560px) {
+    .case__window { height: 104px; }
+    .case__fade { width: 44px; }
+}
