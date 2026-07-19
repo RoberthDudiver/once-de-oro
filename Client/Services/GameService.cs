@@ -339,8 +339,14 @@ public sealed class GameService
     public bool IsInjured(string id) => State.Conditions.TryGetValue(id, out var c) && c.Injured;
     public int FatigueOf(string id) => State.Conditions.TryGetValue(id, out var c) ? c.Fatigue : 0;
 
-    /// <summary>Cuánto rendimiento le resta el cansancio (hasta -8 de fuerza).</summary>
-    public static int FatiguePenalty(int fatigue) => fatigue / 16;
+    /// <summary>
+    /// El cansancio NO baja el rendimiento hasta que la barra está realmente alta.
+    /// Antes restaba desde el primer partido y se sentía roto: ahora hay 60% de
+    /// margen libre y recién ahí empieza a pesar (máximo -5 con la barra llena).
+    /// </summary>
+    public const int FatigueSafe = 60;
+    public static int FatiguePenalty(int fatigue) =>
+        fatigue <= FatigueSafe ? 0 : (fatigue - FatigueSafe) / 8;
 
     /// <summary>El jugador tal como rinde HOY: su fuerza menos el desgaste.</summary>
     public Player Effective(Player p)
@@ -597,11 +603,29 @@ public sealed class GameService
         var tl = LastTimeline;
         var jugaron = EffectiveStarters.Where(p => !IsReserve(p)).Select(p => p.Id).ToHashSet();
 
+        // Cuántas jugadas exigentes tuvo cada uno: remates, goles, penales,
+        // faltas cometidas y recibidas. El que se rompió el lomo se cansa más.
+        var carga = new Dictionary<string, int>();
+        if (tl is not null)
+        {
+            foreach (var e in tl.Events)
+            {
+                if (e.Type is not (SimEventType.Shot or SimEventType.Goal or SimEventType.Foul
+                                   or SimEventType.PenaltyAwarded or SimEventType.Save)) continue;
+                foreach (var id in new[] { e.ActorId, e.TargetId })
+                    if (!string.IsNullOrEmpty(id) && jugaron.Contains(id))
+                        carga[id] = carga.GetValueOrDefault(id) + 1;
+            }
+        }
+
         foreach (var id in jugaron)
         {
             var c = Cond(id);
             c.Matches++;
-            c.Fatigue = Math.Min(100, c.Fatigue + 16 + _rng.Next(0, 7));
+            // Base ~12 + hasta 8 por participación: unos 6 partidos seguidos
+            // para llegar al tope, y menos si el jugador tuvo un partido tranquilo.
+            int extra = Math.Min(8, carga.GetValueOrDefault(id));
+            c.Fatigue = Math.Min(100, c.Fatigue + 11 + extra + _rng.Next(0, 4));
         }
 
         // Los que no jugaron descansan (y los lesionados van cumpliendo su parte)
@@ -641,7 +665,7 @@ public sealed class GameService
         foreach (var id in jugaron)
         {
             var c = Cond(id);
-            if (c.Fatigue >= 85 && !c.Injured && _rng.NextDouble() < 0.04)
+            if (c.Fatigue >= 90 && !c.Injured && _rng.NextDouble() < 0.02)
             {
                 c.Injuries++;
                 c.OutMatches = 1;
