@@ -2,6 +2,8 @@
 @inherits GamePageBase
 @using OnceDeOro.Multiplayer
 @inject MultiplayerService Mp
+@inject NavigationManager Nav
+@inject IJSRuntime JS
 @implements IAsyncDisposable
 
 <PageTitle>Online — Once de Oro</PageTitle>
@@ -76,6 +78,18 @@ else if (Mp.Room.Phase == "lobby")
         <div class="board__comp">@Loc["Código de sala"]</div>
         <div style="font-family:var(--font-display); font-size:64px; letter-spacing:.14em; color:var(--gold-2);">@room.Code</div>
         <div class="muted">@ModeLabel(room.Config) · @FormatLabel(room.Config)</div>
+
+        @* Escaneás y entrás derecho a la sala, sin tener que dictar el código. *@
+        <div class="joinqr">
+            <QrView Text="@LinkSala(room.Code)" Size="188" Alt="@Loc["Escaneá para unirte a la sala"]" />
+            <div class="joinqr__side">
+                <div class="joinqr__hint">@Loc["Escaneá el QR con el teléfono y entrás directo a la sala."]</div>
+                <code class="joinqr__link">@LinkSala(room.Code)</code>
+                <button class="btn btn--ghost" @onclick="() => Copiar(LinkSala(room.Code))">
+                    @(_copiado ? Loc["✓ Copiado"] : Loc["📋 Copiar link"])
+                </button>
+            </div>
+        </div>
     </div>
 
     <div class="section-title"><span class="dot"></span> @Loc["Jugadores"] (@room.Members.Count/@room.Config.Capacity)</div>
@@ -252,6 +266,32 @@ else if (Mp.Room.Phase == "done")
         base.OnInitialized();
         Mp.Changed += OnMp;
         if (string.IsNullOrEmpty(Name)) Name = Game.State.ClubName.Replace(" FC", "");
+
+        // Si venís de escanear el QR, el código ya viene en la dirección: se
+        // completa solo y sólo tenés que poner tu nombre y entrar.
+        var query = new Uri(Nav.Uri).Query;                       // "?sala=MQ8E"
+        foreach (var par in query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var kv = par.Split('=', 2);
+            if (kv.Length == 2 && kv[0].Equals("sala", StringComparison.OrdinalIgnoreCase))
+                JoinCode = Uri.UnescapeDataString(kv[1]).Trim().ToUpperInvariant();
+        }
+    }
+
+    /// <summary>La dirección que lleva a esta sala, la que va adentro del QR.</summary>
+    private string LinkSala(string code)
+    {
+        var b = new Uri(Nav.BaseUri);
+        return $"{b.Scheme}://{b.Authority}/online?sala={code}";
+    }
+
+    private bool _copiado;
+
+    private async Task Copiar(string txt)
+    {
+        try { await JS.InvokeVoidAsync("navigator.clipboard.writeText", txt); _copiado = true; }
+        catch { _copiado = false; }   // sin permiso de portapapeles queda el link a la vista
+        StateHasChanged();
     }
 
     private void OnMp()

@@ -1,0 +1,44 @@
+@* QR dibujado como SVG: nítido a cualquier tamaño y sin pedirle la imagen a nadie. *@
+@using OnceDeOro.Services
+
+@if (_modulos is not null)
+{
+    var n = _modulos.GetLength(0);
+    var total = n + Quiet * 2;
+    <svg class="qr" viewBox="0 0 @total @total" width="@Size" height="@Size"
+         shape-rendering="crispEdges" role="img" aria-label="@Alt">
+        @* El fondo SIEMPRE va blanco, aunque la app sea oscura: un QR con los
+           colores invertidos no lo lee la mayoría de los teléfonos. *@
+        <rect width="@total" height="@total" fill="#ffffff" />
+        @for (int r = 0; r < n; r++)
+        {
+            @for (int c = 0; c < n; c++)
+            {
+                @if (_modulos[r, c])
+                {
+                    <rect x="@(c + Quiet)" y="@(r + Quiet)" width="1" height="1" fill="#000000" />
+                }
+            }
+        }
+    </svg>
+}
+
+@code {
+    [Parameter, EditorRequired] public string Text { get; set; } = "";
+    [Parameter] public int Size { get; set; } = 200;
+    [Parameter] public string Alt { get; set; } = "Código QR";
+
+    /// <summary>Margen blanco obligatorio: sin él muchos lectores no enganchan.</summary>
+    private const int Quiet = 4;
+
+    private bool[,]? _modulos;
+    private string _ultimo = "";
+
+    protected override void OnParametersSet()
+    {
+        if (Text == _ultimo) return;
+        _ultimo = Text;
+        try { _modulos = string.IsNullOrEmpty(Text) ? null : QrCode.Encode(Text); }
+        catch { _modulos = null; }   // si no entra, simplemente no se dibuja
+    }
+}
