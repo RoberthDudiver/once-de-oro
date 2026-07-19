@@ -557,14 +557,22 @@ public sealed class GameService
             if (used >= f.SlotsFor(p.Pos))
             {
                 // reemplaza al titular más flojo de esa posición
+                // el más flojo de HOY (cansancio incluido), no el de menor fuerza nominal
                 var weakest = Starters.Where(s => s.Pos == p.Pos)
-                                      .OrderBy(s => s.Rating).FirstOrDefault();
+                                      .OrderBy(EffectiveRating).ThenBy(s => s.Rating).FirstOrDefault();
                 if (weakest is not null) State.StartingIds.Remove(weakest.Id);
             }
             State.StartingIds.Add(id);
         }
         Commit();
     }
+
+    /// <summary>
+    /// Fuerza con la que un jugador va a jugar HOY: la suya menos lo que le
+    /// descuenta el cansancio. Es la que hay que mirar para armar el equipo,
+    /// porque un 92 fundido puede rendir menos que un 85 descansado.
+    /// </summary>
+    public int EffectiveRating(Player p) => Effective(p).Rating;
 
     /// <summary>Arma automáticamente el mejor XI posible con el plantel actual.</summary>
     public void RebuildBestXI()
@@ -573,8 +581,14 @@ public sealed class GameService
         var chosen = new List<string>();
         foreach (var pos in new[] { Position.GK, Position.DEF, Position.MID, Position.FWD })
         {
-            var best = Owned.Where(p => p.Pos == pos)
-                            .OrderByDescending(p => p.Rating)
+            // Los LESIONADOS quedan afuera: si los elegíamos, ocupaban el puesto
+            // pero después no podían jugar, y el hueco salía vacío a la cancha.
+            // Y ordenamos por fuerza EFECTIVA, no por la nominal: así un titular
+            // cansado pierde el puesto contra un suplente fresco que hoy rinde más.
+            var best = Owned.Where(p => p.Pos == pos && !IsInjured(p.Id))
+                            .OrderByDescending(EffectiveRating)
+                            .ThenByDescending(p => p.Rating)     // a igual rendimiento, el mejor jugador
+                            .ThenBy(p => FatigueOf(p.Id))        // y entre iguales, el más descansado
                             .Take(f.SlotsFor(pos))
                             .Select(p => p.Id);
             chosen.AddRange(best);
