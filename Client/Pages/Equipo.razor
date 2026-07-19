@@ -112,6 +112,45 @@ else
             </PlayerCard>
         }
     </div>
+    @* ---------------- Concentración: 5 minutos y vuelven enteros ---------------- *@
+    <div class="section-title"><span class="dot"></span> @Loc["🛌 Concentración"]</div>
+    <div class="card card--pad mb">
+        <div class="row wrap" style="justify-content:space-between; gap:10px;">
+            <div class="faint" style="font-size:12.5px; max-width:520px;">
+                @Loc["Mandalos a concentrar y en 5 minutos vuelven enteros. Mientras descansan no pueden jugar: ese es el precio."]
+            </div>
+            @if (Cansados().Any())
+            {
+                <button class="btn btn--gold" @onclick="() => Game.RestAll()">
+                    @Loc["😴 Que descansen todos"] (@Cansados().Count())
+                </button>
+            }
+        </div>
+
+        @if (!Cansados().Any() && !Descansando().Any())
+        {
+            <div class="muted mt" style="font-size:13px;">@Loc["Están todos enteros. A jugar."]</div>
+        }
+
+        <div class="grid mt" style="gap:8px;">
+            @foreach (var p in Descansando())
+            {
+                <div class="rest rest--on">
+                    <span class="rest__name">😴 @p.Name</span>
+                    <span class="rest__bar"><i style="width:@RestPct(p.Id)%"></i></span>
+                    <span class="rest__time">@RestLabel(p.Id)</span>
+                </div>
+            }
+            @foreach (var p in Cansados())
+            {
+                <div class="rest">
+                    <span class="rest__name">@p.Name</span>
+                    <span class="rest__fat">😮‍💨 @Game.FatigueOf(p.Id)%</span>
+                    <button class="btn btn--ghost rest__btn" @onclick="() => Game.Rest(p.Id)">@Loc["Descansar"]</button>
+                </div>
+            }
+        </div>
+    </div>
 }
 
 <PlayerDetail P="_ficha" OnClose="() => _ficha = null" />
@@ -119,6 +158,63 @@ else
 @code {
     private Player? _ficha;
     private void Abrir(Player p) => _ficha = p;
+
+    // ---- Concentración ----
+    // Un timer de un segundo mientras haya alguien descansando: es lo único que
+    // necesita refrescarse solo (la cuenta regresiva y el alta automática).
+    private System.Threading.Timer? _tick;
+
+    // Se recalculan una vez por render y no en cada uso: Game.Owned resuelve cada
+    // id contra todo el plantel, así que llamarlo cuatro veces por dibujo se nota
+    // cuando tenés cientos de jugadores.
+    private List<Player> _descansando = new();
+    private List<Player> _cansados = new();
+
+    private List<Player> Descansando() => _descansando;
+    private List<Player> Cansados() => _cansados;
+
+    private void RecalcularDescanso()
+    {
+        var mios = Game.Owned.ToList();
+        _descansando = mios.Where(p => Game.IsResting(p.Id)).ToList();
+        _cansados = mios.Where(p => !Game.IsResting(p.Id) && !Game.IsInjured(p.Id) && Game.FatigueOf(p.Id) > 0)
+                        .OrderByDescending(p => Game.FatigueOf(p.Id)).ToList();
+    }
+
+    protected override void OnGameChanged() => RecalcularDescanso();
+
+    private string RestLabel(string id)
+    {
+        var t = Game.RestLeft(id);
+        return $"{t.Minutes}:{t.Seconds:00}";
+    }
+
+    /// <summary>Cuánto del descanso ya cumplió, para la barrita.</summary>
+    private int RestPct(string id)
+    {
+        double total = GameService.RestMinutes * 60.0;
+        double falta = Game.RestLeft(id).TotalSeconds;
+        return (int)Math.Round(Math.Clamp((total - falta) / total * 100, 0, 100));
+    }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        RecalcularDescanso();
+        _tick = new System.Threading.Timer(_ =>
+        {
+            // Cierra los descansos cumplidos y redibuja la cuenta regresiva.
+            Game.SettleRests();
+            RecalcularDescanso();
+            InvokeAsync(StateHasChanged);
+        }, null, 1000, 1000);
+    }
+
+    public override void Dispose()
+    {
+        _tick?.Dispose();
+        base.Dispose();
+    }
 
     private Position? PlantelPos;
     private void OnNameChange(ChangeEventArgs e) => Game.SetClubName(e.Value?.ToString() ?? "");

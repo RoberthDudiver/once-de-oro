@@ -61,6 +61,13 @@ public sealed class PlayerCondition
     /// <summary>Partidos que le faltan para volver. 0 = disponible.</summary>
     public int OutMatches { get; set; }
 
+    /// <summary>
+    /// Si está concentrado descansando, cuándo termina (UTC). Mientras tanto no
+    /// puede jugar; al cumplirse vuelve con el tanque lleno. Se guarda como
+    /// instante absoluto para que el descanso corra aunque cierres el juego.
+    /// </summary>
+    public DateTime? RestUntil { get; set; }
+
     // ---- Estadísticas acumuladas con vos ----
     public int Matches { get; set; }
     public int Goals { get; set; }

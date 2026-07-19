@@ -119,6 +119,14 @@ public sealed class Loc
         ["⚡ Auto XI"] = "⚡ Auto XI",
         ["✓ XI TITULAR COMPLETO — LISTO PARA JUGAR"] = "✓ FULL STARTING XI — READY TO PLAY",
 
+        // ---- concentración ----
+        ["🛌 Concentración"] = "🛌 Rest camp",
+        ["Mandalos a concentrar y en 5 minutos vuelven enteros. Mientras descansan no pueden jugar: ese es el precio."]
+            = "Send them to the rest camp and in 5 minutes they're back at 100%. While resting they can't play: that's the price.",
+        ["😴 Que descansen todos"] = "😴 Rest everyone",
+        ["Están todos enteros. A jugar."] = "Everyone's fresh. Go play.",
+        ["Descansar"] = "Rest",
+
         // ---- cajas sorpresa ----
         ["🎁 Cajas"] = "🎁 Boxes",
         ["Caja Básica"] = "Basic Box",
@@ -508,6 +516,14 @@ public sealed class Loc
         ["Fuerza"] = "Força",
         ["⚡ Auto XI"] = "⚡ Auto XI",
         ["✓ XI TITULAR COMPLETO — LISTO PARA JUGAR"] = "✓ XI TITULAR COMPLETO — PRONTO PARA JOGAR",
+
+        // ---- concentração ----
+        ["🛌 Concentración"] = "🛌 Concentração",
+        ["Mandalos a concentrar y en 5 minutos vuelven enteros. Mientras descansan no pueden jugar: ese es el precio."]
+            = "Mande-os para a concentração e em 5 minutos voltam a 100%. Enquanto descansam não podem jogar: esse é o preço.",
+        ["😴 Que descansen todos"] = "😴 Que descansem todos",
+        ["Están todos enteros. A jugar."] = "Estão todos inteiros. Bora jogar.",
+        ["Descansar"] = "Descansar",
 
         // ---- caixas surpresa ----
         ["🎁 Cajas"] = "🎁 Caixas",

@@ -537,7 +537,77 @@ public sealed class GameService
     }
 
     public bool IsInjured(string id) => State.Conditions.TryGetValue(id, out var c) && c.Injured;
-    public int FatigueOf(string id) => State.Conditions.TryGetValue(id, out var c) ? c.Fatigue : 0;
+
+    // ---------------------------------------------------------------- descanso
+    // Podés mandar a un jugador a concentrar: 5 minutos REALES sin poder jugar y
+    // vuelve entero. El costo es el tiempo, no la plata, y por eso el descanso lo
+    // deja afuera del equipo mientras dura: si pudiera jugar igual, sería gratis
+    // y el cansancio no significaría nada.
+
+    public const int RestMinutes = 5;
+
+    /// <summary>Cuánto le falta para volver de la concentración. Cero = disponible.</summary>
+    public TimeSpan RestLeft(string id)
+    {
+        if (!State.Conditions.TryGetValue(id, out var c) || c.RestUntil is null) return TimeSpan.Zero;
+        var falta = c.RestUntil.Value - DateTime.UtcNow;
+        return falta > TimeSpan.Zero ? falta : TimeSpan.Zero;
+    }
+
+    public bool IsResting(string id) => RestLeft(id) > TimeSpan.Zero;
+
+    /// <summary>
+    /// El cansancio de HOY. Si ya cumplió el descanso devuelve 0 aunque todavía no
+    /// hayamos guardado el cambio: la lectura nunca puede mentir por un timing.
+    /// </summary>
+    public int FatigueOf(string id)
+    {
+        if (!State.Conditions.TryGetValue(id, out var c)) return 0;
+        if (c.RestUntil is not null && DateTime.UtcNow >= c.RestUntil.Value) return 0;
+        return c.Fatigue;
+    }
+
+    /// <summary>Manda a concentrar. Sale del equipo hasta que se cumplan los 5 minutos.</summary>
+    public void Rest(string id)
+    {
+        var c = Cond(id);
+        if (c.Injured || c.Fatigue == 0) return;
+        c.RestUntil = DateTime.UtcNow.AddMinutes(RestMinutes);
+        Commit();
+    }
+
+    /// <summary>Manda a concentrar a todos los que lo necesitan.</summary>
+    public int RestAll()
+    {
+        int n = 0;
+        foreach (var p in Owned)
+        {
+            var c = Cond(p.Id);
+            if (c.Injured || c.Fatigue == 0 || IsResting(p.Id)) continue;
+            c.RestUntil = DateTime.UtcNow.AddMinutes(RestMinutes);
+            n++;
+        }
+        if (n > 0) Commit();
+        return n;
+    }
+
+    /// <summary>
+    /// Cierra los descansos cumplidos: pone el tanque a full y limpia la marca.
+    /// Devuelve true si algo cambió, para refrescar la pantalla.
+    /// </summary>
+    public bool SettleRests()
+    {
+        bool algo = false;
+        foreach (var c in State.Conditions.Values)
+        {
+            if (c.RestUntil is null || DateTime.UtcNow < c.RestUntil.Value) continue;
+            c.Fatigue = 0;
+            c.RestUntil = null;
+            algo = true;
+        }
+        if (algo) Commit();
+        return algo;
+    }
 
     /// <summary>
     /// El cansancio NO baja el rendimiento hasta que la barra está realmente alta.
@@ -547,6 +617,23 @@ public sealed class GameService
     public const int FatigueSafe = 60;
     public static int FatiguePenalty(int fatigue) =>
         fatigue <= FatigueSafe ? 0 : (fatigue - FatigueSafe) / 8;
+
+    /// <summary>
+    /// Cuánto le pesa un partido según lo que es. El crack está mejor preparado y
+    /// se recupera antes, así que aguanta muchas más fechas seguidas:
+    ///   105-110 → no se cansa nunca (son de otro planeta)
+    ///   100-104 → se cansan muchísimo más lento que el resto
+    ///   y de ahí para abajo, cuanto más flojo, más le cuesta el partido.
+    /// </summary>
+    public static double FatigueFactor(int rating) => rating switch
+    {
+        >= 105 => 0.00,
+        >= 100 => 0.25,
+        >= 95 => 0.55,
+        >= 90 => 0.70,
+        >= 80 => 0.85,
+        _ => 1.00,
+    };
 
     /// <summary>El jugador tal como rinde HOY: su fuerza menos el desgaste.</summary>
     public Player Effective(Player p)
@@ -565,13 +652,16 @@ public sealed class GameService
         };
     }
 
-    /// <summary>Titulares disponibles: los lesionados no pueden jugar.</summary>
-    public IReadOnlyList<Player> AvailableStarters =>
-        Starters.Where(p => !IsInjured(p.Id)).ToList();
+    /// <summary>No puede jugar: está lesionado o concentrado descansando.</summary>
+    public bool IsOut(string id) => IsInjured(id) || IsResting(id);
 
-    /// <summary>Suplentes sanos que podrían entrar.</summary>
+    /// <summary>Titulares disponibles: los lesionados y los que descansan no juegan.</summary>
+    public IReadOnlyList<Player> AvailableStarters =>
+        Starters.Where(p => !IsOut(p.Id)).ToList();
+
+    /// <summary>Suplentes disponibles que podrían entrar.</summary>
     public IReadOnlyList<Player> AvailableBench =>
-        Owned.Where(p => !State.StartingIds.Contains(p.Id) && !IsInjured(p.Id))
+        Owned.Where(p => !State.StartingIds.Contains(p.Id) && !IsOut(p.Id))
              .OrderByDescending(EffectiveRating).ThenByDescending(p => p.Rating).ToList();
 
     /// <summary>El XI real, con los puestos vacíos completados por juveniles de cantera.</summary>
@@ -691,9 +781,10 @@ public sealed class GameService
         }
         else
         {
-            // Un lesionado no puede entrar al XI: si lo dejábamos, ocupaba el puesto
-            // y después no jugaba, que es justo el hueco que queríamos evitar.
-            if (IsInjured(id)) return;
+            // El que no puede jugar (lesionado o concentrado) no entra al XI: si lo
+            // dejábamos, ocupaba el puesto y después no jugaba, que es justo el
+            // hueco que queríamos evitar.
+            if (IsOut(id)) return;
 
             var f = Formation;
             int used = Starters.Count(s => s.Pos == p.Pos);
@@ -728,7 +819,7 @@ public sealed class GameService
             // pero después no podían jugar, y el hueco salía vacío a la cancha.
             // Y ordenamos por fuerza EFECTIVA, no por la nominal: así un titular
             // cansado pierde el puesto contra un suplente fresco que hoy rinde más.
-            var best = Owned.Where(p => p.Pos == pos && !IsInjured(p.Id))
+            var best = Owned.Where(p => p.Pos == pos && !IsOut(p.Id))
                             .OrderByDescending(EffectiveRating)
                             .ThenByDescending(p => p.Rating)     // a igual rendimiento, el mejor jugador
                             .ThenBy(p => FatigueOf(p.Id))        // y entre iguales, el más descansado
@@ -867,10 +958,13 @@ public sealed class GameService
         {
             var c = Cond(id);
             c.Matches++;
-            // Base ~12 + hasta 8 por participación: unos 6 partidos seguidos
-            // para llegar al tope, y menos si el jugador tuvo un partido tranquilo.
-            int extra = Math.Min(8, carga.GetValueOrDefault(id));
-            c.Fatigue = Math.Min(100, c.Fatigue + 11 + extra + _rng.Next(0, 4));
+
+            // Base + lo que le costó el partido. El que se rompió el lomo se cansa más.
+            int extra = Math.Min(6, carga.GetValueOrDefault(id));
+            int bruto = 8 + extra + _rng.Next(0, 3);
+
+            int rating = Owned.FirstOrDefault(p => p.Id == id)?.Rating ?? 70;
+            c.Fatigue = Math.Min(100, c.Fatigue + (int)Math.Round(bruto * FatigueFactor(rating)));
         }
 
         // Los que no jugaron descansan (y los lesionados van cumpliendo su parte)
