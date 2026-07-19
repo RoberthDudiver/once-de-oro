@@ -121,8 +121,8 @@ public sealed class Loc
 
         // ---- concentración ----
         ["🛌 Concentración"] = "🛌 Rest camp",
-        ["Mandalos a concentrar y en 5 minutos vuelven enteros. Mientras descansan no pueden jugar: ese es el precio."]
-            = "Send them to the rest camp and in 5 minutes they're back at 100%. While resting they can't play: that's the price.",
+        ["Mandalos a concentrar y en 1 minuto vuelven enteros. Mientras descansan no pueden jugar: ese es el precio."]
+            = "Send them to the rest camp and in 1 minute they're back at 100%. While resting they can't play: that's the price.",
         ["😴 Que descansen todos"] = "😴 Rest everyone",
         ["Están todos enteros. A jugar."] = "Everyone's fresh. Go play.",
         ["Descansar"] = "Rest",
@@ -577,8 +577,8 @@ public sealed class Loc
 
         // ---- concentração ----
         ["🛌 Concentración"] = "🛌 Concentração",
-        ["Mandalos a concentrar y en 5 minutos vuelven enteros. Mientras descansan no pueden jugar: ese es el precio."]
-            = "Mande-os para a concentração e em 5 minutos voltam a 100%. Enquanto descansam não podem jogar: esse é o preço.",
+        ["Mandalos a concentrar y en 1 minuto vuelven enteros. Mientras descansan no pueden jugar: ese es el precio."]
+            = "Mande-os para a concentração e em 1 minuto voltam a 100%. Enquanto descansam não podem jogar: esse é o preço.",
         ["😴 Que descansen todos"] = "😴 Que descansem todos",
         ["Están todos enteros. A jugar."] = "Estão todos inteiros. Bora jogar.",
         ["Descansar"] = "Descansar",

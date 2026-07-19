@@ -636,12 +636,12 @@ public sealed class GameService
     public bool IsInjured(string id) => State.Conditions.TryGetValue(id, out var c) && c.Injured;
 
     // ---------------------------------------------------------------- descanso
-    // Podés mandar a un jugador a concentrar: 5 minutos REALES sin poder jugar y
+    // Podés mandar a un jugador a concentrar: 1 minuto REAL sin poder jugar y
     // vuelve entero. El costo es el tiempo, no la plata, y por eso el descanso lo
     // deja afuera del equipo mientras dura: si pudiera jugar igual, sería gratis
     // y el cansancio no significaría nada.
 
-    public const int RestMinutes = 5;
+    public const int RestMinutes = 1;
 
     /// <summary>Cuánto le falta para volver de la concentración. Cero = disponible.</summary>
     public TimeSpan RestLeft(string id)
@@ -664,7 +664,7 @@ public sealed class GameService
         return c.Fatigue;
     }
 
-    /// <summary>Manda a concentrar. Sale del equipo hasta que se cumplan los 5 minutos.</summary>
+    /// <summary>Manda a concentrar. Sale del equipo hasta que se cumpla el minuto.</summary>
     public void Rest(string id)
     {
         var c = Cond(id);
