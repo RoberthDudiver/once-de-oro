@@ -401,7 +401,15 @@ public sealed class GameService
             "Piso 90. Acá no hay relleno.",
             new LootBand[] { new(90, 98, 740), new(99, 99, 170), new(100, 109, 90) }),
 
-        new(ClownBox, "Caja del Payaso", "🤡", 300,
+        // Fuera de escala garantizado. Es la segunda más cara del juego y la única
+        // que asegura un jugador que además casi no se cansa.
+        new("olimpo", "Caja Olimpo", "🏛️", 1500,
+            "Sólo dioses: del 100 para arriba, garantizado.",
+            new LootBand[] { new(100, 109, 1000) }),
+
+        // La más cara de todas. Y te da un payaso. Ese es el chiste: el cartel más
+        // grande y el precio más alto del juego para la peor compra posible.
+        new(ClownBox, "Caja del Payaso", "🤡", 1800,
             "GARANTIZADO: un jugador de 110. Palabra de payaso.",
             new LootBand[] { new(TrollRating, TrollRating, 1000) }),
     };
