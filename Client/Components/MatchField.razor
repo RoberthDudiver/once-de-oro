@@ -1,6 +1,7 @@
 @* Cancha 2D vista desde arriba: reproduce el timeline con 22 jugadores + pelota *@
 @using OnceDeOro.Models
 @inject Loc Loc
+@inject Sfx Sfx
 
 <div class="mf">
     @if (_goalId > 0)
@@ -42,6 +43,7 @@
                 <button class="@(_speed == 0.5 ? "on" : "")" @onclick="() => _speed = 0.5">2×</button>
                 <button class="@(_speed == 0.25 ? "on" : "")" @onclick="() => _speed = 0.25">4×</button>
             </div>
+            <button class="btn btn--ghost" @onclick="ToggleSonido" title="@Loc["Sonido"]">@(_sonido ? "🔊" : "🔇")</button>
             <button class="btn btn--ghost" @onclick="() => _skip = true">@Loc["⏩ Saltar al final"]</button>
         </div>
     }
@@ -180,8 +182,18 @@
     private bool _penScored;
     private string? _penTaker, _penBallClass = "", _penKeeperClass = "";
 
+    private bool _sonido = true;
+
+    private async Task ToggleSonido()
+    {
+        _sonido = await Sfx.ToggleAsync();
+        if (!_sonido) Sfx.CrowdStop();
+    }
+
     protected override async Task OnInitializedAsync()
     {
+        await Sfx.LoadAsync();
+        _sonido = Sfx.On;
         _homeBase = BasePositions(Formation.All.FirstOrDefault(f => f.Name == HomeFormationName) ?? Formation.F433, true);
         _awayBase = BasePositions(Formation.All.FirstOrDefault(f => f.Name == AwayFormationName) ?? Formation.F433, false);
         for (int i = 0; i < 11; i++)
@@ -206,6 +218,7 @@
             await Task.Delay(Math.Max(6, ms));
         }
         _done = true;
+        Sfx.CrowdStop();
         StateHasChanged();
         await OnFinished.InvokeAsync();
     }
@@ -255,6 +268,8 @@
             if (e.Type is SimEventType.Pass or SimEventType.Carry && e.Team is 0 or 1)
                 _possCount[e.Team]++;
         }
+
+        Sonar(e);
 
         switch (e.Type)
         {
@@ -313,6 +328,29 @@
             SimEventType.PenaltyMiss   => "❌ " + F("{0} le ataja a {1}", a, tg) + $"  ({e.ScoreH}-{e.ScoreA})",
             _ => e.Text,
         };
+    }
+
+    /// <summary>Le pone sonido a lo que pasa en la cancha.</summary>
+    private void Sonar(SimEvent e)
+    {
+        switch (e.Type)
+        {
+            case SimEventType.KickOff:        Sfx.CrowdStart(); Sfx.Play("whistle"); break;
+            case SimEventType.Goal:           Sfx.Play("goal"); break;
+            case SimEventType.Yellow:         Sfx.Play("yellow"); break;
+            case SimEventType.Red:            Sfx.Play("red"); Sfx.Play("boo"); break;
+            case SimEventType.Offside:        Sfx.Play("whistle"); break;
+            case SimEventType.Foul:           Sfx.Play("whistle"); break;
+            case SimEventType.PenaltyAwarded: Sfx.Play("whistleLong"); Sfx.Play("boo"); break;
+            case SimEventType.Save:           Sfx.Play("roar"); break;
+            case SimEventType.Post:           Sfx.Play("boo"); break;
+            case SimEventType.HalfTime:       Sfx.Play("whistleLong"); break;
+            case SimEventType.SecondHalf:     Sfx.Play("whistle"); break;
+            case SimEventType.FullTime:       Sfx.Play("whistleLong"); break;
+            case SimEventType.ShootoutStart:  Sfx.Play("whistleLong"); break;
+            case SimEventType.PenaltyGoal:    Sfx.Play("goal"); break;
+            case SimEventType.PenaltyMiss:    Sfx.Play("boo"); break;
+        }
     }
 
     private void AddKey(SimEventType type, SimEvent e)

@@ -1,6 +1,7 @@
 @page "/partido"
 @inherits GamePageBase
 @inject NavigationManager Nav
+@inject Sfx Sfx
 
 <PageTitle>Partido — Once de Oro</PageTitle>
 
@@ -245,6 +246,12 @@ else
         _result = Game.LastMatch;
         _reward = Game.ApplyMatch(_result!);
         _phase = Phase.Done;
+
+        var run = Game.State.Run;
+        if (run is not null && run.Champion) Sfx.Play("victory");
+        else if (run is not null && run.Eliminated) Sfx.Play("defeat");
+        else if (_result is not null && _result.HomeWon) Sfx.Play("roar");
+
         StateHasChanged();
     }
 
