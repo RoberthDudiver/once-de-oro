@@ -394,6 +394,13 @@ public sealed class GameService
             new LootBand[] { new(70, 79, 50), new(80, 89, 300), new(90, 98, 530),
                              new(99, 99, 80), new(100, 109, 40) }),
 
+        // La cara de verdad: acá no existe el relleno, el piso es 90. Cuesta más que
+        // la de Leyenda justamente por eso: no es que dé mejores 100+, es que NUNCA
+        // te clava un 79.
+        new("elite", "Caja Élite", "👑", 800,
+            "Piso 90. Acá no hay relleno.",
+            new LootBand[] { new(90, 98, 740), new(99, 99, 170), new(100, 109, 90) }),
+
         new(ClownBox, "Caja del Payaso", "🤡", 300,
             "GARANTIZADO: un jugador de 110. Palabra de payaso.",
             new LootBand[] { new(TrollRating, TrollRating, 1000) }),
