@@ -3,6 +3,56 @@
 
 <PageTitle>Academia — Once de Oro</PageTitle>
 
+@* ============ TOKENS DE MEJORA: sirven para CUALQUIER jugador ============ *@
+<div class="section-title"><span class="dot"></span> @Loc["Tokens de mejora"]</div>
+
+<div class="card card--pad mb">
+    <div class="row wrap" style="justify-content:space-between; gap:12px;">
+        <div>
+            <div class="tok__count">🎟️ @Game.State.Tokens</div>
+            <div class="muted" style="font-size:12.5px;">@Loc["Sirven para subir de nivel a cualquier jugador tuyo, hasta 99."]</div>
+        </div>
+        <div class="row wrap" style="gap:8px;">
+            @foreach (var q in new[] { 1, 5, 10 })
+            {
+                <button class="btn btn--ghost" style="padding:9px 13px;"
+                        disabled="@(!Game.CanBuyTokens(q))" @onclick="() => Game.BuyTokens(q)">
+                    +@q · $@(q * GameService.TokenCost)M
+                </button>
+            }
+        </div>
+    </div>
+</div>
+
+@if (Game.Owned.Any())
+{
+    <div class="card card--pad mb">
+        <div class="muted" style="font-size:12.5px; margin-bottom:10px;">
+            @Loc["Cuanto más fuerte es el jugador, más tokens cuesta cada punto. Así mejorar a una estrella es una inversión de verdad."]
+        </div>
+        <div class="upg">
+            @foreach (var p in Game.Owned.OrderByDescending(x => x.Rating).Take(30))
+            {
+                var tope = p.Rating >= GameService.MaxRating;
+                var costo = GameService.TokensToUpgrade(p.Rating);
+                var alcanza = Game.State.Tokens >= costo;
+                var mejoras = Game.UpgradeOf(p.Id);
+                <div class="upg__row">
+                    <span class="dot-player @Tier(p.Rating)" style="width:38px;height:38px;font-size:15px;">@p.Rating</span>
+                    <span class="upg__name">
+                        @p.Name
+                        @if (mejoras > 0) { <span class="upg__plus">+@mejoras</span> }
+                    </span>
+                    <button class="btn @(alcanza && !tope ? "btn--gold" : "btn--ghost")" style="padding:7px 12px; font-size:12.5px;"
+                            disabled="@(tope || !alcanza)" @onclick="() => Game.UpgradePlayer(p.Id)">
+                        @(tope ? Loc["Máximo"] : $"▲ {costo} 🎟️")
+                    </button>
+                </div>
+            }
+        </div>
+    </div>
+}
+
 <div class="section-title"><span class="dot"></span> @Loc["Academia"]</div>
 
 <div class="card card--pad mb">

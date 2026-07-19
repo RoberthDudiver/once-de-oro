@@ -146,11 +146,13 @@ public sealed class GameService
     // ---------------------------------------------------------------- plantel
     public IEnumerable<Player> Owned =>
         State.OwnedIds.Select(id => AllPlayers.FirstOrDefault(p => p.Id == id))
-                      .Where(p => p is not null)!.Cast<Player>();
+                      .Where(p => p is not null)!.Cast<Player>()
+                      .Select(Boosted);   // con las mejoras compradas aplicadas
 
     public IReadOnlyList<Player> Starters =>
         State.StartingIds.Select(id => AllPlayers.FirstOrDefault(p => p.Id == id))
-                         .Where(p => p is not null).Cast<Player>().ToList();
+                         .Where(p => p is not null).Cast<Player>()
+                         .Select(Boosted).ToList();
 
     public Formation Formation =>
         Formation.All.FirstOrDefault(f => f.Name == State.FormationName) ?? Formation.F433;
@@ -169,6 +171,69 @@ public sealed class GameService
 
     public bool IsReserve(Player p) => p.Id.StartsWith("res-");
 
+    // ---------------------------------------------------------------- tokens de mejora
+    // Se puede subir de nivel a CUALQUIER jugador, no sólo a los de academia.
+    // El precio del token es fijo, pero cada punto cuesta cada vez MÁS tokens:
+    // así llevar a un juvenil de 70 a 71 es barato y llevar a Messi de 96 a 97
+    // es una inversión enorme. Es lo que mantiene el sistema justo.
+
+    public const int TokenCost = 50;      // millones por token
+    public const int MaxRating = 99;
+
+    /// <summary>Cuántos tokens cuesta subir UN punto desde esa fuerza.</summary>
+    public static int TokensToUpgrade(int rating) => rating switch
+    {
+        < 70 => 1,
+        < 80 => 2,
+        < 85 => 3,
+        < 90 => 5,
+        < 93 => 8,
+        < 95 => 12,
+        < 97 => 18,
+        < 98 => 25,
+        _ => 35,
+    };
+
+    public int UpgradeOf(string id) => State.Upgrades.TryGetValue(id, out var v) ? v : 0;
+
+    /// <summary>El jugador con las mejoras que le compraste ya aplicadas.</summary>
+    public Player Boosted(Player p)
+    {
+        int up = UpgradeOf(p.Id);
+        if (up <= 0) return p;
+        return new Player
+        {
+            Id = p.Id, Name = p.Name, Nation = p.Nation, Flag = p.Flag, Pos = p.Pos,
+            Rating = Math.Min(MaxRating, p.Rating + up), IsLegend = p.IsLegend, Era = p.Era,
+        };
+    }
+
+    public bool CanBuyTokens(int qty) => qty > 0 && State.Money >= qty * TokenCost;
+
+    public bool BuyTokens(int qty)
+    {
+        if (!CanBuyTokens(qty)) return false;
+        State.Money -= qty * TokenCost;
+        State.Tokens += qty;
+        Commit();
+        return true;
+    }
+
+    /// <summary>Sube un punto de fuerza gastando tokens. Tope 99.</summary>
+    public bool UpgradePlayer(string id)
+    {
+        var p = Owned.FirstOrDefault(x => x.Id == id);
+        if (p is null || p.Rating >= MaxRating) return false;
+
+        int cost = TokensToUpgrade(p.Rating);
+        if (State.Tokens < cost) return false;
+
+        State.Tokens -= cost;
+        State.Upgrades[id] = UpgradeOf(id) + 1;
+        Commit();
+        return true;
+    }
+
     // ---------------------------------------------------------------- condición física
     /// <summary>Estado (cansancio, lesión, estadísticas) de un jugador. Lo crea si no existe.</summary>
     public PlayerCondition Cond(string id)
@@ -185,7 +250,7 @@ public sealed class GameService
     public int FatigueOf(string id) => State.Conditions.TryGetValue(id, out var c) ? c.Fatigue : 0;
 
     /// <summary>Cuánto rendimiento le resta el cansancio (hasta -8 de fuerza).</summary>
-    public static int FatiguePenalty(int fatigue) => fatigue / 12;
+    public static int FatiguePenalty(int fatigue) => fatigue / 16;
 
     /// <summary>El jugador tal como rinde HOY: su fuerza menos el desgaste.</summary>
     public Player Effective(Player p)
@@ -444,7 +509,7 @@ public sealed class GameService
         {
             var c = Cond(id);
             c.Matches++;
-            c.Fatigue = Math.Min(100, c.Fatigue + 24 + _rng.Next(0, 9));
+            c.Fatigue = Math.Min(100, c.Fatigue + 16 + _rng.Next(0, 7));
         }
 
         // Los que no jugaron descansan (y los lesionados van cumpliendo su parte)
@@ -452,7 +517,7 @@ public sealed class GameService
         {
             var c = Cond(p.Id);
             if (!jugaron.Contains(p.Id))
-                c.Fatigue = Math.Max(0, c.Fatigue - 22);
+                c.Fatigue = Math.Max(0, c.Fatigue - 34);
             if (c.OutMatches > 0) c.OutMatches--;
         }
 
@@ -475,7 +540,7 @@ public sealed class GameService
                 case SimEventType.Injury when jugaron.Contains(e.ActorId):
                     var c = Cond(e.ActorId);
                     c.Injuries++;
-                    c.OutMatches = Math.Max(c.OutMatches, 1 + _rng.Next(3));   // 1 a 3 partidos
+                    c.OutMatches = Math.Max(c.OutMatches, 1 + _rng.Next(2));   // 1 o 2 partidos
                     break;
             }
         }
@@ -484,10 +549,10 @@ public sealed class GameService
         foreach (var id in jugaron)
         {
             var c = Cond(id);
-            if (c.Fatigue >= 80 && !c.Injured && _rng.NextDouble() < 0.10)
+            if (c.Fatigue >= 85 && !c.Injured && _rng.NextDouble() < 0.04)
             {
                 c.Injuries++;
-                c.OutMatches = 1 + _rng.Next(2);
+                c.OutMatches = 1;
             }
         }
     }

@@ -102,7 +102,7 @@ public static class PlayerDatabase
             P("Johan Neeskens", "P. Bajos", NL, Position.MID, 86, 1974),
             P("Arjen Robben", "P. Bajos", NL, Position.FWD, 88, 2010, true),
             P("Wesley Sneijder", "P. Bajos", NL, Position.MID, 87, 2010),
-            P("Virgil van Dijk", "P. Bajos", NL, Position.DEF, 89, 2022, true),
+            P("Virgil van Dijk", "P. Bajos", NL, Position.DEF, 95, 2022, true),
             P("Ruud van Nistelrooy", "P. Bajos", NL, Position.FWD, 86, 2006),
             P("Edwin van der Sar", "P. Bajos", NL, Position.GK, 89, 2010),
             P("Ronald Koeman", "P. Bajos", NL, Position.DEF, 84, 1994),
@@ -538,6 +538,33 @@ public static class PlayerDatabase
             P("Christian Vieri", "Italia", IT, Position.FWD, 87, 2002, true),
             P("Hernán Crespo", "Argentina", AR, Position.FWD, 87, 2002, true),
             P("Fernando Torres", "España", ES, Position.FWD, 87, 2008, true),
+        });
+
+
+        // ============================================================
+        //  Pedidos del jugador: figuras actuales + mas colombianos
+        // ============================================================
+        const string CV = "🇨🇻";
+
+        l.AddRange(new[]
+        {
+            P("Martin Ødegaard", "Noruega", NO, Position.MID, 87, 2026),
+            P("Valentín Barco", "Argentina", AR, Position.DEF, 80, 2026),
+            P("Anthony Gordon", "Inglaterra", EN, Position.FWD, 83, 2026),
+            P("Vozinha", "Cabo Verde", CV, Position.GK, 99, 2026, true),
+            P("Richard Ríos", "Colombia", CO, Position.MID, 83, 2026),
+            P("Jhon Arias", "Colombia", CO, Position.MID, 83, 2026),
+            P("Camilo Vargas", "Colombia", CO, Position.GK, 82, 2026),
+            P("Johan Mojica", "Colombia", CO, Position.DEF, 79, 2026),
+            P("Rafael Santos Borré", "Colombia", CO, Position.FWD, 81, 2026),
+            P("Carlos Cuesta", "Colombia", CO, Position.DEF, 79, 2026),
+            P("Yerry Mina", "Colombia", CO, Position.DEF, 80, 2022),
+            P("Radamel Falcao García", "Colombia", CO, Position.FWD, 86, 2014, true),
+            P("Juan Cuadrado", "Colombia", CO, Position.MID, 84, 2018),
+            P("Mateus Uribe", "Colombia", CO, Position.MID, 80, 2022),
+            P("Willington Ortiz", "Colombia", CO, Position.FWD, 83, 1975, true),
+            P("Iván Córdoba", "Colombia", CO, Position.DEF, 84, 2002, true),
+            P("Mario Yepes", "Colombia", CO, Position.DEF, 83, 2014, true),
         });
 
         return l;

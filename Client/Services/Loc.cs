@@ -206,6 +206,9 @@ public sealed class Loc
         ["Goles"] = "Goals",
         ["Lesiones"] = "Injuries",
         ["Goles/partido"] = "Goals/match",
+        ["Tokens de mejora"] = "Upgrade tokens",
+        ["Sirven para subir de nivel a cualquier jugador tuyo, hasta 99."] = "Use them to level up any of your players, up to 99.",
+        ["Cuanto más fuerte es el jugador, más tokens cuesta cada punto. Así mejorar a una estrella es una inversión de verdad."] = "The stronger the player, the more tokens each point costs. Upgrading a star is a real investment.",
         ["Academia"] = "Academy",
         ["Creá tus propios jugadores y hacelos crecer entrenando y jugando. Entrenar cuesta cada vez más caro: es donde tu fortuna encuentra destino."]
             = "Create your own players and grow them by training and playing. Training gets pricier every level: that's where your fortune finally has somewhere to go.",
@@ -522,6 +525,9 @@ public sealed class Loc
         ["Goles"] = "Gols",
         ["Lesiones"] = "Lesões",
         ["Goles/partido"] = "Gols/jogo",
+        ["Tokens de mejora"] = "Tokens de melhoria",
+        ["Sirven para subir de nivel a cualquier jugador tuyo, hasta 99."] = "Servem para subir de nível qualquer jogador seu, até 99.",
+        ["Cuanto más fuerte es el jugador, más tokens cuesta cada punto. Así mejorar a una estrella es una inversión de verdad."] = "Quanto mais forte o jogador, mais tokens custa cada ponto. Melhorar um craque é um investimento de verdade.",
         ["Academia"] = "Academia",
         ["Creá tus propios jugadores y hacelos crecer entrenando y jugando. Entrenar cuesta cada vez más caro: es donde tu fortuna encuentra destino."]
             = "Crie seus próprios jogadores e faça-os crescer treinando e jogando. Treinar fica mais caro a cada nível: é onde a sua fortuna finalmente tem destino.",

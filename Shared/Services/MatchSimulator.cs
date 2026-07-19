@@ -140,7 +140,7 @@ public static class MatchSimulator
                     if (cr < 0.03) { if (foulTeam == 0) stats.RedHome++; else stats.RedAway++; Add(new SimEvent { Clock = t, Type = SimEventType.Red, Team = foulTeam, BallX = x, BallY = y, Phase = ph, Dur = 1.2, Big = true, Actor = fouler, ActorId = Idf(foulerP), Text = $"🟥 Roja a {fouler}" }); }
                     else if (cr < 0.25) { if (foulTeam == 0) stats.YellowHome++; else stats.YellowAway++; Add(new SimEvent { Clock = t, Type = SimEventType.Yellow, Team = foulTeam, BallX = x, BallY = y, Phase = ph, Dur = 0.9, Actor = fouler, ActorId = Idf(foulerP), Text = $"🟨 Amarilla a {fouler}" }); }
                     // Lesión ocasional del jugador que recibió la falta
-                    if (rng.NextDouble() < 0.06)
+                    if (rng.NextDouble() < 0.025)   // lesiones nerfeadas
                         Add(new SimEvent { Clock = t, Type = SimEventType.Injury, Team = team, BallX = x, BallY = y, Phase = ph, Dur = 1.1, Actor = victim, ActorId = Idf(victimP), Text = $"🚑 {victim} queda golpeado y necesita atención" });
 
                     // ¿La falta fue DENTRO DEL ÁREA? Entonces es PENAL.

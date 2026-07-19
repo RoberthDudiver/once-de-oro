@@ -105,6 +105,12 @@ public sealed class GameState
     /// <summary>Cansancio, lesiones y estadísticas de cada jugador, por Id.</summary>
     public Dictionary<string, PlayerCondition> Conditions { get; set; } = new();
 
+    /// <summary>Tokens de mejora disponibles para subir de nivel a cualquier jugador.</summary>
+    public int Tokens { get; set; }
+
+    /// <summary>Puntos de fuerza ganados con tokens, por jugador.</summary>
+    public Dictionary<string, int> Upgrades { get; set; } = new();
+
     // Estadísticas de carrera
     public int MatchesPlayed { get; set; }
     public int Wins { get; set; }

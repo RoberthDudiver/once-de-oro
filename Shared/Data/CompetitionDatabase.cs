@@ -112,6 +112,12 @@ public static class CompetitionDatabase
             R("Sevilla FC", "⚪", 80), R("Real Sociedad", "🔵", 79), R("Villarreal", "🟡", 79),
             R("Athletic", "🔴", 78), R("Betis", "🟢", 78), R("Valencia", "🟠", 77), R("Girona", "🔴", 77),
         }),
+        League("liga-ita", "Serie A", "Táctica italiana: el fútbol más cerrado", "🇮🇹", "#4ea3ff", 3, 83, 16, 280, new[]
+        {
+            R("Nerazzurri", "🔵", 87), R("Rossoneri", "🔴", 85), R("Turín Vecchia", "⚫", 86),
+            R("Partenopei", "🩵", 85), R("Giallorossi", "🟡", 82), R("Biancocelesti", "🩵", 81),
+            R("Viola", "🟣", 80), R("Bergamaschi", "🔵", 83), R("Rossoblu", "🔴", 79), R("Granata", "🟤", 78),
+        }),
         League("liga-eng", "Premier League", "La liga más competitiva del mundo", "🏴󠁧󠁢󠁥󠁮󠁧󠁿", "#b98bff", 4, 87, 25, 420, new[]
         {
             R("City Sky", "🩵", 89), R("Reds Anfield", "🔴", 88), R("Gunners N5", "🔴", 87),
