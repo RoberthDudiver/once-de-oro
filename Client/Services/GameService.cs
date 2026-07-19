@@ -234,6 +234,96 @@ public sealed class GameService
         return true;
     }
 
+    // ---------------------------------------------------------------- ojeadores
+    // Cuanto mejor (y más caro) el ojeador, mejores promesas encuentra. Lo que se
+    // paga no es lo que el chico rinde HOY, sino hasta dónde puede llegar.
+
+    public sealed record Scout(string Name, int Cost, int MinPot, int MaxPot, string Desc);
+
+    public static readonly Scout[] Scouts =
+    {
+        new("Ojeador local",         25,  68, 80, "Recorre canchas de barrio. Encuentra chicos aprovechables."),
+        new("Ojeador regional",      70,  76, 88, "Cubre todo el país. Aparecen los primeros nombres serios."),
+        new("Ojeador internacional",180,  84, 93, "Viaja por el continente. Promesas de selección juvenil."),
+        new("Ojeador de élite",     450,  90, 99, "La red que descubre a los cracks antes que nadie."),
+    };
+
+    private static readonly string[] ProspectFirst =
+        { "Mateo", "Thiago", "Benjamín", "Santino", "Lautaro", "Dylan", "Emiliano", "Bruno",
+          "Iker", "Aarón", "Yeferson", "Kevin", "Alexis", "Diego", "Nahuel", "Cristian" };
+    private static readonly string[] ProspectLast =
+        { "Rojas", "Cabrera", "Medina", "Ferreyra", "Quintero", "Moreno", "Palacios", "Bermúdez",
+          "Villalba", "Ocampo", "Zambrano", "Escalante", "Ibarra", "Núñez", "Rivas", "Guerrero" };
+    private static readonly (string Nation, string Flag)[] ProspectHome =
+    {
+        ("Argentina", "🇦🇷"), ("Brasil", "🇧🇷"), ("Uruguay", "🇺🇾"), ("Colombia", "🇨🇴"),
+        ("Venezuela", "🇻🇪"), ("Chile", "🇨🇱"), ("México", "🇲🇽"), ("España", "🇪🇸"),
+        ("Francia", "🇫🇷"), ("Portugal", "🇵🇹"), ("Nigeria", "🇳🇬"), ("Senegal", "🇸🇳"),
+    };
+
+    public bool CanScout(Scout s) => State.Money >= s.Cost;
+
+    /// <summary>Contrata un ojeador: te trae 3 promesas para elegir.</summary>
+    public bool SendScout(Scout s)
+    {
+        if (!CanScout(s)) return false;
+        State.Money -= s.Cost;
+
+        for (int i = 0; i < 3; i++)
+        {
+            int pot = _rng.Next(s.MinPot, s.MaxPot + 1);
+            // Cuanto más alto es el techo, más lejos suele estar de alcanzarlo.
+            int actual = Math.Clamp(pot - _rng.Next(14, 30), 45, pot - 1);
+            var (nation, flag) = ProspectHome[_rng.Next(ProspectHome.Length)];
+
+            State.Prospects.Add(new Prospect
+            {
+                Id = $"pro-{Guid.NewGuid():N}"[..12],
+                Name = $"{ProspectFirst[_rng.Next(ProspectFirst.Length)]} {ProspectLast[_rng.Next(ProspectLast.Length)]}",
+                Nation = nation,
+                Flag = flag,
+                Pos = (Position)_rng.Next(4),
+                Rating = actual,
+                Potential = pot,
+                Age = _rng.Next(16, 20),
+                Cost = ProspectPrice(actual, pot),
+                ScoutName = s.Name,
+            });
+        }
+        Commit();
+        return true;
+    }
+
+    /// <summary>Lo que vale una promesa: pesa mucho más el techo que lo que rinde hoy.</summary>
+    public static int ProspectPrice(int rating, int potential) =>
+        (int)Math.Round(4 + Math.Pow(Math.Max(0, rating - 45), 1.7) / 6.0
+                          + Math.Pow(Math.Max(0, potential - 60), 2.1) / 9.0);
+
+    /// <summary>Ficha a la promesa: entra a tu academia con su techo.</summary>
+    public bool SignProspect(string id)
+    {
+        var pr = State.Prospects.FirstOrDefault(x => x.Id == id);
+        if (pr is null || State.Money < pr.Cost) return false;
+
+        State.Money -= pr.Cost;
+        State.Academy.Add(new AcademyPlayer
+        {
+            Id = pr.Id, Name = pr.Name, Nation = pr.Nation, Flag = pr.Flag,
+            Pos = pr.Pos, Rating = pr.Rating, Potential = pr.Potential, Age = pr.Age,
+        });
+        State.OwnedIds.Add(pr.Id);
+        State.Prospects.Remove(pr);
+        Commit();
+        return true;
+    }
+
+    /// <summary>Descarta una promesa que no te interesa.</summary>
+    public void DiscardProspect(string id)
+    {
+        State.Prospects.RemoveAll(x => x.Id == id);
+        Commit();
+    }
+
     // ---------------------------------------------------------------- condición física
     /// <summary>Estado (cansancio, lesión, estadísticas) de un jugador. Lo crea si no existe.</summary>
     public PlayerCondition Cond(string id)
@@ -470,7 +560,8 @@ public sealed class GameService
     public bool TrainAcademyPlayer(string id)
     {
         var a = State.Academy.FirstOrDefault(x => x.Id == id);
-        if (a is null || a.Rating >= 99) return false;
+        // Una promesa no puede superar su techo: eso es lo que la hace valiosa o no.
+        if (a is null || a.Rating >= Math.Min(99, a.Potential)) return false;
 
         int cost = TrainingCost(a.Rating);
         if (State.Money < cost) return false;
@@ -485,13 +576,14 @@ public sealed class GameService
     /// <summary>Suma experiencia y sube de nivel cuando alcanza el umbral.</summary>
     private static void GrantXp(AcademyPlayer a, int xp)
     {
+        int techo = Math.Min(99, a.Potential <= 0 ? 99 : a.Potential);
         a.Xp += xp;
-        while (a.Rating < 99 && a.Xp >= XpNeeded(a.Rating))
+        while (a.Rating < techo && a.Xp >= XpNeeded(a.Rating))
         {
             a.Xp -= XpNeeded(a.Rating);
             a.Rating++;
         }
-        if (a.Rating >= 99) { a.Rating = 99; a.Xp = 0; }
+        if (a.Rating >= techo) { a.Rating = techo; a.Xp = 0; }
     }
 
     // ---------------------------------------------------------------- después del partido

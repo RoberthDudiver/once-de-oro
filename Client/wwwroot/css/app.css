@@ -805,3 +805,13 @@ a { color: inherit; text-decoration: none; }
 }
 .upg__name { font-family: var(--font-head); font-size: 14px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .upg__plus { font-size: 11px; color: var(--green); margin-left: 6px; }
+
+/* Ojeadores y promesas */
+.badge-n { display: inline-grid; place-content: center; min-width: 18px; height: 18px; margin-left: 5px;
+           padding: 0 5px; border-radius: 99px; font-size: 11px; background: var(--red); color: #fff; }
+.scout { position: relative; }
+.pot__bar { position: relative; height: 9px; border-radius: 99px; background: rgba(255,255,255,.1); overflow: hidden; }
+.pot__max { position: absolute; left: 0; top: 0; height: 100%; border-radius: 99px;
+            background: repeating-linear-gradient(90deg, rgba(245,197,66,.45) 0 5px, transparent 5px 10px); }
+.pot__now { position: absolute; left: 0; top: 0; height: 100%; border-radius: 99px; z-index: 2;
+            background: linear-gradient(90deg, var(--gold-deep), var(--gold-2)); }

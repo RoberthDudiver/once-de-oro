@@ -21,6 +21,11 @@ public sealed class AcademyPlayer
     public Position Pos { get; set; }
     public int Rating { get; set; } = 55;
 
+    /// <summary>Techo al que puede llegar entrenando. 99 = sin techo conocido.</summary>
+    public int Potential { get; set; } = 99;
+    /// <summary>Edad al ser descubierto (las promesas son muy jóvenes).</summary>
+    public int Age { get; set; } = 18;
+
     /// <summary>Experiencia acumulada hacia el próximo punto de fuerza.</summary>
     public int Xp { get; set; }
     public int Sessions { get; set; }
@@ -46,6 +51,26 @@ public sealed class PlayerCondition
     public int Injuries { get; set; }
 
     public bool Injured => OutMatches > 0;
+}
+
+/// <summary>
+/// Una joven promesa que encontró un ojeador. Todavía no es tuya: hay que ficharla.
+/// Lo valioso no es lo que rinde hoy, sino hasta dónde puede llegar.
+/// </summary>
+public sealed class Prospect
+{
+    public string Id { get; set; } = "";
+    public string Name { get; set; } = "";
+    public string Nation { get; set; } = "";
+    public string Flag { get; set; } = "🌱";
+    public Position Pos { get; set; }
+    public int Rating { get; set; }
+    /// <summary>El techo al que puede llegar entrenando.</summary>
+    public int Potential { get; set; }
+    public int Age { get; set; }
+    public int Cost { get; set; }
+    /// <summary>Qué ojeador lo encontró.</summary>
+    public string ScoutName { get; set; } = "";
 }
 
 /// <summary>Una fila de la tabla de posiciones de una liga.</summary>
@@ -107,6 +132,9 @@ public sealed class GameState
 
     /// <summary>Tokens de mejora disponibles para subir de nivel a cualquier jugador.</summary>
     public int Tokens { get; set; }
+
+    /// <summary>Promesas que encontraron tus ojeadores y todavía podés fichar.</summary>
+    public List<Prospect> Prospects { get; set; } = new();
 
     /// <summary>Puntos de fuerza ganados con tokens, por jugador.</summary>
     public Dictionary<string, int> Upgrades { get; set; } = new();

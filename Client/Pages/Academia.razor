@@ -3,7 +3,18 @@
 
 <PageTitle>Academia — Once de Oro</PageTitle>
 
-@* ============ TOKENS DE MEJORA: sirven para CUALQUIER jugador ============ *@
+@* Tres apartados separados para que cada cosa tenga su lugar *@
+<div class="seg wrap mb" style="margin-top:18px;">
+    <button class="@(Tab == "cantera" ? "on" : "")" @onclick='() => Tab = "cantera"'>🎓 @Loc["Cantera"]</button>
+    <button class="@(Tab == "ojeadores" ? "on" : "")" @onclick='() => Tab = "ojeadores"'>
+        🔍 @Loc["Ojeadores"]
+        @if (Game.State.Prospects.Count > 0) { <span class="badge-n">@Game.State.Prospects.Count</span> }
+    </button>
+    <button class="@(Tab == "mejoras" ? "on" : "")" @onclick='() => Tab = "mejoras"'>🎟️ @Loc["Mejoras"]</button>
+</div>
+
+@if (Tab == "mejoras")
+{
 <div class="section-title"><span class="dot"></span> @Loc["Tokens de mejora"]</div>
 
 <div class="card card--pad mb">
@@ -52,7 +63,93 @@
         </div>
     </div>
 }
+}
 
+@* ================================ OJEADORES ================================ *@
+@if (Tab == "ojeadores")
+{
+    <div class="section-title"><span class="dot"></span> @Loc["Contratar un ojeador"]</div>
+    <p class="muted" style="margin:0 0 14px; font-size:13.5px;">
+        @Loc["Los ojeadores buscan jóvenes promesas. Lo que pagás no es lo que rinden hoy, sino hasta dónde pueden llegar."]
+    </p>
+
+    <div class="grid grid--cards mb">
+        @foreach (var s in GameService.Scouts)
+        {
+            <div class="card card--pad scout">
+                <div class="row" style="justify-content:space-between; align-items:flex-start;">
+                    <div>
+                        <div style="font-family:var(--font-head); font-size:17px;">@Loc[s.Name]</div>
+                        <div class="muted" style="font-size:12.5px; margin-top:3px;">@Loc[s.Desc]</div>
+                    </div>
+                    <span class="pill pill--gold">@s.MinPot–@s.MaxPot</span>
+                </div>
+                <div class="row mt" style="justify-content:space-between;">
+                    <span class="muted" style="font-size:12.5px;">@Loc["Techo de las promesas"]</span>
+                    <button class="btn btn--gold" style="padding:9px 14px;"
+                            disabled="@(!Game.CanScout(s))" @onclick="() => Game.SendScout(s)">
+                        $@s.Cost M · @Loc["Buscar"]
+                    </button>
+                </div>
+            </div>
+        }
+    </div>
+
+    @if (Game.State.Prospects.Count == 0)
+    {
+        <div class="empty">
+            <div class="empty__ico">🔍</div>
+            <p>@Loc["Todavía no encontraste promesas. Contratá un ojeador."]</p>
+        </div>
+    }
+    else
+    {
+        <div class="section-title"><span class="dot"></span> @Loc["Promesas encontradas"] (@Game.State.Prospects.Count)</div>
+        <div class="grid grid--cards">
+            @foreach (var pr in Game.State.Prospects.OrderByDescending(x => x.Potential))
+            {
+                <div class="card card--pad">
+                    <div class="row" style="justify-content:space-between; align-items:flex-start;">
+                        <div class="row">
+                            <div class="dot-player @Tier(pr.Rating)" style="width:46px;height:46px;font-size:18px;">@pr.Rating</div>
+                            <div>
+                                <div style="font-family:var(--font-head); font-size:16px;">@pr.Name</div>
+                                <div class="muted" style="font-size:12px;">
+                                    @pr.Flag @pr.Nation · @pr.Pos.Full() · @pr.Age @Loc["años"]
+                                </div>
+                            </div>
+                        </div>
+                        <span class="pill @(pr.Potential >= 90 ? "pill--gold" : "")">▲ @pr.Potential</span>
+                    </div>
+
+                    <div class="pot mt">
+                        <div class="pot__bar">
+                            <span class="pot__now" style="width:@(pr.Rating)%"></span>
+                            <span class="pot__max" style="width:@(pr.Potential)%"></span>
+                        </div>
+                        <div class="row" style="justify-content:space-between; font-size:11.5px; color:var(--ink-faint); margin-top:4px;">
+                            <span>@Loc["Hoy"] @pr.Rating</span>
+                            <span>@Loc["Puede llegar a"] @pr.Potential</span>
+                        </div>
+                    </div>
+
+                    <div class="row wrap mt" style="gap:8px;">
+                        <button class="btn btn--gold" style="flex:1; padding:10px;"
+                                disabled="@(Game.State.Money < pr.Cost)" @onclick="() => Game.SignProspect(pr.Id)">
+                            @Loc["Fichar"] · $@pr.Cost M
+                        </button>
+                        <button class="btn btn--ghost" style="padding:10px 12px;" @onclick="() => Game.DiscardProspect(pr.Id)">✕</button>
+                    </div>
+                    <div class="faint" style="font-size:11px; margin-top:6px;">@Loc[pr.ScoutName]</div>
+                </div>
+            }
+        </div>
+    }
+}
+
+@* ================================ CANTERA ================================ *@
+@if (Tab == "cantera")
+{
 <div class="section-title"><span class="dot"></span> @Loc["Academia"]</div>
 
 <div class="card card--pad mb">
@@ -104,8 +201,10 @@ else
         {
             var cost = GameService.TrainingCost(a.Rating);
             var need = GameService.XpNeeded(a.Rating);
-            var pct = a.Rating >= 99 ? 100 : (int)Math.Round(100.0 * a.Xp / need);
-            var maxed = a.Rating >= 99;
+            // El techo manda: una promesa no puede pasar de su potencial.
+            var techo = Math.Min(GameService.MaxRating, a.Potential <= 0 ? 99 : a.Potential);
+            var maxed = a.Rating >= techo;
+            var pct = maxed ? 100 : (int)Math.Round(100.0 * a.Xp / need);
             <div class="card card--pad aca">
                 <div class="row" style="justify-content:space-between; align-items:flex-start;">
                     <div class="row">
@@ -115,7 +214,13 @@ else
                             <div class="muted" style="font-size:12.5px;">@a.Pos.Full() · @a.Nation</div>
                         </div>
                     </div>
-                    <span class="pill pill--gold">@Loc[GameService.AcademyTier(a.Rating)]</span>
+                    <div style="text-align:right;">
+                        <span class="pill pill--gold">@Loc[GameService.AcademyTier(a.Rating)]</span>
+                        @if (techo < 99)
+                        {
+                            <div class="faint" style="font-size:11px; margin-top:4px;">@Loc["Techo"] @techo</div>
+                        }
+                    </div>
                 </div>
 
                 <div class="aca__bar mt" title="@a.Xp / @need">
@@ -153,8 +258,10 @@ else
         </div>
     </div>
 }
+}
 
 @code {
+    private string Tab = "cantera";
     private string _name = "", _nation = "";
     private Position _pos = Position.FWD;
 
