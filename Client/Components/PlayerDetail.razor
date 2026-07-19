@@ -115,7 +115,8 @@
                 {
                     <div class="attr">
                         <span class="attr__lbl">@Loc[etiqueta]</span>
-                        <div class="attr__bar"><span class="@BarClass(valor)" style="width:@(valor)%"></span></div>
+                        @* La barra se llena hasta el borde; el número sí muestra el valor real. *@
+                        <div class="attr__bar"><span class="@BarClass(valor)" style="width:@(Math.Min(100, valor))%"></span></div>
                         <span class="attr__num">@valor</span>
                     </div>
                 }
@@ -233,6 +234,15 @@
             var ataque = new[] { "Definición", "Remate", "Velocidad" };
             foreach (var n in nombres)
                 result.Add((n, ataque.Contains(n) ? 99 : 31));
+            return result;
+        }
+
+        // Los de 100 para arriba están fuera de escala: TODOS sus atributos valen
+        // lo que valen ellos. Si les aplicáramos el techo de 99 como al resto, un
+        // 105 se vería igual que un 99 y no se notaría en ningún lado que es mejor.
+        if (p.Rating >= 100)
+        {
+            foreach (var n in nombres) result.Add((n, p.Rating));
             return result;
         }
 
