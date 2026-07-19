@@ -443,21 +443,39 @@ public sealed class GameService
         }
 
         int rating = _rng.Next(band.Min, band.Max + 1);
-        var (nation, flag) = ProspectHome[_rng.Next(ProspectHome.Length)];
 
-        var loot = new LootPlayer
+        // Del 100 para arriba no se genera un desconocido: sale una VERSIÓN PRIME
+        // con nombre y año. Son las únicas cartas de 100+ del juego y no se pueden
+        // comprar en el mercado, así que la única forma de tenerlas es esta.
+        LootPlayer loot;
+        if (!payaso && rating >= 100)
         {
-            Id = $"box-{Guid.NewGuid():N}"[..12],
-            Name = payaso
-                ? ClownNames[_rng.Next(ClownNames.Length)]
-                : $"{ProspectFirst[_rng.Next(ProspectFirst.Length)]} {ProspectLast[_rng.Next(ProspectLast.Length)]}",
-            Nation = payaso ? "Circo FC" : nation,
-            Flag = payaso ? "🤡" : flag,
-            Pos = payaso ? Position.FWD : (Position)_rng.Next(4),
-            Rating = rating,
-            Troll = payaso,
-            BoxName = box.Name,
-        };
+            var prime = ElegirPrime(rating);
+            loot = new LootPlayer
+            {
+                Id = $"box-{Guid.NewGuid():N}"[..12],
+                Name = prime.Name, Nation = prime.Nation, Flag = prime.Flag,
+                Pos = prime.Pos, Rating = prime.Rating,
+                BoxName = box.Name,
+            };
+        }
+        else
+        {
+            var (nation, flag) = ProspectHome[_rng.Next(ProspectHome.Length)];
+            loot = new LootPlayer
+            {
+                Id = $"box-{Guid.NewGuid():N}"[..12],
+                Name = payaso
+                    ? ClownNames[_rng.Next(ClownNames.Length)]
+                    : $"{ProspectFirst[_rng.Next(ProspectFirst.Length)]} {ProspectLast[_rng.Next(ProspectLast.Length)]}",
+                Nation = payaso ? "Circo FC" : nation,
+                Flag = payaso ? "🤡" : flag,
+                Pos = payaso ? Position.FWD : (Position)_rng.Next(4),
+                Rating = rating,
+                Troll = payaso,
+                BoxName = box.Name,
+            };
+        }
 
         State.Loot.Add(loot);
         State.OwnedIds.Add(loot.Id);
@@ -466,6 +484,23 @@ public sealed class GameService
         Commit();
         return p;
     }
+
+    /// <summary>
+    /// Qué prime te toca para la fuerza que salió. Entre los que están a la misma
+    /// distancia se prefieren los que NO tenés: repetir el mismo Messi tres veces
+    /// seguidas arruina la ilusión de estar completando un álbum.
+    /// </summary>
+    private Player ElegirPrime(int rating)
+    {
+        var candidatos = PrimeDatabase.ClosestTo(rating).ToList();
+        var mios = Owned.Select(p => p.Name).ToHashSet();
+        var nuevos = candidatos.Where(p => !mios.Contains(p.Name)).ToList();
+        var pool = nuevos.Count > 0 ? nuevos : candidatos;
+        return pool[_rng.Next(pool.Count)];
+    }
+
+    /// <summary>true si ya tenés esa versión prime (se comparan por nombre).</summary>
+    public bool OwnsPrime(Player prime) => Owned.Any(p => p.Name == prime.Name);
 
     /// <summary>Materializa un jugador de caja como <see cref="Player"/> jugable.</summary>
     public static Player ToPlayer(LootPlayer l) => new()

@@ -127,8 +127,8 @@ else
 @if (Tab == "all")
 {
     <div class="faint mb" style="font-size:12.5px;">
-        @Loc["Todos los jugadores que existen en el juego, tengas o no. Tocá uno para ver su ficha completa."]
-        · <b>@Lista().Count</b> / @PlayerDatabase.All.Count
+        @Loc["Todos los jugadores que existen, tengas o no. Los de 100+ son versiones PRIME: no se compran, solo salen de las cajas."]
+        · <b>@Lista().Count</b> / @(PlayerDatabase.All.Count + PrimeDatabase.All.Count)
     </div>
 }
 
@@ -151,7 +151,21 @@ else
                     {
                         @* En el catálogo no se compra ni se vende: se mira. Lo único que
                            agrega es si ya lo tenés y cuánto sale. *@
-                        @if (Game.Owns(p.Id))
+                        @if (p.Rating >= 100)
+                        {
+                            @* Prime: no se vende, sólo sale de una caja. *@
+                            @if (MisNombres().Contains(p.Name))
+                            {
+                                <span class="pill pill--gold" style="white-space:nowrap;">✓ @Loc["Lo tenés"]</span>
+                            }
+                            else
+                            {
+                                <span class="pill" style="white-space:nowrap; color:var(--blue); border-color:rgba(78,163,255,.45);">
+                                    🎁 @Loc["Solo por caja"]
+                                </span>
+                            }
+                        }
+                        else if (Game.Owns(p.Id))
                         {
                             <span class="pill pill--gold" style="white-space:nowrap;">✓ @Loc["Lo tenés"]</span>
                         }
@@ -193,13 +207,22 @@ else
     private Player? _ficha;
     private void Abrir(Player p) => _ficha = p;
 
+    // Los primes se reconocen por NOMBRE (el que tenés salió de una caja y su Id es
+    // otro). Se arma el conjunto una vez por dibujo: Game.Owned resuelve cada id
+    // contra todo el plantel y llamarlo una vez por carta se nota.
+    private HashSet<string>? _misNombres;
+    private HashSet<string> MisNombres() => _misNombres ??= Game.Owned.Select(p => p.Name).ToHashSet();
+    protected override void OnGameChanged() => _misNombres = null;
+
     /// <summary>Los jugadores que se ven con los filtros puestos.</summary>
     private List<Player> Lista() =>
         (Tab switch
         {
             "buy" => Game.Market,             // los que podés fichar ahora
             "own" => Game.Owned,              // tu plantel
-            _ => PlayerDatabase.All,          // catálogo: TODOS los que existen
+            // Catálogo: todo lo que existe, incluidas las versiones prime que NO
+            // están en venta (para que se vea qué se puede cazar con las cajas).
+            _ => PlayerDatabase.All.Concat(PrimeDatabase.All),
         })
             .Where(p => Pos is null || p.Pos == Pos)
             .Where(p => string.IsNullOrEmpty(Country) || p.Nation == Country)
