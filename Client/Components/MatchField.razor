@@ -39,12 +39,12 @@
     {
         <div class="mf__controls mf__controls--top">
             <div class="seg">
-                <button class="@(_speed == 1.0 ? "on" : "")" @onclick="() => _speed = 1.0">1×</button>
-                <button class="@(_speed == 0.5 ? "on" : "")" @onclick="() => _speed = 0.5">2×</button>
-                <button class="@(_speed == 0.25 ? "on" : "")" @onclick="() => _speed = 0.25">4×</button>
+                <button class="@(_speed == 1.0 ? "on" : "")" @onclick="() => SetSpeed(1.0)">1×</button>
+                <button class="@(_speed == 0.5 ? "on" : "")" @onclick="() => SetSpeed(0.5)">2×</button>
+                <button class="@(_speed == 0.25 ? "on" : "")" @onclick="() => SetSpeed(0.25)">4×</button>
             </div>
             <button class="btn btn--ghost" @onclick="ToggleSonido" title="@Loc["Sonido"]">@(_sonido ? "🔊" : "🔇")</button>
-            <button class="btn btn--ghost" @onclick="() => _skip = true">@Loc["⏩ Saltar al final"]</button>
+            <button class="btn btn--ghost" @onclick="Saltar">@Loc["⏩ Saltar al final"]</button>
         </div>
     }
 
@@ -190,7 +190,8 @@
     private async Task ToggleSonido()
     {
         _sonido = await Sfx.ToggleAsync();
-        if (!_sonido) Sfx.CrowdStop();
+        if (!_sonido) { Sfx.CrowdStop(); Sfx.MusicStop(); }
+        else AjustarSonido();          // vuelve el ambiente o la música, según la velocidad
     }
 
     protected override async Task OnInitializedAsync()
@@ -225,6 +226,7 @@
         }
         _done = true;
         Sfx.CrowdStop();
+        Sfx.MusicStop();
         StateHasChanged();
         await OnFinished.InvokeAsync();
     }
@@ -336,9 +338,39 @@
         };
     }
 
+    /// <summary>
+    /// En x4 o salteando, los eventos entran en ráfaga: silbatos, gritos y bocinas
+    /// se pisan entre sí y aturden. En ese modo apagamos los efectos y el ambiente,
+    /// y dejamos sólo la música de hinchada, que da la sensación de "esto va rápido".
+    /// </summary>
+    private bool Rapido => _skip || _speed <= 0.25;
+
+    private void SetSpeed(double v)
+    {
+        _speed = v;
+        AjustarSonido();
+    }
+
+    private void Saltar()
+    {
+        _skip = true;
+        AjustarSonido();
+    }
+
+    private void AjustarSonido()
+    {
+        // No miramos _sonido acá: el mute ya lo respeta odoSfx del lado de JS, y
+        // duplicar la condición sólo agrega una forma de que la música no arranque.
+        if (_done) return;
+        if (Rapido) { Sfx.CrowdStop(); Sfx.MusicStart(); }
+        else { Sfx.MusicStop(); Sfx.CrowdStart(); }
+    }
+
     /// <summary>Le pone sonido a lo que pasa en la cancha.</summary>
     private void Sonar(SimEvent e)
     {
+        if (Rapido) return;   // en modo rápido manda la música, no los efectos
+
         switch (e.Type)
         {
             case SimEventType.KickOff:        Sfx.CrowdStart(); Sfx.Play("whistle"); break;

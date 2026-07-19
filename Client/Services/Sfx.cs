@@ -23,6 +23,10 @@ public sealed class Sfx
     public void CrowdStart() => Fire("odoSfx.crowdStart");
     public void CrowdStop() => Fire("odoSfx.crowdStop");
 
+    /// <summary>Loop de hinchada para el modo rápido (reemplaza a los efectos).</summary>
+    public void MusicStart() => Fire("odoSfx.musicStart");
+    public void MusicStop() => Fire("odoSfx.musicStop");
+
     public async Task LoadAsync()
     {
         try { On = await _js.InvokeAsync<bool>("odoSfx.isOn"); } catch { On = false; }

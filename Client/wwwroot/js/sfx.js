@@ -180,6 +180,90 @@
         src.start(t); src.stop(t + 1.4);
     }
 
+    // ---------------------------------------------------------------- MÚSICA
+    // En x4 y al saltear el partido los eventos caen uno encima del otro y los
+    // efectos aturden. Ahí callamos todo y dejamos sólo esto: un loop de
+    // hinchada (bombo + palmas + trompeta) que acompaña sin cansar.
+    let music = null;
+
+    /** Bombo de hinchada: golpe grave con caída de tono. */
+    function kick(t0) {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(150, t0);
+        o.frequency.exponentialRampToValueAtTime(45, t0 + 0.12);
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(0.9, t0 + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.32);
+        o.connect(g).connect(music.bus);
+        o.start(t0); o.stop(t0 + 0.36);
+    }
+
+    /** Palmas de la tribuna. */
+    function clap(t0) {
+        const src = noise(), bp = ctx.createBiquadFilter(), g = ctx.createGain();
+        bp.type = 'bandpass'; bp.frequency.value = 1500; bp.Q.value = 1.1;
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(0.5, t0 + 0.006);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.14);
+        src.connect(bp).connect(g).connect(music.bus);
+        src.start(t0); src.stop(t0 + 0.18);
+    }
+
+    /** Trompeta de tribuna (la melodía que canta la hinchada). */
+    function horn(freq, t0, dur) {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'sawtooth'; o.frequency.value = freq;
+        const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2200;
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(0.20, t0 + 0.05);
+        g.gain.setValueAtTime(0.20, t0 + dur * 0.6);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+        o.connect(lp).connect(g).connect(music.bus);
+        o.start(t0); o.stop(t0 + dur + 0.05);
+    }
+
+    const BEAT = 0.44;                       // ~136 BPM, paso de marcha
+    // Melodía sobre 16 tiempos; null = silencio. Sale de la típica marcha de tribuna.
+    const MELODIA = [392, null, 392, 440, 494, null, 440, null,
+                     392, null, 440, 392, 330, null, null, null];
+
+    /** Programa los golpes que vienen (lookahead: el reloj de JS no alcanza solo). */
+    function schedule() {
+        if (!music) return;
+        const limite = now() + 0.4;
+        while (music.next < limite) {
+            const t = music.next, i = music.beat % 16;
+            kick(t);                                  // bombo en cada tiempo
+            if (i % 4 === 1 || i % 4 === 3) clap(t);  // palmas en el contratiempo
+            if (MELODIA[i]) horn(MELODIA[i], t, BEAT * 0.9);
+            music.beat++;
+            music.next += BEAT;
+        }
+    }
+
+    function musicStart() {
+        if (!enabled || !audio() || music) return;
+        const t = now();
+        const bus = ctx.createGain();
+        bus.gain.setValueAtTime(0.0001, t);
+        bus.gain.exponentialRampToValueAtTime(0.16, t + 0.8);
+        bus.connect(master);
+        music = { bus, beat: 0, next: t + 0.1, timer: 0 };
+        music.timer = setInterval(schedule, 80);
+        schedule();
+    }
+
+    function musicStop() {
+        if (!music) return;
+        const t = now(), m = music;
+        music = null;                     // frena el scheduler antes del fade
+        clearInterval(m.timer);
+        m.bus.gain.cancelScheduledValues(t);
+        m.bus.gain.setValueAtTime(m.bus.gain.value, t);
+        m.bus.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+    }
+
     window.odoSfx = {
         play(name) {
             switch (name) {
@@ -195,11 +279,12 @@
             }
         },
         crowdStart, crowdStop,
+        musicStart, musicStop,
         isOn: () => enabled,
         toggle() {
             enabled = !enabled;
             localStorage.setItem(KEY, enabled ? 'on' : 'off');
-            if (!enabled) crowdStop();
+            if (!enabled) { crowdStop(); musicStop(); }
             return enabled;
         },
     };
