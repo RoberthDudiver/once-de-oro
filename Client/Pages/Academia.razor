@@ -6,6 +6,7 @@
 @* Tres apartados separados para que cada cosa tenga su lugar *@
 <div class="seg wrap mb" style="margin-top:18px;">
     <button class="@(Tab == "cantera" ? "on" : "")" @onclick='() => Tab = "cantera"'>🎓 @Loc["Cantera"]</button>
+    <button class="@(Tab == "copa" ? "on" : "")" @onclick='() => Tab = "copa"'>🏅 @Loc["Copa juvenil"]</button>
     <button class="@(Tab == "ojeadores" ? "on" : "")" @onclick='() => Tab = "ojeadores"'>
         🔍 @Loc["Ojeadores"]
         @if (Game.State.Prospects.Count > 0) { <span class="badge-n">@Game.State.Prospects.Count</span> }
@@ -63,6 +64,101 @@
         </div>
     </div>
 }
+}
+
+@* ============================= COPA JUVENIL 5v5 ============================= *@
+@if (Tab == "copa")
+{
+    <div class="section-title"><span class="dot"></span> @Loc["Copa juvenil"] · 5 vs 5</div>
+    <p class="muted" style="margin:0 0 14px; font-size:13.5px;">
+        @Loc["Torneos de formación para tu cantera: dan mucha experiencia y poco dinero. No cansan ni lesionan."]
+    </p>
+
+    @if (Game.State.Academy.Count < GameService.YouthSquadSize)
+    {
+        <div class="empty">
+            <div class="empty__ico">🏅</div>
+            <p>@Loc["Necesitás al menos 5 juveniles. Creá jugadores o fichá promesas con un ojeador."]</p>
+        </div>
+    }
+    else
+    {
+        <div class="card card--pad mb">
+            <div class="row" style="justify-content:space-between;">
+                <h3 style="font-size:17px;">@Loc["Elegí 5 juveniles"]</h3>
+                <span class="pill @(Elegidos.Count == GameService.YouthSquadSize ? "pill--green" : "")">
+                    @Elegidos.Count/@GameService.YouthSquadSize
+                </span>
+            </div>
+            <div class="ycal mt">
+                @foreach (var a in Game.State.Academy.OrderByDescending(x => x.Rating))
+                {
+                    var sel = Elegidos.Contains(a.Id);
+                    <button class="ypick @(sel ? "on" : "")" @onclick="() => Toggle(a.Id)">
+                        <span class="dot-player @Tier(a.Rating)" style="width:34px;height:34px;font-size:14px;">@a.Rating</span>
+                        <span class="ypick__n">@a.Name</span>
+                        <span class="faint">@a.Pos.Label()</span>
+                    </button>
+                }
+            </div>
+        </div>
+
+        <div class="grid grid--cards">
+            @foreach (var cup in GameService.YouthCups)
+            {
+                <div class="card card--pad">
+                    <div class="row" style="justify-content:space-between; align-items:flex-start;">
+                        <div>
+                            <div style="font-family:var(--font-head); font-size:17px;">@Loc[cup.Name]</div>
+                            <div class="muted" style="font-size:12.5px; margin-top:3px;">@Loc[cup.Desc]</div>
+                        </div>
+                        <span class="pill">@Loc["Rival"] @cup.RivalStrength</span>
+                    </div>
+                    <div class="row wrap mt" style="gap:6px;">
+                        <span class="pill">@cup.Matches @Loc["partidos"]</span>
+                        <span class="pill pill--gold">+@cup.XpWin XP @Loc["por victoria"]</span>
+                        <span class="pill">$@cup.Prize M</span>
+                    </div>
+                    <div class="mt">
+                        <button class="btn btn--gold" style="width:100%; padding:11px;"
+                                disabled="@(!Game.CanPlayYouth(cup, Elegidos))"
+                                @onclick="() => Jugar(cup)">
+                            @(cup.Cost == 0 ? Loc["Jugar · Gratis"] : $"{Loc["Jugar"]} · ${cup.Cost}M")
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+
+        @if (Game.LastYouth is { } r)
+        {
+            <div class="section-title"><span class="dot"></span> @Loc[r.CupName]</div>
+            <div class="card card--pad">
+                @if (r.Champion)
+                {
+                    <div class="center mb"><div class="trophy" style="font-size:44px;">🏅</div>
+                        <div style="font-family:var(--font-display); font-size:26px; color:var(--gold-2);">@Loc["¡INVICTOS!"]</div></div>
+                }
+                @foreach (var m in r.Matches)
+                {
+                    <div class="yres @(m.Us > m.Them ? "win" : m.Us == m.Them ? "draw" : "lose")">
+                        <span>@Loc["Tu cantera"]</span>
+                        <b>@m.Us – @m.Them</b>
+                        <span>@m.Rival</span>
+                    </div>
+                }
+                <div class="row wrap mt" style="gap:8px;">
+                    <span class="pill pill--green">@r.Won/@r.Matches.Count @Loc["ganados"]</span>
+                    <span class="pill pill--gold">+@r.Xp XP</span>
+                    <span class="pill">+$@r.Prize M</span>
+                </div>
+                @if (r.LeveledUp.Count > 0)
+                {
+                    <div class="real-note">⬆ @string.Join(" · ", r.LeveledUp)</div>
+                }
+            </div>
+        }
+    }
 }
 
 @* ================================ OJEADORES ================================ *@
@@ -264,6 +360,17 @@ else
     private string Tab = "cantera";
     private string _name = "", _nation = "";
     private Position _pos = Position.FWD;
+
+    // ---- Copa juvenil ----
+    private readonly List<string> Elegidos = new();
+
+    private void Toggle(string id)
+    {
+        if (!Elegidos.Remove(id) && Elegidos.Count < GameService.YouthSquadSize)
+            Elegidos.Add(id);
+    }
+
+    private void Jugar(GameService.YouthCup cup) => Game.PlayYouthCup(cup, Elegidos.ToList());
 
     private static readonly (string tier, int from)[] Route =
     {

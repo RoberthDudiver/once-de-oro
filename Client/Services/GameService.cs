@@ -234,6 +234,92 @@ public sealed class GameService
         return true;
     }
 
+    // ---------------------------------------------------------------- torneos juveniles
+    // Competencias 5 vs 5 pensadas SOLO para hacer crecer a la cantera: dan mucha
+    // experiencia y poca plata. No cansan ni lesionan: son de formación.
+
+    public const int YouthSquadSize = 5;
+
+    public sealed record YouthCup(string Name, int Cost, int RivalStrength, int Matches,
+                                  int XpWin, int XpPlay, int Prize, string Desc);
+
+    public static readonly YouthCup[] YouthCups =
+    {
+        new("Copa Barrial",        0, 54, 3, 130,  50,   6, "Potreros del barrio. Entrada libre, ideal para empezar."),
+        new("Torneo Sub-19",       8, 64, 3, 220,  85,  22, "Categorías juveniles federadas. Ya se juega en serio."),
+        new("Copa Federal Juvenil",22, 74, 4, 340, 130,  60, "Lo mejor de las inferiores del país."),
+        new("Mundialito Juvenil",  55, 84, 4, 520, 200, 150, "El torneo donde se miran todos los ojeadores del mundo."),
+    };
+
+    public sealed record YouthMatch(string Rival, int Us, int Them);
+    public sealed record YouthResult(string CupName, List<YouthMatch> Matches, int Won,
+                                     int Xp, int Prize, bool Champion, List<string> LeveledUp);
+
+    /// <summary>Último torneo juvenil jugado, para mostrarlo en pantalla.</summary>
+    public YouthResult? LastYouth { get; private set; }
+
+    private static readonly string[] YouthRivals =
+        { "Cantera Río Verde", "Juveniles del Puerto", "Escuelita Norte", "Semillero Sur",
+          "Academia La Loma", "Inferiores del Valle", "Club Atlético Juvenil", "Sub-19 Costa" };
+
+    public bool CanPlayYouth(YouthCup cup, IReadOnlyCollection<string> ids) =>
+        ids.Count == YouthSquadSize && State.Money >= cup.Cost;
+
+    /// <summary>Juega el torneo juvenil completo con los 5 elegidos y reparte experiencia.</summary>
+    public YouthResult? PlayYouthCup(YouthCup cup, List<string> ids)
+    {
+        if (!CanPlayYouth(cup, ids)) return null;
+
+        var equipo = ids.Select(id => State.Academy.FirstOrDefault(a => a.Id == id))
+                        .Where(a => a is not null).Cast<AcademyPlayer>().ToList();
+        if (equipo.Count != YouthSquadSize) return null;
+
+        State.Money -= cup.Cost;
+
+        var jugadores = equipo.Select(ToPlayer).ToList();
+        int fuerza = (int)Math.Round(jugadores.Average(p => p.Rating));
+        var rivalSquad = Enumerable.Range(0, YouthSquadSize).Select(i => new Player
+        {
+            Id = $"yr-{i}", Name = $"Juvenil {i + 1}", Nation = "Rival", Flag = "🌱",
+            Pos = (Position)(i % 4), Rating = cup.RivalStrength,
+        }).ToList();
+
+        var partidos = new List<YouthMatch>();
+        int ganados = 0;
+
+        for (int i = 0; i < cup.Matches; i++)
+        {
+            string rival = YouthRivals[_rng.Next(YouthRivals.Length)];
+            var tl = MatchSimulator.Simulate(
+                "Tu cantera", "🎓", TeamPower.Flat(fuerza), jugadores,
+                rival, "🌱", TeamPower.Flat(cup.RivalStrength), rivalSquad,
+                knockout: false, seed: _rng.Next());
+
+            int us = tl.Result.HomeGoals, them = tl.Result.AwayGoals;
+            if (us > them) ganados++;
+            partidos.Add(new YouthMatch(rival, us, them));
+        }
+
+        // Experiencia: jugar ya suma, ganar suma mucho más. Respeta el techo.
+        int xp = ganados * cup.XpWin + (cup.Matches - ganados) * cup.XpPlay;
+        var subieron = new List<string>();
+        foreach (var a in equipo)
+        {
+            int antes = a.Rating;
+            a.Matches += cup.Matches;
+            GrantXp(a, xp);
+            if (a.Rating > antes) subieron.Add($"{a.Name} {antes}→{a.Rating}");
+        }
+
+        bool campeon = ganados == cup.Matches;
+        int premio = cup.Prize * ganados + (campeon ? cup.Prize * 2 : 0);
+        State.Money += premio;
+
+        LastYouth = new YouthResult(cup.Name, partidos, ganados, xp, premio, campeon, subieron);
+        Commit();
+        return LastYouth;
+    }
+
     // ---------------------------------------------------------------- ojeadores
     // Cuanto mejor (y más caro) el ojeador, mejores promesas encuentra. Lo que se
     // paga no es lo que el chico rinde HOY, sino hasta dónde puede llegar.
