@@ -110,7 +110,7 @@ public static class MatchSimulator
             Add(new SimEvent
             {
                 Clock = t, Type = SimEventType.Corner, Team = team,
-                BallX = cx, BallY = cy, Phase = ph, Dur = 1.0,
+                BallX = cx, BallY = cy, Phase = ph, Dur = 1.7,
                 Actor = patea, ActorId = Idf(pateaP),
                 Text = $"⛳ Corner para {(team == 0 ? homeName : awayName)}, lo tira {patea}",
             });
@@ -163,7 +163,7 @@ public static class MatchSimulator
             {
                 Clock = t, Type = SimEventType.ThrowIn, Team = team,
                 BallX = Math.Clamp(x, 0.05, 0.95), BallY = rng.NextDouble() < 0.5 ? 0.02 : 0.98,
-                Phase = ph, Dur = 0.5, Actor = lanza, ActorId = Idf(lanzaP),
+                Phase = ph, Dur = 0.9, Actor = lanza, ActorId = Idf(lanzaP),
                 Text = $"↩️ Saque de banda para {(team == 0 ? homeName : awayName)}",
             });
         }
@@ -251,7 +251,7 @@ public static class MatchSimulator
                         Add(new SimEvent
                         {
                             Clock = t, Type = SimEventType.PenaltyAwarded, Team = team,
-                            BallX = spotX, BallY = 0.5, Phase = ph, Dur = 1.3, Big = true,
+                            BallX = spotX, BallY = 0.5, Phase = ph, Dur = 2.1, Big = true,
                             Actor = taker, Target = keeper, ActorId = Idf(takerP), TargetId = Idf(keeperP),
                             Text = $"🎯 ¡PENAL para {usName}! Lo patea {taker}",
                         });

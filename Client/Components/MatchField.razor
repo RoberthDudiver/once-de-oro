@@ -259,6 +259,12 @@
             _bx = e.BallX; _by = e.BallY;
             _ballClass = e.Type is SimEventType.Shot or SimEventType.Goal ? "shot" : "";
 
+            // Las jugadas detenidas se arman a mano: en un penal la gente sale del
+            // area, en un corner se amontona en el area y alguien va al banderin.
+            // Con el seguimiento generico la pelota viajaba sola y los 22 se
+            // quedaban parados en su formacion, que es lo que se veia falso.
+            if (!JugadaDetenida(e))
+            {
             for (int t = 0; t < 2; t++)
             {
                 bool attacking = e.Team == t;
@@ -285,6 +291,7 @@
                 var bx = e.Team == 0 ? _hx : _ax;
                 var by = e.Team == 0 ? _hy : _ay;
                 bx[e.Player] = _bx; by[e.Player] = _by;
+            }
             }
             if (e.Type is SimEventType.Pass or SimEventType.Carry && e.Team is 0 or 1)
                 _possCount[e.Team]++;
@@ -484,6 +491,110 @@
     {
         int i = text.LastIndexOf('('), j = text.LastIndexOf(')');
         if (i >= 0 && j > i) _pens = text.Substring(i + 1, j - i - 1);
+    }
+
+    /// <summary>
+    /// Arma a los 22 para una jugada detenida. Devuelve false si el evento no es
+    /// una de ellas y hay que usar el seguimiento normal.
+    ///
+    /// Equipo 0 ataca hacia la DERECHA (su arco esta en x pequeno) y el 1 al reves.
+    /// Todo se acota a la cancha para que no se corten los nombres.
+    /// </summary>
+    private bool JugadaDetenida(SimEvent e)
+    {
+        if (e.Team is not (0 or 1)) return false;
+        if (e.Type is not (SimEventType.Corner or SimEventType.ThrowIn or SimEventType.PenaltyAwarded))
+            return false;
+
+        int at = e.Team, df = 1 - at;               // ataca / defiende
+        double dir = at == 0 ? 1 : -1;              // hacia donde ataca
+        double arcoRival = at == 0 ? 0.955 : 0.045; // arco al que le tira
+        double arcoPropio = at == 0 ? 0.045 : 0.955;
+
+        var ax = at == 0 ? _hx : _ax; var ay = at == 0 ? _hy : _ay;
+        var dx = df == 0 ? _hx : _ax; var dy = df == 0 ? _hy : _ay;
+
+        void Poner(double[] X, double[] Y, int i, double x, double y)
+        {
+            X[i] = Math.Clamp(x, 0.06, 0.94);
+            Y[i] = Math.Clamp(y, 0.08, 0.92);
+        }
+
+        // Los arqueros van SIEMPRE a su arco
+        Poner(ax, ay, 0, arcoPropio, 0.5);
+        Poner(dx, dy, 0, arcoRival, 0.5);
+
+        if (e.Type == SimEventType.PenaltyAwarded)
+        {
+            // La foto del penal: el pateador solo con la pelota, el arquero en la
+            // linea y TODOS los demas afuera del area, en semicirculo.
+            Poner(ax, ay, 1, e.BallX - dir * 0.045, 0.5);          // el que patea
+            Poner(dx, dy, 0, arcoRival + dir * 0.012, 0.5);        // arquero en la raya
+
+            double borde = at == 0 ? 0.70 : 0.30;                  // limite del area
+            for (int i = 2; i < 11; i++)                           // companeros afuera
+            {
+                double ang = (i - 2) / 8.0 * Math.PI - Math.PI / 2;
+                Poner(ax, ay, i, borde - dir * 0.05 * Math.Cos(ang), 0.5 + 0.30 * Math.Sin(ang));
+            }
+            for (int i = 1; i < 11; i++)                           // rivales afuera
+            {
+                double ang = (i - 1) / 9.0 * Math.PI - Math.PI / 2;
+                Poner(dx, dy, i, borde + dir * 0.02 * Math.Cos(ang), 0.5 + 0.34 * Math.Sin(ang));
+            }
+            return true;
+        }
+
+        if (e.Type == SimEventType.Corner)
+        {
+            bool arriba = e.BallY < 0.5;
+            double haciaCentro = arriba ? 1 : -1;
+
+            Poner(ax, ay, 1, e.BallX - dir * 0.02, e.BallY + haciaCentro * 0.03);   // el que lo tira
+
+            // Seis atacantes se meten al area, escalonados
+            for (int i = 2; i <= 7; i++)
+            {
+                double k = (i - 2) / 5.0;
+                Poner(ax, ay, i, arcoRival - dir * (0.13 - k * 0.07), 0.30 + k * 0.40);
+            }
+            // Tres se quedan afuera por si sale el contragolpe
+            for (int i = 8; i < 11; i++)
+                Poner(ax, ay, i, 0.5 - dir * 0.06, 0.28 + (i - 8) * 0.22);
+
+            // La defensa se mete toda al area a marcar
+            for (int i = 1; i <= 8; i++)
+            {
+                double k = (i - 1) / 7.0;
+                Poner(dx, dy, i, arcoRival - dir * (0.10 - k * 0.06), 0.27 + k * 0.46);
+            }
+            for (int i = 9; i < 11; i++)                            // dos aguantan afuera
+                Poner(dx, dy, i, arcoRival - dir * 0.26, 0.36 + (i - 9) * 0.28);
+            return true;
+        }
+
+        // Saque de banda: el que saca sobre la raya y el resto se abre a recibir
+        bool arribaL = e.BallY < 0.5;
+        double dentro = arribaL ? 1 : -1;
+        Poner(ax, ay, 1, e.BallX, e.BallY + dentro * 0.02);        // el que saca
+
+        for (int i = 2; i <= 4; i++)                                // se ofrecen cerca
+            Poner(ax, ay, i, e.BallX + dir * (i - 2) * 0.10 - dir * 0.05,
+                             e.BallY + dentro * (0.10 + (i - 2) * 0.07));
+        for (int i = 5; i < 11; i++)                                // el resto mantiene forma
+        {
+            var b = at == 0 ? _homeBase : _awayBase;
+            Poner(ax, ay, i, b[i].x + (e.BallX - b[i].x) * 0.25, b[i].y + (e.BallY - b[i].y) * 0.15);
+        }
+        for (int i = 1; i <= 3; i++)                                // marcan a los que reciben
+            Poner(dx, dy, i, e.BallX + dir * (i - 1) * 0.10 - dir * 0.02,
+                             e.BallY + dentro * (0.15 + (i - 1) * 0.07));
+        for (int i = 4; i < 11; i++)
+        {
+            var b = df == 0 ? _homeBase : _awayBase;
+            Poner(dx, dy, i, b[i].x + (e.BallX - b[i].x) * 0.15, b[i].y + (e.BallY - b[i].y) * 0.10);
+        }
+        return true;
     }
 
     private (double x, double y)[] BasePositions(Formation f, bool home)
