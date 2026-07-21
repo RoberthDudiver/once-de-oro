@@ -90,6 +90,50 @@ else
                     }
                 </div>
             </div>
+
+        @* Va JUNTO a la cancha: elegis los colores y las gradas viendo el cambio. *@
+        <div class="section-title"><span class="dot"></span> @Loc["🎨 Camiseta y estadio"]</div>
+        <div class="card card--pad mb">
+            <div class="muted" style="font-size:12px; letter-spacing:.2em; text-transform:uppercase; margin-bottom:10px;">@Loc["Colores del club"]</div>
+            <div class="kits mb">
+                @foreach (var k in GameService.Kits)
+                {
+                    var elegido = Game.State.Primary == k.P && Game.State.Secondary == k.S;
+                    <button class="kit-chip @(elegido ? "on" : "")" title="@k.Name"
+                            @onclick="() => Game.SetColors(k.P, k.S)">
+                        <span class="kit-chip__a" style="background:@k.P"></span>
+                        <span class="kit-chip__b" style="background:@k.S"></span>
+                    </button>
+                }
+            </div>
+
+            <div class="row wrap" style="gap:16px;">
+                <label class="pickr">
+                    <span>@Loc["Principal"]</span>
+                    <input type="color" value="@Game.State.Primary"
+                           @onchange="CambiarPrincipal" />
+                </label>
+                <label class="pickr">
+                    <span>@Loc["Secundario"]</span>
+                    <input type="color" value="@Game.State.Secondary"
+                           @onchange="CambiarSecundario" />
+                </label>
+            </div>
+
+            <div class="muted" style="font-size:12px; letter-spacing:.2em; text-transform:uppercase; margin:18px 0 10px;">@Loc["Gradas"]</div>
+            <div class="stands-pick">
+                @foreach (var s in GameService.StandStyles)
+                {
+                    <button class="standopt @(Game.State.Stands == s.Key ? "on" : "")"
+                            @onclick="() => Game.SetStands(s.Key)">
+                        <span class="standopt__prev" data-stands="@s.Key"
+                              style="--c1:@Game.State.Primary; --c2:@Game.State.Secondary;"></span>
+                        <b>@Loc[s.Name]</b>
+                        <span class="faint">@Loc[s.Desc]</span>
+                    </button>
+                }
+            </div>
+        </div>
         </div>
     </div>
 
@@ -242,49 +286,6 @@ else
         </div>
     </div>
 
-    @* ---------------- Camiseta y estadio ---------------- *@
-    <div class="section-title"><span class="dot"></span> @Loc["🎨 Camiseta y estadio"]</div>
-    <div class="card card--pad mb">
-        <div class="muted" style="font-size:12px; letter-spacing:.2em; text-transform:uppercase; margin-bottom:10px;">@Loc["Colores del club"]</div>
-        <div class="kits mb">
-            @foreach (var k in GameService.Kits)
-            {
-                var elegido = Game.State.Primary == k.P && Game.State.Secondary == k.S;
-                <button class="kit-chip @(elegido ? "on" : "")" title="@k.Name"
-                        @onclick="() => Game.SetColors(k.P, k.S)">
-                    <span class="kit-chip__a" style="background:@k.P"></span>
-                    <span class="kit-chip__b" style="background:@k.S"></span>
-                </button>
-            }
-        </div>
-
-        <div class="row wrap" style="gap:16px;">
-            <label class="pickr">
-                <span>@Loc["Principal"]</span>
-                <input type="color" value="@Game.State.Primary"
-                       @onchange="CambiarPrincipal" />
-            </label>
-            <label class="pickr">
-                <span>@Loc["Secundario"]</span>
-                <input type="color" value="@Game.State.Secondary"
-                       @onchange="CambiarSecundario" />
-            </label>
-        </div>
-
-        <div class="muted" style="font-size:12px; letter-spacing:.2em; text-transform:uppercase; margin:18px 0 10px;">@Loc["Gradas"]</div>
-        <div class="stands-pick">
-            @foreach (var s in GameService.StandStyles)
-            {
-                <button class="standopt @(Game.State.Stands == s.Key ? "on" : "")"
-                        @onclick="() => Game.SetStands(s.Key)">
-                    <span class="standopt__prev" data-stands="@s.Key"
-                          style="--c1:@Game.State.Primary; --c2:@Game.State.Secondary;"></span>
-                    <b>@Loc[s.Name]</b>
-                    <span class="faint">@Loc[s.Desc]</span>
-                </button>
-            }
-        </div>
-    </div>
 }
 
 <PlayerDetail P="_ficha" OnClose="() => _ficha = null" />
