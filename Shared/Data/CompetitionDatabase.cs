@@ -20,7 +20,7 @@ public static class CompetitionDatabase
             Tier = 1,
             RecommendedStrength = 66,
             EntryFee = 0,
-            ChampionPrize = 900,
+            ChampionPrize = 60,
             KnockoutRounds = new[] { "Cuartos", "Semifinal", "Final" },
             Rivals = new[]
             {
