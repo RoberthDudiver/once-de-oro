@@ -3,6 +3,7 @@
 @using OnceDeOro.Data
 @inject Loc Loc
 @inject Sfx Sfx
+@inject GameService Game
 
 <div class="mf">
     @if (_goalId > 0)
@@ -84,6 +85,14 @@
     }
     else
     {
+        @* La cancha del partido tambien juega en TU estadio: mismos colores y
+           mismas gradas que elegiste en Equipo. *@
+        <div class="stadium stadium--match" data-stands="@Game.State.Stands"
+             style="--c1:@Game.State.Primary; --c2:@Game.State.Secondary;">
+        <div class="stand stand--top"></div>
+        <div class="stand stand--bottom"></div>
+        <div class="stand stand--left"></div>
+        <div class="stand stand--right"></div>
         <div class="mf__pitch" style="--t:@($"{_stepSec.ToString(System.Globalization.CultureInfo.InvariantCulture)}s")">
             <div class="mf__mid"></div>
             <div class="mf__circle"></div>
@@ -114,6 +123,7 @@
             {
                 <div class="mf__banner" @key="_bannerId"><span>@_banner</span></div>
             }
+        </div>
         </div>
     }
 
