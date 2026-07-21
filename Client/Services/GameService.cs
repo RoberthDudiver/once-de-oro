@@ -856,11 +856,23 @@ public sealed class GameService
 
     public bool Sell(string id)
     {
-        var p = PlayerDatabase.All.FirstOrDefault(x => x.Id == id);
-        if (p is null || !Owns(p.Id)) return false;
+        // Se busca en TODO lo que puede ser tuyo, no sólo en la base del mercado:
+        // los que salen de una caja y los de tu academia también son vendibles, y
+        // antes el botón simplemente no hacía nada con ellos.
+        var p = Owned.FirstOrDefault(x => x.Id == id);
+        if (p is null) return false;
+
         State.Money += SellPrice(p);
         State.OwnedIds.Remove(id);
         State.StartingIds.Remove(id);
+
+        // Y se borra del lugar donde vivía, si no quedaba como fantasma: fuera del
+        // plantel pero todavía ocupando lugar en la partida guardada.
+        State.Loot.RemoveAll(l => l.Id == id);
+        State.Academy.RemoveAll(a => a.Id == id);
+        State.Conditions.Remove(id);
+        State.Upgrades.Remove(id);
+
         Commit();
         return true;
     }

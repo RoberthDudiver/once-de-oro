@@ -272,6 +272,10 @@ public static class MatchSimulator
         Period(90 * 60, (90 + add2) * 60, MatchPhase.Second);
         Add(new SimEvent { Clock = (90 + add2) * 60, Type = SimEventType.FullTime, BallX = 0.5, BallY = 0.5, Phase = MatchPhase.Second, Dur = 1.4, Big = true, ScoreH = score[0], ScoreA = score[1], Text = $"⏱ Final del partido · {score[0]}-{score[1]}" });
 
+        // Dónde termina REALMENTE el reloj. Si no hay prórroga, el partido se
+        // acaba en el 90+añadido y el marcador no puede decir otra cosa.
+        int finalSec = (90 + add2) * 60;
+
         bool extra = false, shootout = false;
         int homePens = 0, awayPens = 0;
 
@@ -282,6 +286,7 @@ public static class MatchSimulator
             Period(90 * 60, 105 * 60, MatchPhase.ExtraFirst);
             Period(105 * 60, 120 * 60, MatchPhase.ExtraSecond);
             Add(new SimEvent { Clock = 120 * 60, Type = SimEventType.FullTime, BallX = 0.5, BallY = 0.5, Phase = MatchPhase.ExtraSecond, Dur = 1.2, Big = true, ScoreH = score[0], ScoreA = score[1], Text = $"⏱ 120' · {score[0]}-{score[1]}" });
+            finalSec = 120 * 60;
         }
 
         if (knockout && score[0] == score[1])
@@ -344,7 +349,11 @@ public static class MatchSimulator
             Goals = goals,
         };
 
-        Add(new SimEvent { Clock = 120 * 60, Type = SimEventType.End, BallX = 0.5, BallY = 0.5, Phase = MatchPhase.Ended, Dur = 0.6, Text = "Final" });
+        // OJO: este evento va con el reloj REAL del final, no con 120 fijo. Antes
+        // estaba clavado en 120*60 y era lo último que se aplicaba, así que un
+        // partido ganado 5-2 mostraba el pitazo final en el 90+4 y acto seguido
+        // el marcador saltaba a 120' como si hubiera ido a suplementario.
+        Add(new SimEvent { Clock = finalSec, Type = SimEventType.End, BallX = 0.5, BallY = 0.5, Phase = MatchPhase.Ended, Dur = 0.6, Text = "Final" });
 
         return new MatchTimeline
         {
