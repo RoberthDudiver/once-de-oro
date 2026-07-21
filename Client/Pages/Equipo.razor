@@ -41,11 +41,8 @@ else
             @* La cancha va adentro del estadio: las gradas se pintan alrededor con
                los colores del club. *@
             <div class="stadium" data-stands="@Game.State.Stands"
-                 style="--c1:@Game.State.Primary; --c2:@Game.State.Secondary;">
-                <div class="stand stand--top"></div>
-                <div class="stand stand--bottom"></div>
-                <div class="stand stand--left"></div>
-                <div class="stand stand--right"></div>
+                 style="--c1:@Game.State.Primary; --c2:@Game.State.Secondary; --grada:@(Game.Stadium.GradaPx)px;">
+                <div class="stand"></div>
             <div class="pitch">
                 <div class="pitch__circle"></div>
                 @* Cada línea es una fila flex: el navegador la reparte y NUNCA se sale de la cancha. *@

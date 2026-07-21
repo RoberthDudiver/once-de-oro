@@ -113,6 +113,7 @@ else
             <div class="result-banner @(win ? "win" : "lose")">
                 <div class="result-banner__title">@(win ? Loc["¡VICTORIA!"] : draw ? Loc["EMPATE"] : Loc["DERROTA"])</div>
                 @if (_reward > 0) { <div class="result-banner__reward">+ $@_reward M @Loc["en premios"] 💰</div> }
+                @if (_gate > 0) { <div class="result-banner__reward">+ $@_gate M @Loc["de recaudación"] 🎟️</div> }
             </div>
         }
 
@@ -211,7 +212,7 @@ else
 
     private MatchTimeline? _timeline;
     private MatchResult? _result;
-    private int _reward;
+    private int _reward, _gate;
     private string _stageLabel = "";
 
     protected override void OnInitialized()
@@ -245,6 +246,7 @@ else
     {
         _result = Game.LastMatch;
         _reward = Game.ApplyMatch(_result!);
+        _gate = Game.LastGateM;          // lo que dejó la gente en la puerta
         _phase = Phase.Done;
 
         var run = Game.State.Run;
@@ -258,7 +260,7 @@ else
     private void NextMatch()
     {
         _phase = Phase.Pre;
-        _timeline = null; _result = null; _reward = 0;
+        _timeline = null; _result = null; _reward = 0; _gate = 0;
         StateHasChanged();
     }
 

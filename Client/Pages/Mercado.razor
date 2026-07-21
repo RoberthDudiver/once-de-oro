@@ -12,6 +12,7 @@
         <button class="@(Tab == "own" ? "on" : "")" @onclick='() => Tab = "own"'>@Loc["👕 Mi plantel"] (@Game.Owned.Count())</button>
         <button class="@(Tab == "box" ? "on" : "")" @onclick='() => Tab = "box"'>@Loc["🎁 Cajas"]</button>
         <button class="@(Tab == "all" ? "on" : "")" @onclick='() => Tab = "all"'>@Loc["📖 Catálogo"]</button>
+        <button class="@(Tab == "stad" ? "on" : "")" @onclick='() => Tab = "stad"'>@Loc["🏟️ Estadio"]</button>
     </div>
     <div class="seg">
         <button class="@(Pos is null ? "on" : "")" @onclick="() => Pos = null">@Loc["Todos"]</button>
@@ -95,6 +96,60 @@
                         @onclick="() => Abrir(caja)">
                     @Loc["Abrir"] · $@caja.Cost M
                 </button>
+            </div>
+        }
+    </div>
+}
+else if (Tab == "stad")
+{
+    var actual = Game.Stadium;
+    <div class="faint mb" style="font-size:12.5px;">
+        @Loc["Cuanta más gente entra al estadio, más se recauda en cada partido. La entrada se cobra sola al terminar el partido."]
+    </div>
+
+    <div class="card card--pad mb">
+        <div class="row wrap" style="justify-content:space-between; gap:12px;">
+            <div>
+                <div class="muted" style="font-size:12px; letter-spacing:.2em; text-transform:uppercase;">@Loc["Tu estadio"]</div>
+                <div style="font-family:var(--font-head); font-size:22px; color:var(--gold-2);">@Loc[actual.Name]</div>
+            </div>
+            <div class="row wrap" style="gap:8px;">
+                <span class="pill">👥 @actual.Capacity.ToString("N0")</span>
+                <span class="pill pill--gold">💰 @Plata(actual.IncomeK) @Loc["por partido"]</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid" style="gap:10px;">
+        @foreach (var t in GameService.StadiumTiers)
+        {
+            var tengo = Game.OwnsStadium(t);
+            <div class="lootbox @(t.Key == actual.Key ? "lootbox--troll" : "")">
+                <div class="lootbox__ico">🏟️</div>
+                <div class="lootbox__body">
+                    <div class="lootbox__name">@Loc[t.Name]</div>
+                    <div class="lootbox__desc">@Loc[t.Desc]</div>
+                    <div class="lootbox__odds">
+                        <span class="odd"><b>👥 @t.Capacity.ToString("N0")</b></span>
+                        <span class="odd"><b>💰 @Plata(t.IncomeK)</b> @Loc["por partido"]</span>
+                    </div>
+                </div>
+                @if (t.Key == actual.Key)
+                {
+                    <span class="pill pill--gold" style="white-space:nowrap;">✓ @Loc["El tuyo"]</span>
+                }
+                else if (tengo)
+                {
+                    <span class="pill" style="white-space:nowrap;">@Loc["Superado"]</span>
+                }
+                else
+                {
+                    <button class="btn btn--gold lootbox__btn"
+                            disabled="@(!Game.CanBuyStadium(t))"
+                            @onclick="() => Game.BuyStadium(t)">
+                        @Loc["Comprar"] · $@t.Cost M
+                    </button>
+                }
             </div>
         }
     </div>
@@ -213,6 +268,10 @@ else
     private HashSet<string>? _misNombres;
     private HashSet<string> MisNombres() => _misNombres ??= Game.Owned.Select(p => p.Name).ToHashSet();
     protected override void OnGameChanged() => _misNombres = null;
+
+    /// <summary>Formatea la recaudación: "500 mil" o "200 M".</summary>
+    private static string Plata(int miles) =>
+        miles < 1000 ? $"{miles} mil" : $"{miles / 1000} M";
 
     /// <summary>Los jugadores que se ven con los filtros puestos.</summary>
     private List<Player> Lista() =>

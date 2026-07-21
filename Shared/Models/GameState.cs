@@ -160,6 +160,16 @@ public sealed class GameState
     public string Secondary { get; set; } = "#12203c";
     /// <summary>Estilo de las gradas del estadio (ver GameService.StandStyles).</summary>
     public string Stands { get; set; } = "clasica";
+
+    /// <summary>Tamaño del estadio comprado (ver GameService.StadiumTiers).</summary>
+    public string Stadium { get; set; } = "popular";
+
+    /// <summary>
+    /// Recaudación en MILES que todavía no llegó a completar un millón. El dinero
+    /// del juego se lleva en millones enteros, y la tribuna más chica recauda 500
+    /// mil por partido: sin este resto, esa entrada se perdía al redondear.
+    /// </summary>
+    public int GateBankK { get; set; }
     public string FormationName { get; set; } = "4-3-3";
     public TeamStyle Style { get; set; } = TeamStyle.Equilibrado;
 

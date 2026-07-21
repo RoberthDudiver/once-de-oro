@@ -907,6 +907,76 @@ public sealed class GameService
     // Los colores del club y las gradas. Es puro adorno, pero es lo que hace que
     // la cancha se sienta TUYA y no la misma de todos.
 
+    /// <summary>
+    /// Un tamaño de estadio. Cuanta más gente entra, más recauda por partido.
+    /// El ingreso va en MILES para poder expresar los 500 mil de la tribuna
+    /// más chica, que en millones enteros se perdería al redondear.
+    /// </summary>
+    public sealed record StadiumTier(string Key, string Name, int Capacity,
+                                     int IncomeK, int Cost, int GradaPx, string Desc);
+
+    /// <summary>
+    /// Calibrado para que cada salto se pague solo en ~14 partidos: así comprar
+    /// siempre conviene a la larga, pero nunca es plata gratis en el momento.
+    /// </summary>
+    public static readonly StadiumTier[] StadiumTiers =
+    {
+        new("popular",    "Tribuna Popular",     8_000,     500,     0, 18,
+            "La cancha del barrio. Con lo que entra apenas se pagan los focos."),
+        new("municipal",  "Estadio Municipal",  25_000,   3_000,    40, 24,
+            "Tablones de verdad y una popular que empuja."),
+        new("ciudad",     "Estadio de Ciudad",  45_000,  12_000,   150, 30,
+            "Ya se agotan las entradas una semana antes."),
+        new("monumental", "Monumental",         70_000,  35_000,   500, 36,
+            "Tres bandejas. El rival entra intimidado."),
+        new("coloso",     "Coloso",             90_000,  80_000, 1_200, 42,
+            "De los que salen en la tele del mundo entero."),
+        new("templo",     "Templo del Fútbol", 120_000, 200_000, 3_000, 50,
+            "El estadio más grande que se puede tener. Se llena solo."),
+    };
+
+    public StadiumTier Stadium =>
+        StadiumTiers.FirstOrDefault(t => t.Key == State.Stadium) ?? StadiumTiers[0];
+
+    /// <summary>El siguiente escalón, o null si ya tenés el más grande.</summary>
+    public StadiumTier? NextStadium()
+    {
+        int i = Array.FindIndex(StadiumTiers, t => t.Key == Stadium.Key);
+        return i >= 0 && i + 1 < StadiumTiers.Length ? StadiumTiers[i + 1] : null;
+    }
+
+    public bool OwnsStadium(StadiumTier t) =>
+        Array.FindIndex(StadiumTiers, x => x.Key == State.Stadium) >=
+        Array.FindIndex(StadiumTiers, x => x.Key == t.Key);
+
+    public bool CanBuyStadium(StadiumTier t) => !OwnsStadium(t) && State.Money >= t.Cost;
+
+    public bool BuyStadium(StadiumTier t)
+    {
+        if (!CanBuyStadium(t)) return false;
+        State.Money -= t.Cost;
+        State.Stadium = t.Key;
+        Commit();
+        return true;
+    }
+
+    /// <summary>
+    /// Cobra la entrada de un partido. Devuelve los millones que entraron ahora
+    /// (puede ser 0 con la tribuna chica: los 500 mil quedan guardados y recién
+    /// al segundo partido completan el millón).
+    /// </summary>
+    /// <summary>Lo que entró por la puerta en el último partido, en millones.</summary>
+    public int LastGateM { get; private set; }
+
+    private int CobrarEntrada()
+    {
+        State.GateBankK += Stadium.IncomeK;
+        int millones = State.GateBankK / 1000;
+        State.GateBankK %= 1000;
+        State.Money += millones;
+        return millones;
+    }
+
     public sealed record StandStyle(string Key, string Name, string Desc);
 
     public static readonly StandStyle[] StandStyles =
@@ -1514,6 +1584,7 @@ public sealed class GameService
         State.BestRatingReached = Math.Max(State.BestRatingReached, Power.Overall);
         GrantMatchXp();
         ApplyConditions();
+        LastGateM = CobrarEntrada();   // la gente que entró al estadio
 
         run.GoalsFor += r.HomeGoals;
         run.GoalsAgainst += r.AwayGoals;
@@ -1609,6 +1680,7 @@ public sealed class GameService
         State.BestRatingReached = Math.Max(State.BestRatingReached, Power.Overall);
         GrantMatchXp();   // los de academia crecen jugando
         ApplyConditions();  // cansancio, lesiones y estadisticas individuales
+        LastGateM = CobrarEntrada();   // la gente que entró al estadio
 
         // Estadísticas del torneo
         run.GoalsFor += r.HomeGoals;
