@@ -84,7 +84,73 @@ else
     }
     else if (_phase == Phase.Playing && _timeline is not null && opp is not null)
     {
-        <MatchField Timeline="_timeline"
+        @if (_vestuario)
+        {
+            @* ---------- ENTRETIEMPO: el momento del DT ---------- *@
+            <div class="card card--pad vest">
+                <div class="vest__ttl">🧴 @Loc["Entretiempo"] · @_result0</div>
+
+                <div class="muted mt" style="font-size:12px; letter-spacing:.2em; text-transform:uppercase;">@Loc["Planteo"]</div>
+                <div class="seg wrap mt">
+                    @foreach (var st in Enum.GetValues<TeamStyle>())
+                    {
+                        <button class="@(Game.State.Style == st ? "on" : "")"
+                                @onclick="() => Game.SetStyleSegundoTiempo(st)">@Loc[st.ToString()]</button>
+                    }
+                </div>
+                <div class="faint mt" style="font-size:12px;">
+                    @Loc["Ir al ataque cansa más a tus jugadores; meterse atrás, menos."]
+                </div>
+
+                <div class="muted mt" style="font-size:12px; letter-spacing:.2em; text-transform:uppercase;">
+                    @Loc["Cambios"] · @Game.CambiosDisponibles @Loc["disponibles"]
+                </div>
+                @if (Game.CambiosDisponibles > 0)
+                {
+                    <div class="row wrap mt" style="gap:8px; align-items:flex-end;">
+                        <label class="pickr" style="flex-direction:column; align-items:flex-start; gap:4px;">
+                            <span>@Loc["Sale"]</span>
+                            <select class="mkt-select" @bind="_sale">
+                                <option value="">—</option>
+                                @foreach (var p in Game.Starters)
+                                {
+                                    <option value="@p.Id">@p.Rating · @Short(p.Name)</option>
+                                }
+                            </select>
+                        </label>
+                        <label class="pickr" style="flex-direction:column; align-items:flex-start; gap:4px;">
+                            <span>@Loc["Entra"]</span>
+                            <select class="mkt-select" @bind="_entra">
+                                <option value="">—</option>
+                                @foreach (var p in Game.AvailableBench)
+                                {
+                                    <option value="@p.Id">@p.Rating · @Short(p.Name)</option>
+                                }
+                            </select>
+                        </label>
+                        <button class="btn btn--gold"
+                                disabled="@(string.IsNullOrEmpty(_sale) || string.IsNullOrEmpty(_entra))"
+                                @onclick="HacerCambio">🔄 @Loc["Cambiar"]</button>
+                    </div>
+                }
+                @if (_cambios.Count > 0)
+                {
+                    <div class="grid mt" style="gap:6px;">
+                        @foreach (var c in _cambios)
+                        {
+                            <div class="faint" style="font-size:12.5px;">🔄 @c</div>
+                        }
+                    </div>
+                }
+
+                <button class="btn btn--gold btn--block mt" @onclick="SalirAlSegundoTiempo">
+                    ▶ @Loc["Salir al segundo tiempo"]
+                </button>
+            </div>
+        }
+
+        <MatchField @ref="_campo" PararEnEntretiempo="true" OnEntretiempo="AbrirVestuario"
+                    Timeline="_timeline"
                     HomeName="@Game.State.ClubName" HomeFlag="⚽" HomeFormationName="@Game.Formation.Name"
                     AwayName="@opp.Name" AwayFlag="@opp.Flag"
                     HomeStarters="Game.LastHomeStarters" AwayStarters="Game.LastAwaySquad"
@@ -237,9 +303,53 @@ else
     private void Play()
     {
         _stageLabel = Game.StageInfo().stageName;
-        _timeline = Game.SimulateNextTimeline();
+        _timeline = Game.SimulateNextTimeline();   // sólo el 1T
         _phase = Phase.Playing;
+        _vestuario = false;
+        _cambios.Clear();
         StateHasChanged();
+    }
+
+    // ---- Entretiempo ----
+    private MatchField? _campo;
+    private bool _vestuario;
+    private string _sale = "", _entra = "", _result0 = "";
+    private readonly List<string> _cambios = new();
+
+    private void AbrirVestuario()
+    {
+        _result0 = $"{_timeline!.Result.HomeGoals} – {_timeline.Result.AwayGoals}";
+        _vestuario = true;
+        StateHasChanged();
+    }
+
+    private void HacerCambio()
+    {
+        var sale = Game.Starters.FirstOrDefault(p => p.Id == _sale);
+        var entra = Game.Owned.FirstOrDefault(p => p.Id == _entra);
+        if (sale is null || entra is null) return;
+        if (Game.Cambiar(_sale, _entra))
+        {
+            _cambios.Add($"{Short(sale.Name)} → {Short(entra.Name)}");
+            _sale = ""; _entra = "";
+        }
+    }
+
+    private void SalirAlSegundoTiempo()
+    {
+        // Se juega el 2T con el equipo y el planteo que quedaron, y se le agrega
+        // al MISMO timeline que la cancha está reproduciendo.
+        Game.SimularSegundoTiempo();
+        _vestuario = false;
+        StateHasChanged();
+        _campo?.Reanudar();
+    }
+
+    private static string Short(string n)
+    {
+        n = OnceDeOro.Data.PrimeDatabase.BaseName(n);
+        var partes = n.Split(' ');
+        return partes.Length == 1 ? n : partes[^1];
     }
 
     private void OnMatchFinished()

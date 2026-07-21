@@ -66,13 +66,17 @@ public static class MatchSimulator
         string homeName, string homeFlag, TeamPower home, IReadOnlyList<Player> homeStarters,
         string awayName, string awayFlag, TeamPower away, IReadOnlyList<Player> awayStarters,
         bool knockout, int seed,
-        TeamRoles? homeRoles = null, TeamRoles? awayRoles = null)
+        TeamRoles? homeRoles = null, TeamRoles? awayRoles = null,
+        MatchHalf half = MatchHalf.Full, MatchState? resume = null)
     {
-        var rng = new Random(seed);
-        var events = new List<SimEvent>();
-        var stats = new MatchStats();
-        var goals = new List<Goal>();
-        int[] score = { 0, 0 };
+        // Si venimos del entretiempo se retoma TODO lo del primer tiempo; si no,
+        // arranca en blanco. El equipo y el estilo pueden haber cambiado: eso
+        // llega en los parametros, por eso el 2T se simula con otra fuerza.
+        var rng = new Random(resume?.Seed ?? seed);
+        var events = resume?.Events ?? new List<SimEvent>();
+        var stats = resume?.Stats ?? new MatchStats();
+        var goals = resume?.Goals ?? new List<Goal>();
+        int[] score = { resume?.ScoreHome ?? 0, resume?.ScoreAway ?? 0 };
 
         double hp = home.Overall, ap = away.Overall;
         stats.PossHome = (int)Math.Round(100.0 * (hp + 3) / (hp + ap + 6));
@@ -104,11 +108,14 @@ public static class MatchSimulator
         double C01(double v) => Math.Clamp(v, 0.06, 0.94);
         int Min(int sec) => Math.Min(120, sec / 60 + 1);
 
-        Add(new SimEvent { Clock = 0, Type = SimEventType.KickOff, BallX = 0.5, BallY = 0.5, Text = "¡Comienza el partido!", Big = true, Dur = 0.8 });
+        // Sólo cuando EMPIEZA el partido: si venimos del entretiempo esto volvia
+        // a meter el saque inicial en el minuto 0, con el reloj ya en 48.
+        if (half != MatchHalf.Second)
+            Add(new SimEvent { Clock = 0, Type = SimEventType.KickOff, BallX = 0.5, BallY = 0.5, Text = "¡Comienza el partido!", Big = true, Dur = 0.8 });
         // (Actor/Target/ScoreH/ScoreA se llenan por evento para poder traducir el relato en el cliente)
 
         // Reparto de posesión sesgado por fuerza (acumulado para la estadística real)
-        var possSecs = new double[2];
+        var possSecs = new[] { resume?.PossHomeSecs ?? 0, resume?.PossAwaySecs ?? 0 };
         double homeShare = Math.Pow(home.Overall, 1.7) / (Math.Pow(home.Overall, 1.7) + Math.Pow(away.Overall, 1.7));
 
         // ---------------------------------------------------------------- CORNER
@@ -463,6 +470,9 @@ public static class MatchSimulator
             }
         }
 
+        // ---- PRIMER TIEMPO (se saltea si venimos del entretiempo) ----
+        if (half != MatchHalf.Second)
+        {
         // 1º TIEMPO — pausa de hidratación al minuto 22 (regla Mundial 2026)
         Period(0, 22 * 60, MatchPhase.First);
         Add(new SimEvent { Clock = 22 * 60, Type = SimEventType.HydrationBreak, BallX = 0.5, BallY = 0.5, Phase = MatchPhase.First, Dur = 1.4, Actor = "22", Text = "💧 Pausa de hidratación (min 22)" });
@@ -470,6 +480,31 @@ public static class MatchSimulator
         int add1 = 1 + rng.Next(4);   // 1..4 min de añadido
         Period(45 * 60, (45 + add1) * 60, MatchPhase.First);
         Add(new SimEvent { Clock = (45 + add1) * 60, Type = SimEventType.HalfTime, BallX = 0.5, BallY = 0.5, Phase = MatchPhase.Half, Dur = 1.6, Big = true, ScoreH = score[0], ScoreA = score[1], Text = $"⏸ Entretiempo · {score[0]}-{score[1]}" });
+        }
+
+        // Si sólo se pedía el primer tiempo, se corta acá y se devuelve TODO lo
+        // necesario para retomar: sin esto el 2T empezaria 0-0 y sin historia.
+        if (half == MatchHalf.First)
+        {
+            double tp = possSecs[0] + possSecs[1];
+            if (tp > 0) stats.PossHome = (int)Math.Round(100 * possSecs[0] / tp);
+            return new MatchTimeline
+            {
+                Result = new MatchResult
+                {
+                    HomeName = homeName, AwayName = awayName, HomeFlag = homeFlag, AwayFlag = awayFlag,
+                    HomeGoals = score[0], AwayGoals = score[1], Goals = goals,
+                },
+                Stats = stats, Events = events, Knockout = knockout,
+                Resume = new MatchState
+                {
+                    Events = events, Stats = stats, Goals = goals,
+                    ScoreHome = score[0], ScoreAway = score[1],
+                    PossHomeSecs = possSecs[0], PossAwaySecs = possSecs[1],
+                    Seed = rng.Next(),
+                },
+            };
+        }
 
         // 2º TIEMPO — pausa de hidratación al minuto 67 (22' del 2T)
         Add(new SimEvent { Clock = 45 * 60, Type = SimEventType.SecondHalf, BallX = 0.5, BallY = 0.5, Phase = MatchPhase.Second, Dur = 0.8, Text = "Arranca el segundo tiempo" });

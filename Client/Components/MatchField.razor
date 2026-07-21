@@ -224,11 +224,32 @@
         await Play();
     }
 
+    [Parameter] public bool PararEnEntretiempo { get; set; }
+    [Parameter] public EventCallback OnEntretiempo { get; set; }
+
+    private TaskCompletionSource? _seguir;
+
+    /// <summary>Lo llama la pantalla del partido cuando el DT termina en el vestuario.</summary>
+    public void Reanudar() => _seguir?.TrySetResult();
+
     private async Task Play()
     {
-        foreach (var e in Timeline.Events)
+        // Se recorre por INDICE y releyendo Count: el segundo tiempo se agrega a
+        // esta misma lista mientras el partido está pausado, y así sigue solo.
+        for (int i = 0; i < Timeline.Events.Count; i++)
         {
+            var e = Timeline.Events[i];
             Apply(e);
+
+            if (PararEnEntretiempo && e.Type == SimEventType.HalfTime)
+            {
+                _done = false;
+                StateHasChanged();
+                _seguir = new TaskCompletionSource();
+                await OnEntretiempo.InvokeAsync();
+                await _seguir.Task;          // espera a que el DT cierre el vestuario
+                _seguir = null;
+            }
             _stepSec = Math.Max(0.12, e.Dur * _speed);
             StateHasChanged();
             int ms = (int)(e.Dur * 1000 * (_skip ? 0.02 : _speed));

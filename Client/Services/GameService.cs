@@ -729,6 +729,24 @@ public sealed class GameService
     ///   100-104 → se cansan muchísimo más lento que el resto
     ///   y de ahí para abajo, cuanto más flojo, más le cuesta el partido.
     /// </summary>
+    /// <summary>
+    /// Cuánto castiga el estilo. Ir al ataque exige correr mucho más; meterse
+    /// atrás cansa menos. Es lo que hace que cambiar el planteo tenga precio.
+    /// </summary>
+    public static double StyleFatigue(TeamStyle s) => s switch
+    {
+        TeamStyle.Ofensivo => 1.30,
+        TeamStyle.Defensivo => 0.75,
+        _ => 1.00,
+    };
+
+    /// <summary>
+    /// El estilo de CADA tiempo. Si en el entretiempo pasás de defensivo a
+    /// ofensivo, el segundo tiempo cansa más que el primero, y al revés.
+    /// </summary>
+    public TeamStyle StylePrimerTiempo { get; private set; } = TeamStyle.Equilibrado;
+    public TeamStyle StyleSegundoTiempo { get; private set; } = TeamStyle.Equilibrado;
+
     public static double FatigueFactor(int rating) => rating switch
     {
         >= 105 => 0.00,
@@ -1341,7 +1359,10 @@ public sealed class GameService
             int bruto = 8 + extra + _rng.Next(0, 3);
 
             int rating = Owned.FirstOrDefault(p => p.Id == id)?.Rating ?? 70;
-            c.Fatigue = Math.Min(100, c.Fatigue + (int)Math.Round(bruto * FatigueFactor(rating)));
+            // Los dos tiempos pueden haberse jugado con planteos distintos: se
+            // promedia lo que costó cada mitad.
+            double estilo = (StyleFatigue(StylePrimerTiempo) + StyleFatigue(StyleSegundoTiempo)) / 2.0;
+            c.Fatigue = Math.Min(100, c.Fatigue + (int)Math.Round(bruto * FatigueFactor(rating) * estilo));
         }
 
         // Los que no jugaron descansan (y los lesionados van cumpliendo su parte)
@@ -1624,17 +1645,88 @@ public sealed class GameService
 
         var home = EffectiveStarters;
         var away = RivalSquad(opp);
+
+        // Se simula SOLO el primer tiempo: en el entretiempo el DT puede meter
+        // cambios y cambiar el planteo, y recién ahí se juega el segundo.
+        _rival = opp;
+        _knockout = knockout;
+        _awaySquad = away;
+        StylePrimerTiempo = State.Style;
+        StyleSegundoTiempo = State.Style;
+        _cambiosHechos = 0;
+
         var tl = MatchSimulator.Simulate(
             State.ClubName, "⚽", Power, home,
             opp.Name, opp.Flag, TeamPower.Flat(opp.Strength), away,
             knockout: knockout, seed: _rng.Next(),
-            homeRoles: State.Roles);   // tus designados patean penales, libres y corners
+            homeRoles: State.Roles,    // tus designados patean penales, libres y corners
+            half: MatchHalf.First);
 
         LastMatch = tl.Result;
         LastTimeline = tl;
         LastHomeStarters = home;
         LastAwaySquad = away;
         return tl;
+    }
+
+    // ---------------------------------------------------------------- entretiempo
+    // Datos del partido en curso que hacen falta para reanudarlo en el 2T.
+    private RivalSnapshot? _rival;
+    private bool _knockout;
+    private IReadOnlyList<Player> _awaySquad = Array.Empty<Player>();
+    private int _cambiosHechos;
+
+    public const int MaxCambios = 3;
+    public int CambiosHechos => _cambiosHechos;
+    public int CambiosDisponibles => MaxCambios - _cambiosHechos;
+
+    /// <summary>Cambia el planteo en el vestuario. Afecta al 2T y a cuánto se cansan.</summary>
+    public void SetStyleSegundoTiempo(TeamStyle s)
+    {
+        State.Style = s;
+        StyleSegundoTiempo = s;
+        Commit();
+    }
+
+    /// <summary>
+    /// Mete un cambio: sale uno del XI y entra un suplente. Sólo hasta tres, como
+    /// en el fútbol de verdad.
+    /// </summary>
+    public bool Cambiar(string saleId, string entraId)
+    {
+        if (_cambiosHechos >= MaxCambios) return false;
+        if (!State.StartingIds.Contains(saleId)) return false;
+        var entra = Owned.FirstOrDefault(p => p.Id == entraId);
+        if (entra is null || State.StartingIds.Contains(entraId) || IsOut(entraId)) return false;
+
+        int i = State.StartingIds.IndexOf(saleId);
+        State.StartingIds[i] = entraId;
+        _cambiosHechos++;
+        Commit();
+        return true;
+    }
+
+    /// <summary>
+    /// Juega el segundo tiempo con el equipo y el planteo que quedaron. Devuelve
+    /// el timeline COMPLETO (el del 1T con el 2T agregado atrás).
+    /// </summary>
+    public MatchTimeline SimularSegundoTiempo()
+    {
+        var tl = LastTimeline!;
+        var opp = _rival!;
+        var home = EffectiveStarters;
+
+        var full = MatchSimulator.Simulate(
+            State.ClubName, "⚽", Power, home,
+            opp.Name, opp.Flag, TeamPower.Flat(opp.Strength), _awaySquad,
+            knockout: _knockout, seed: _rng.Next(),
+            homeRoles: State.Roles,
+            half: MatchHalf.Second, resume: tl.Resume);
+
+        LastMatch = full.Result;
+        LastTimeline = full;
+        LastHomeStarters = home;
+        return full;
     }
 
     private static readonly string[] RivalNames =

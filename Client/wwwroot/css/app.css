@@ -1197,3 +1197,15 @@ a { color: inherit; text-decoration: none; }
 }
 .orden__quien { display: flex; align-items: center; gap: 8px; font-size: 13.5px; }
 .orden__ops button { font-size: 11.5px; padding: 5px 9px; }
+
+/* ---------------------------------------------------------------- entretiempo */
+.vest {
+    margin-bottom: 16px;
+    border-color: var(--gold);
+    box-shadow: 0 0 26px rgba(245, 197, 66, .22);
+    animation: lootPop .35s cubic-bezier(.2, 1.4, .4, 1);
+}
+.vest__ttl {
+    font-family: var(--font-head); font-size: 19px; letter-spacing: .04em;
+    color: var(--gold-2);
+}

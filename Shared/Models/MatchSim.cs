@@ -73,6 +73,12 @@ public sealed class MatchTimeline
     public bool Knockout { get; init; }
     public bool WentExtraTime { get; set; }
     public bool WentShootout { get; set; }
+
+    /// <summary>
+    /// Sólo cuando se simuló el PRIMER TIEMPO: con esto se reanuda el partido
+    /// después de los cambios del entretiempo. null = el partido está completo.
+    /// </summary>
+    public MatchState? Resume { get; set; }
 }
 
 /// <summary>Predicción previa al partido con modelos reconocidos (Poisson + Elo).</summary>
@@ -87,4 +93,26 @@ public sealed class Prediction
     public int EloAway { get; set; }
     public double EloHomeWin { get; set; }         // prob. de victoria local por Elo
     public List<(int H, int A, double P)> TopScores { get; set; } = new();
+}
+
+
+/// <summary>Qué parte del partido simular.</summary>
+public enum MatchHalf { Full, First, Second }
+
+/// <summary>
+/// Lo que hay que guardar del entretiempo para poder seguir el partido despues:
+/// el marcador, las estadisticas, los goles, la posesion y los eventos ya
+/// jugados. Sin esto el segundo tiempo arrancaria de cero.
+/// </summary>
+public sealed class MatchState
+{
+    public List<SimEvent> Events { get; set; } = new();
+    public MatchStats Stats { get; set; } = new();
+    public List<Goal> Goals { get; set; } = new();
+    public int ScoreHome { get; set; }
+    public int ScoreAway { get; set; }
+    public double PossHomeSecs { get; set; }
+    public double PossAwaySecs { get; set; }
+    /// <summary>Semilla para que el 2T siga siendo aleatorio pero reproducible.</summary>
+    public int Seed { get; set; }
 }
