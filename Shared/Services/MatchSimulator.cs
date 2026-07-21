@@ -94,6 +94,80 @@ public static class MatchSimulator
         var possSecs = new double[2];
         double homeShare = Math.Pow(home.Overall, 1.7) / (Math.Pow(home.Overall, 1.7) + Math.Pow(away.Overall, 1.7));
 
+        // ---------------------------------------------------------------- CORNER
+        // Antes el corner solo sumaba al contador de estadisticas: se contaban 5
+        // por partido y NUNCA se veia ninguno. Ahora es una jugada de verdad: la
+        // pelota va al banderin, se tira el centro y puede terminar en gol.
+        void Corner(int team, int t, MatchPhase ph)
+        {
+            if (team == 0) stats.CornersHome++; else stats.CornersAway++;
+
+            double cx = team == 0 ? 0.985 : 0.015;      // banderin del corner
+            double cy = rng.NextDouble() < 0.5 ? 0.04 : 0.96;
+            var pateaP = Pick(team == 0 ? homeStarters : awayStarters, rng);
+            string patea = Nm(pateaP, "N°7");
+
+            Add(new SimEvent
+            {
+                Clock = t, Type = SimEventType.Corner, Team = team,
+                BallX = cx, BallY = cy, Phase = ph, Dur = 1.0,
+                Actor = patea, ActorId = Idf(pateaP),
+                Text = $"⛳ Corner para {(team == 0 ? homeName : awayName)}, lo tira {patea}",
+            });
+
+            // El centro al area
+            double areaX = team == 0 ? 0.88 : 0.12;
+            Add(new SimEvent
+            {
+                Clock = t, Type = SimEventType.Pass, Team = team, Player = 1 + rng.Next(10),
+                BallX = areaX, BallY = 0.42 + rng.NextDouble() * 0.16, Phase = ph, Dur = 0.7,
+            });
+
+            // ¿Alguien la conecta? Del corner sale gol en ~3 de cada 100
+            double r = rng.NextDouble();
+            if (r < 0.03)
+            {
+                var cabeceaP = Scorer(team);
+                string cabecea = Nm(cabeceaP, "N°9");
+                score[team]++;
+                if (team == 0) { stats.ShotsHome++; stats.OnTargetHome++; } else { stats.ShotsAway++; stats.OnTargetAway++; }
+                goals.Add(new Goal(Min(t), cabecea, team == 0));
+                Add(new SimEvent
+                {
+                    Clock = t, Type = SimEventType.Goal, Team = team, Player = 1 + rng.Next(10),
+                    BallX = team == 0 ? 0.985 : 0.015, BallY = 0.5 + (rng.NextDouble() - 0.5) * 0.16,
+                    Phase = ph, Dur = 2.2, Big = true,
+                    Actor = cabecea, ActorId = Idf(cabeceaP), ScoreH = score[0], ScoreA = score[1],
+                    Text = $"⚽ ¡GOL de cabeza de {cabecea}!",
+                });
+            }
+            else if (r < 0.12)
+            {
+                if (team == 0) stats.ShotsHome++; else stats.ShotsAway++;
+                Add(new SimEvent
+                {
+                    Clock = t, Type = SimEventType.Miss, Team = team,
+                    BallX = team == 0 ? 0.99 : 0.01, BallY = 0.12, Phase = ph, Dur = 0.9,
+                    Text = "😖 Cabezazo apenas desviado",
+                });
+            }
+        }
+
+        // ---------------------------------------------------------------- LATERAL
+        // La pelota sale por el costado y la pone en juego el equipo contrario.
+        void ThrowIn(int team, int t, double x, MatchPhase ph)
+        {
+            var lanzaP = Pick(team == 0 ? homeStarters : awayStarters, rng);
+            string lanza = Nm(lanzaP, "N°3");
+            Add(new SimEvent
+            {
+                Clock = t, Type = SimEventType.ThrowIn, Team = team,
+                BallX = Math.Clamp(x, 0.05, 0.95), BallY = rng.NextDouble() < 0.5 ? 0.02 : 0.98,
+                Phase = ph, Dur = 0.5, Actor = lanza, ActorId = Idf(lanzaP),
+                Text = $"↩️ Saque de banda para {(team == 0 ? homeName : awayName)}",
+            });
+        }
+
         void Period(int startSec, int endSec, MatchPhase ph)
         {
             int t = startSec;
@@ -126,6 +200,21 @@ public static class MatchSimulator
                     });
                 }
 
+                // La pelota se va al costado: saque de banda. Es lo mas comun que
+                // pasa en un partido y no existia; ahora se ve.
+                if (rng.NextDouble() < 0.035)
+                {
+                    ThrowIn(1 - team, t, x, ph);
+                    continue;                       // la jugada se corta ahi
+                }
+
+                // Salio por el fondo tras un despeje: corner para el que atacaba.
+                if (rng.NextDouble() < 0.027)
+                {
+                    Corner(team, t, ph);
+                    continue;
+                }
+
                 // Falta — con nombres: quién la hizo y a quién
                 if (rng.NextDouble() < 0.10)   // ~23 faltas por partido
                 {
@@ -149,7 +238,9 @@ public static class MatchSimulator
 
                     // ¿La falta fue DENTRO DEL ÁREA? Entonces es PENAL.
                     bool inBox = team == 0 ? x > 0.82 : x < 0.18;
-                    if (inBox && rng.NextDouble() < 0.035)   // ~0,25 penales por partido, como en la realidad
+                    // Un poco por encima del ritmo real (0,25/partido): a ese ritmo
+                    // se veia uno cada 5 partidos y parecia que no existian.
+                    if (inBox && rng.NextDouble() < 0.06)
                     {
                         var takerP = Scorer(team);
                         var keeperP = Keeper(1 - team);
@@ -238,7 +329,7 @@ public static class MatchSimulator
                             if (team == 0) stats.OnTargetHome++; else stats.OnTargetAway++;
                             double keepX = team == 0 ? 0.91 : 0.09;
                             Add(new SimEvent { Clock = t, Type = SimEventType.Save, Team = 1 - team, BallX = keepX, BallY = goalY, Phase = ph, Dur = 0.9, Actor = Nm(Keeper(1 - team), "el arquero"), ActorId = Idf(Keeper(1 - team)), Text = $"🧤 ¡Atajó!" });
-                            if (rng.NextDouble() < 0.5) { if (team == 0) stats.CornersHome++; else stats.CornersAway++; }
+                            if (rng.NextDouble() < 0.5) Corner(team, t, ph);   // el rebote se va al corner
                         }
                         else if (r < 0.63)
                         {

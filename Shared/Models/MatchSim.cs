@@ -7,7 +7,9 @@ public enum SimEventType
     Corner, Offside, Injury, HydrationBreak, HalfTime, SecondHalf, FullTime,
     ExtraTimeStart, ShootoutStart, PenaltyGoal, PenaltyMiss, End,
     /// <summary>Penal cobrado DURANTE el partido (distinto de la tanda final).</summary>
-    PenaltyAwarded
+    PenaltyAwarded,
+    /// <summary>Saque de banda: la pelota salió por el costado.</summary>
+    ThrowIn
 }
 
 /// <summary>Fase del partido (para el reloj y los rótulos).</summary>

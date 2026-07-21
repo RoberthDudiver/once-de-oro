@@ -130,6 +130,7 @@
         <div class="mf__stat"><b>@_st.PossHome%</b><span>@Loc["Posesión"]</span><b>@_st.PossAway%</b></div>
         <div class="mf__statbar"><span style="width:@(_st.PossHome)%"></span></div>
         <div class="mf__statrow"><b>@_st.ShotsHome</b><span>@Loc["Remates"]</span><b>@_st.ShotsAway</b></div>
+        <div class="mf__statrow"><b>@_st.CornersHome</b><span>@Loc["Corners"]</span><b>@_st.CornersAway</b></div>
         <div class="mf__statrow"><b>@_st.FoulsHome</b><span>@Loc["Faltas"]</span><b>@_st.FoulsAway</b></div>
         <div class="mf__statrow"><b>@_st.YellowHome/@_st.RedHome</b><span>🟨 / 🟥</span><b>@_st.YellowAway/@_st.RedAway</b></div>
     </div>
@@ -162,6 +163,7 @@
     [Parameter] public string? Round { get; set; }
     [Parameter] public EventCallback OnFinished { get; set; }
 
+    private readonly int[] _corners = new int[2];
     private readonly double[] _hx = new double[11], _hy = new double[11], _ax = new double[11], _ay = new double[11];
     // Arrancan VACÍOS, nunca null: el componente puede renderizarse antes de que
     // OnInitializedAsync termine (basta un await), y el render lee .Length.
@@ -247,7 +249,10 @@
         bool live = e.Type is SimEventType.KickOff or SimEventType.Pass or SimEventType.Carry
                             or SimEventType.Shot or SimEventType.Goal or SimEventType.Save
                             or SimEventType.Post or SimEventType.Miss or SimEventType.Foul
-                            or SimEventType.PenaltyAwarded;
+                            or SimEventType.PenaltyAwarded
+                            // Sin esto la pelota NO viaja al banderin ni al lateral y la
+                            // jugada queda invisible: solo se veria el texto.
+                            or SimEventType.Corner or SimEventType.ThrowIn;
 
         if (live)
         {
@@ -298,6 +303,10 @@
             case SimEventType.Red: AddKey(SimEventType.Red, e); break;
             case SimEventType.Injury: AddKey(SimEventType.Injury, e); break;
             case SimEventType.Offside: AddKey(SimEventType.Offside, e); break;
+            case SimEventType.Corner:
+                if (e.Team is 0 or 1) _corners[e.Team]++;
+                AddKey(SimEventType.Corner, e);
+                break;
             case SimEventType.PenaltyAwarded: AddKey(SimEventType.PenaltyAwarded, e); break;
             case SimEventType.PenaltyGoal:
             case SimEventType.PenaltyMiss:
@@ -326,6 +335,8 @@
             SimEventType.Foul          => F("Falta de {0} sobre {1}", a, tg),
             SimEventType.Yellow        => "🟨 " + F("Amarilla a {0}", a),
             SimEventType.Red           => "🟥 " + F("Roja a {0}", a),
+            SimEventType.Corner        => "⛳ " + F("Corner. Lo tira {0}", a),
+            SimEventType.ThrowIn       => "↩️ " + Loc["Saque de banda"],
             SimEventType.Injury        => "🚑 " + F("{0} queda golpeado y necesita atención", a),
             SimEventType.Offside       => "🚩 " + F("Offside · posición adelantada de {0}", a),
             SimEventType.Shot          => F("Remate de {0} ({1})", a, e.Target),
@@ -408,6 +419,7 @@
             SimEventType.Red => "🟥",
             SimEventType.Injury => "🚑",
             SimEventType.Offside => "🚩",
+            SimEventType.Corner => "⛳",
             SimEventType.PenaltyAwarded => "🎯",
             _ => "•"
         };
@@ -461,6 +473,10 @@
             FoulsHome = S(f.FoulsHome), FoulsAway = S(f.FoulsAway),
             YellowHome = S(f.YellowHome), YellowAway = S(f.YellowAway),
             RedHome = S(f.RedHome), RedAway = S(f.RedAway),
+            // Los corners se cuentan de VERDAD, uno por uno, en vez de estimarlos
+            // por el avance del reloj: ahora son jugadas que se ven en la cancha,
+            // y el numero tiene que coincidir con lo que acabas de mirar.
+            CornersHome = _corners[0], CornersAway = _corners[1],
         };
     }
 
