@@ -11,13 +11,18 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@300;400;500;600;700&family=Barlow:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="css/app.css" />
-    <!-- El ?v= obliga al navegador a soltar el favicon viejo, que cachea con mucha insistencia -->
-    <!-- El PNG va PRIMERO: si el navegador no dibuja el emoji del SVG, igual ve la pelota -->
-
-    <link rel="icon" type="image/png" sizes="64x64" href="favicon.png?v=3" />
-    <link rel="icon" type="image/svg+xml" href="favicon.svg?v=3" />
-    <link rel="apple-touch-icon" href="icon-192.png?v=3" />
+    <!-- OJO: subir este ?v= cada vez que se toque app.css, si no el navegador
+         se queda con la hoja vieja y la pantalla no cambia. -->
+    <link rel="stylesheet" href="css/app.css?v=5" />
+    <!-- El ?v= obliga al navegador a soltar el icono viejo, que cachea con mucha insistencia.
+         Los tres archivos salen del MISMO dibujo (geometria, no el emoji): antes el SVG
+         dibujaba el emoji como texto y cada sistema usaba su propio set, asi que en el
+         celular aparecia una pelota distinta a la del navegador. -->
+    <link rel="icon" type="image/svg+xml" href="favicon.svg?v=4" />
+    <link rel="icon" type="image/png" sizes="64x64" href="favicon.png?v=4" />
+    <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png?v=4" />
+    <link rel="manifest" href="manifest.json?v=4" />
+    <meta name="theme-color" content="#f5c542" />
     <link href="OnceDeOro.styles.css" rel="stylesheet" />
     <script src="js/sfx.js"></script>
     <script type="importmap"></script>

@@ -1,0 +1,14 @@
+{
+  "name": "Once de Oro",
+  "short_name": "Once de Oro",
+  "description": "Juego web tipo manager de fútbol.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0f1a",
+  "theme_color": "#f5c542",
+  "icons": [
+    { "src": "icon-192.png?v=4", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png?v=4", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png?v=4", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

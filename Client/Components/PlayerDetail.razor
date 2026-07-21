@@ -181,6 +181,12 @@
                     🚑 @Loc["Lesionado"] · @c.OutMatches @(c.OutMatches == 1 ? Loc["partido"] : Loc["partidos"])
                 </div>
             }
+            else if (c.Suspended > 0)
+            {
+                <div class="pill" style="width:100%; justify-content:center; padding:10px; color:var(--red); border-color:rgba(255,90,106,.45);">
+                    🟥 @Loc["Suspendido"] · @c.Suspended @(c.Suspended == 1 ? Loc["partido"] : Loc["partidos"])
+                </div>
+            }
             else
             {
                 <div class="pill pill--green" style="width:100%; justify-content:center; padding:10px;">

@@ -78,6 +78,15 @@ public sealed class PlayerCondition
     public int Red { get; set; }
     public int Injuries { get; set; }
 
+    /// <summary>
+    /// Partidos de suspensión que le quedan por cumplir. Va aparte de OutMatches
+    /// porque un expulsado NO está lesionado: la ficha tiene que decir la verdad.
+    /// </summary>
+    public int Suspended { get; set; }
+
+    /// <summary>Amarillas acumuladas desde la última suspensión (cada 5, se pierde un partido).</summary>
+    public int YellowStreak { get; set; }
+
     public bool Injured => OutMatches > 0;
 }
 

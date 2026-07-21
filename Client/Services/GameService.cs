@@ -635,6 +635,13 @@ public sealed class GameService
 
     public bool IsInjured(string id) => State.Conditions.TryGetValue(id, out var c) && c.Injured;
 
+    /// <summary>Fechas que le quedan de suspensión por tarjetas. 0 = puede jugar.</summary>
+    public const int RedBanMatches = 1;
+    public const int YellowsForBan = 5;
+
+    public int BanLeft(string id) => State.Conditions.TryGetValue(id, out var c) ? c.Suspended : 0;
+    public bool IsSuspended(string id) => BanLeft(id) > 0;
+
     // ---------------------------------------------------------------- descanso
     // Podés mandar a un jugador a concentrar: 1 minuto REAL sin poder jugar y
     // vuelve entero. El costo es el tiempo, no la plata, y por eso el descanso lo
@@ -770,7 +777,7 @@ public sealed class GameService
     private bool Blocked(Player p) => BlockedNames.Count > 0 && BlockedNames.Contains(p.Name);
 
     /// <summary>No puede jugar: está lesionado o concentrado descansando.</summary>
-    public bool IsOut(string id) => IsInjured(id) || IsResting(id);
+    public bool IsOut(string id) => IsInjured(id) || IsSuspended(id) || IsResting(id);
 
     /// <summary>Titulares disponibles: los lesionados y los que descansan no juegan.</summary>
     public IReadOnlyList<Player> AvailableStarters =>
@@ -1164,7 +1171,11 @@ public sealed class GameService
             var c = Cond(p.Id);
             if (!jugaron.Contains(p.Id))
                 c.Fatigue = Math.Max(0, c.Fatigue - 34);
+            // Se cumple una fecha de la lesión y otra de la suspensión. Va ANTES de
+            // procesar las tarjetas de este partido, así el que ve la roja hoy se
+            // pierde el próximo y no éste, que ya jugó.
             if (c.OutMatches > 0) c.OutMatches--;
+            if (c.Suspended > 0) c.Suspended--;
         }
 
         if (tl is null) return;
@@ -1177,11 +1188,23 @@ public sealed class GameService
                 case SimEventType.Goal when jugaron.Contains(e.ActorId):
                     Cond(e.ActorId).Goals++;
                     break;
+                // Las tarjetas ahora PESAN: antes sólo se contaban y el expulsado
+                // jugaba el partido siguiente como si nada.
                 case SimEventType.Yellow when jugaron.Contains(e.ActorId):
-                    Cond(e.ActorId).Yellow++;
+                    var cy = Cond(e.ActorId);
+                    cy.Yellow++;
+                    cy.YellowStreak++;
+                    if (cy.YellowStreak >= YellowsForBan)      // 5 amarillas = una fecha
+                    {
+                        cy.YellowStreak = 0;
+                        cy.Suspended = Math.Max(cy.Suspended, 1);
+                    }
                     break;
                 case SimEventType.Red when jugaron.Contains(e.ActorId):
-                    Cond(e.ActorId).Red++;
+                    var cr = Cond(e.ActorId);
+                    cr.Red++;
+                    cr.YellowStreak = 0;                       // la roja limpia la cuenta
+                    cr.Suspended = Math.Max(cr.Suspended, RedBanMatches);
                     break;
                 case SimEventType.Injury when jugaron.Contains(e.ActorId):
                     var c = Cond(e.ActorId);

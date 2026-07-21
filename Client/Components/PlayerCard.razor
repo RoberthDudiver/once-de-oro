@@ -14,10 +14,11 @@
             <span>@P.Nation</span>
         </div>
         @{ var cond = Game.State.Conditions.TryGetValue(P.Id, out var cc) ? cc : null; }
-        @if (cond is not null && (cond.Injured || cond.Fatigue >= 45))
+        @if (cond is not null && (cond.Injured || cond.Suspended > 0 || cond.Fatigue >= 45))
         {
             <div class="pcard__flags">
                 @if (cond.Injured) { <span class="tag-inj">🚑 @cond.OutMatches</span> }
+                else if (cond.Suspended > 0) { <span class="tag-ban">🟥 @cond.Suspended</span> }
                 else { <span class="tag-fat">😮‍💨 @cond.Fatigue%</span> }
             </div>
         }

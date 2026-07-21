@@ -109,13 +109,17 @@ else
         {
             <PlayerCard P="p" ShowPrice="false" OnOpen="Abrir">
                 <Actions>
-                    @* Al lesionado sólo se lo puede sacar, nunca poner: no puede jugar. *@
+                    @* Al que no puede jugar (lesionado o suspendido) sólo se lo puede sacar. *@
                     <button class="icon-btn @(Game.IsStarter(p.Id) ? "icon-btn--sell" : "icon-btn--buy")"
-                            disabled="@(!Game.IsStarter(p.Id) && Game.IsInjured(p.Id))"
+                            disabled="@(!Game.IsStarter(p.Id) && Game.IsOut(p.Id))"
                             title="@(Game.IsStarter(p.Id) ? Loc["Sacar del XI"]
-                                     : Game.IsInjured(p.Id) ? Loc["Lesionado: no puede jugar"] : Loc["Poner en el XI"])"
+                                     : Game.IsInjured(p.Id) ? Loc["Lesionado: no puede jugar"]
+                                     : Game.IsSuspended(p.Id) ? Loc["Suspendido: no puede jugar"]
+                                     : Loc["Poner en el XI"])"
                             @onclick="() => Game.ToggleStarter(p.Id)">
-                        @(Game.IsStarter(p.Id) ? "−" : Game.IsInjured(p.Id) ? "🚑" : "＋")
+                        @(Game.IsStarter(p.Id) ? "−"
+                          : Game.IsInjured(p.Id) ? "🚑"
+                          : Game.IsSuspended(p.Id) ? "🟥" : "＋")
                     </button>
                 </Actions>
             </PlayerCard>

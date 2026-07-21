@@ -46,7 +46,22 @@ builder.Services.AddAuthorization();
 var app = builder.Build();
 
 app.UseBlazorFrameworkFiles();
-app.UseStaticFiles();
+
+// index.html y el manifest se revalidan SIEMPRE. Son los que apuntan a todo lo
+// demas con su ?v=, asi que si el navegador se queda con una copia vieja de
+// estos dos, sigue pidiendo el CSS y los iconos viejos por mas que se haya
+// desplegado una version nueva. "no-cache" no es "no cachear": es "preguntá
+// antes de usarlo", que es exactamente lo que hace falta.
+var sinCache = new[] { ".html", ".webmanifest", "manifest.json" };
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        var f = ctx.File.Name;
+        if (sinCache.Any(x => f.EndsWith(x, StringComparison.OrdinalIgnoreCase)))
+            ctx.Context.Response.Headers.CacheControl = "no-cache, must-revalidate";
+    }
+});
 app.UseRouting();
 
 app.UseAuthentication();
@@ -54,6 +69,10 @@ app.UseAuthorization();
 
 app.MapAccountEndpoints();
 app.MapHub<DuelHub>("/duelhub");
-app.MapFallbackToFile("index.html");
+app.MapFallbackToFile("index.html", new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+        ctx.Context.Response.Headers.CacheControl = "no-cache, must-revalidate",
+});
 
 app.Run();

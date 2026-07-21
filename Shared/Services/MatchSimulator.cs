@@ -136,9 +136,13 @@ public static class MatchSimulator
                     string victim = Nm(victimP, "N°9");
                     if (foulTeam == 0) stats.FoulsHome++; else stats.FoulsAway++;
                     Add(new SimEvent { Clock = t, Type = SimEventType.Foul, Team = foulTeam, BallX = x, BallY = y, Phase = ph, Dur = 0.7, Actor = fouler, Target = victim, ActorId = Idf(foulerP), TargetId = Idf(victimP), Text = $"Falta de {fouler} sobre {victim}" });
+                    // Calibrado contra el futbol real: ~3.5 amarillas y una roja cada
+                    // 7 partidos. Antes era 3% roja y 22% amarilla por falta, que con
+                    // ~23 faltas por partido daba UNA ROJA EN LA MITAD de los partidos:
+                    // con las tarjetas ya pesando, eso te dejaba sin plantel.
                     double cr = rng.NextDouble();
-                    if (cr < 0.03) { if (foulTeam == 0) stats.RedHome++; else stats.RedAway++; Add(new SimEvent { Clock = t, Type = SimEventType.Red, Team = foulTeam, BallX = x, BallY = y, Phase = ph, Dur = 1.2, Big = true, Actor = fouler, ActorId = Idf(foulerP), Text = $"🟥 Roja a {fouler}" }); }
-                    else if (cr < 0.25) { if (foulTeam == 0) stats.YellowHome++; else stats.YellowAway++; Add(new SimEvent { Clock = t, Type = SimEventType.Yellow, Team = foulTeam, BallX = x, BallY = y, Phase = ph, Dur = 0.9, Actor = fouler, ActorId = Idf(foulerP), Text = $"🟨 Amarilla a {fouler}" }); }
+                    if (cr < 0.006) { if (foulTeam == 0) stats.RedHome++; else stats.RedAway++; Add(new SimEvent { Clock = t, Type = SimEventType.Red, Team = foulTeam, BallX = x, BallY = y, Phase = ph, Dur = 1.2, Big = true, Actor = fouler, ActorId = Idf(foulerP), Text = $"🟥 Roja a {fouler}" }); }
+                    else if (cr < 0.16) { if (foulTeam == 0) stats.YellowHome++; else stats.YellowAway++; Add(new SimEvent { Clock = t, Type = SimEventType.Yellow, Team = foulTeam, BallX = x, BallY = y, Phase = ph, Dur = 0.9, Actor = fouler, ActorId = Idf(foulerP), Text = $"🟨 Amarilla a {fouler}" }); }
                     // Lesión ocasional del jugador que recibió la falta
                     if (rng.NextDouble() < 0.008)   // lesiones MUY poco frecuentes
                         Add(new SimEvent { Clock = t, Type = SimEventType.Injury, Team = team, BallX = x, BallY = y, Phase = ph, Dur = 1.1, Actor = victim, ActorId = Idf(victimP), Text = $"🚑 {victim} queda golpeado y necesita atención" });
