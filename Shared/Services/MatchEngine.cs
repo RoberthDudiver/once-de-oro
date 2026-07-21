@@ -39,7 +39,9 @@ public sealed class MatchEngine
             case TeamStyle.Defensivo: attack -= 3; defense += 5; break;
         }
 
-        int Clamp(double v) => (int)Math.Round(Math.Clamp(v, 30, 99));
+        // El techo es 109 y no 99: si un equipo de primes se aplanaba en 99, tener
+        // once jugadores de 100+ no servía de nada y la fuerza mentía.
+        int Clamp(double v) => (int)Math.Round(Math.Clamp(v, 30, 109));
         return new TeamPower(Clamp(overall), Clamp(attack), Clamp(defense));
     }
 

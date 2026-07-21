@@ -145,7 +145,12 @@ public sealed class GameState
 {
     public int Money { get; set; } = 200;
     public string ClubName { get; set; } = "Once de Oro FC";
+    /// <summary>Color principal de la camiseta (y de la hinchada en las gradas).</summary>
     public string Primary { get; set; } = "#f5c542";
+    /// <summary>Color secundario, para el contraste de la camiseta y las gradas.</summary>
+    public string Secondary { get; set; } = "#12203c";
+    /// <summary>Estilo de las gradas del estadio (ver GameService.StandStyles).</summary>
+    public string Stands { get; set; } = "clasica";
     public string FormationName { get; set; } = "4-3-3";
     public TeamStyle Style { get; set; } = TeamStyle.Equilibrado;
 

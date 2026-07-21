@@ -896,6 +896,46 @@ public sealed class GameService
 
     public void SetStyle(TeamStyle style) { State.Style = style; Commit(); }
 
+    // ---------------------------------------------------------------- estadio
+    // Los colores del club y las gradas. Es puro adorno, pero es lo que hace que
+    // la cancha se sienta TUYA y no la misma de todos.
+
+    public sealed record StandStyle(string Key, string Name, string Desc);
+
+    public static readonly StandStyle[] StandStyles =
+    {
+        new("clasica",  "Clásica",  "Tribuna llena en el color del club."),
+        new("bicolor",  "Bicolor",  "Franjas alternadas con los dos colores."),
+        new("mosaico",  "Mosaico",  "El clásico mosaico de la hinchada."),
+        new("nocturna", "Nocturna", "Estadio a oscuras con celulares prendidos."),
+        new("vacia",    "Vacía",    "A puertas cerradas, sin público."),
+    };
+
+    /// <summary>Paletas listas, para no tener que pelearse con el selector de color.</summary>
+    public static readonly (string Name, string P, string S)[] Kits =
+    {
+        ("Oro",       "#f5c542", "#12203c"),
+        ("Sangre",    "#e23b3b", "#1a1a1a"),
+        ("Cielo",     "#4ea3ff", "#ffffff"),
+        ("Verde",     "#2fbf6b", "#0e2a1c"),
+        ("Violeta",   "#9b6bff", "#1a1030"),
+        ("Naranja",   "#ff8a3d", "#2a1405"),
+        ("Rosa",      "#ff5fae", "#2a0f1d"),
+        ("Blanco",    "#f2f2f2", "#111111"),
+    };
+
+    public void SetColors(string primary, string secondary)
+    {
+        if (!string.IsNullOrWhiteSpace(primary)) State.Primary = primary;
+        if (!string.IsNullOrWhiteSpace(secondary)) State.Secondary = secondary;
+        Commit();
+    }
+
+    public void SetStands(string key)
+    {
+        if (StandStyles.Any(s => s.Key == key)) { State.Stands = key; Commit(); }
+    }
+
     public bool IsStarter(string id) => State.StartingIds.Contains(id);
 
     /// <summary>Alterna un jugador dentro/fuera del XI respetando los cupos de la formación.</summary>

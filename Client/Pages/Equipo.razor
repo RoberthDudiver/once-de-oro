@@ -38,6 +38,14 @@ else
                 </div>
             </div>
 
+            @* La cancha va adentro del estadio: las gradas se pintan alrededor con
+               los colores del club. *@
+            <div class="stadium" data-stands="@Game.State.Stands"
+                 style="--c1:@Game.State.Primary; --c2:@Game.State.Secondary;">
+                <div class="stand stand--top"></div>
+                <div class="stand stand--bottom"></div>
+                <div class="stand stand--left"></div>
+                <div class="stand stand--right"></div>
             <div class="pitch">
                 <div class="pitch__circle"></div>
                 @* Cada línea es una fila flex: el navegador la reparte y NUNCA se sale de la cancha. *@
@@ -50,12 +58,13 @@ else
                                  @onclick="() => { if (slot.Player is Player sp && !Game.IsReserve(sp)) Game.ToggleStarter(sp.Id); }">
                                 @{ var pl = slot.Player!; var res = Game.IsReserve(pl); }
                                 <div class="pitch__pos pos--@slot.Pos">@slot.Pos.Label()</div>
-                                <div class="dot-player @(res ? "reserve" : Tier(pl))">@pl.Rating</div>
+                                <div class="dot-player @(res ? "reserve" : "kit")">@pl.Rating</div>
                                 <div class="pitch__name">@(res ? Loc["libre"] : Short(pl.Name))</div>
                             </div>
                         }
                     </div>
                 }
+            </div>
             </div>
         </div>
 
@@ -67,9 +76,9 @@ else
                 </div>
                 @{ var pw = Game.Power; }
                 <div class="power mt">
-                    <div class="pbar"><span class="pbar__lbl">GEN</span><div class="pbar__track"><div class="pbar__fill" style="width:@(pw.Overall)%"></div></div><span class="pbar__num">@pw.Overall</span></div>
-                    <div class="pbar"><span class="pbar__lbl">ATA</span><div class="pbar__track"><div class="pbar__fill atk" style="width:@(pw.Attack)%"></div></div><span class="pbar__num">@pw.Attack</span></div>
-                    <div class="pbar"><span class="pbar__lbl">DEF</span><div class="pbar__track"><div class="pbar__fill def" style="width:@(pw.Defense)%"></div></div><span class="pbar__num">@pw.Defense</span></div>
+                    <div class="pbar"><span class="pbar__lbl">GEN</span><div class="pbar__track"><div class="pbar__fill" style="width:@(Math.Min(100, pw.Overall))%"></div></div><span class="pbar__num">@pw.Overall</span></div>
+                    <div class="pbar"><span class="pbar__lbl">ATA</span><div class="pbar__track"><div class="pbar__fill atk" style="width:@(Math.Min(100, pw.Attack))%"></div></div><span class="pbar__num">@pw.Attack</span></div>
+                    <div class="pbar"><span class="pbar__lbl">DEF</span><div class="pbar__track"><div class="pbar__fill def" style="width:@(Math.Min(100, pw.Defense))%"></div></div><span class="pbar__num">@pw.Defense</span></div>
                 </div>
                 <div class="mt">
                     @if (Game.HasFullRealXI)
@@ -151,6 +160,76 @@ else
             }
         </div>
     </div>
+
+    @* ---------------- Fusión de primes ---------------- *@
+    var fusiones = Fusionables();
+    @if (fusiones.Count > 0)
+    {
+        <div class="section-title"><span class="dot"></span> @Loc["⬆️ Fusiones disponibles"]</div>
+        <div class="card card--pad mb">
+            <div class="faint mb" style="font-size:12.5px;">
+                @Loc["Tenés la versión común de estos jugadores. Sacrificala y su versión prime sube un punto."]
+            </div>
+            <div class="grid" style="gap:8px;">
+                @foreach (var (prime, comun) in fusiones)
+                {
+                    <div class="fuse">
+                        <div class="fuse__txt">
+                            <b>@prime.Name</b> @prime.Rating → <b>@(prime.Rating + 1)</b>
+                            <div class="faint">@Loc["Se pierde"] @comun.Name (@comun.Rating)</div>
+                        </div>
+                        <button class="btn btn--gold" @onclick="() => Game.Fuse(prime.Id)">
+                            @Loc["Mejorar"] · @prime.Rating → @(prime.Rating + 1)
+                        </button>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    @* ---------------- Camiseta y estadio ---------------- *@
+    <div class="section-title"><span class="dot"></span> @Loc["🎨 Camiseta y estadio"]</div>
+    <div class="card card--pad mb">
+        <div class="muted" style="font-size:12px; letter-spacing:.2em; text-transform:uppercase; margin-bottom:10px;">@Loc["Colores del club"]</div>
+        <div class="kits mb">
+            @foreach (var k in GameService.Kits)
+            {
+                var elegido = Game.State.Primary == k.P && Game.State.Secondary == k.S;
+                <button class="kit-chip @(elegido ? "on" : "")" title="@k.Name"
+                        @onclick="() => Game.SetColors(k.P, k.S)">
+                    <span class="kit-chip__a" style="background:@k.P"></span>
+                    <span class="kit-chip__b" style="background:@k.S"></span>
+                </button>
+            }
+        </div>
+
+        <div class="row wrap" style="gap:16px;">
+            <label class="pickr">
+                <span>@Loc["Principal"]</span>
+                <input type="color" value="@Game.State.Primary"
+                       @onchange="CambiarPrincipal" />
+            </label>
+            <label class="pickr">
+                <span>@Loc["Secundario"]</span>
+                <input type="color" value="@Game.State.Secondary"
+                       @onchange="CambiarSecundario" />
+            </label>
+        </div>
+
+        <div class="muted" style="font-size:12px; letter-spacing:.2em; text-transform:uppercase; margin:18px 0 10px;">@Loc["Gradas"]</div>
+        <div class="stands-pick">
+            @foreach (var s in GameService.StandStyles)
+            {
+                <button class="standopt @(Game.State.Stands == s.Key ? "on" : "")"
+                        @onclick="() => Game.SetStands(s.Key)">
+                    <span class="standopt__prev" data-stands="@s.Key"
+                          style="--c1:@Game.State.Primary; --c2:@Game.State.Secondary;"></span>
+                    <b>@Loc[s.Name]</b>
+                    <span class="faint">@Loc[s.Desc]</span>
+                </button>
+            }
+        </div>
+    </div>
 }
 
 <PlayerDetail P="_ficha" OnClose="() => _ficha = null" />
@@ -172,6 +251,28 @@ else
 
     private List<Player> Descansando() => _descansando;
     private List<Player> Cansados() => _cansados;
+
+    /// <summary>
+    /// Primes tuyos que YA se pueden mejorar porque tenés su versión común. Estaba
+    /// sólo dentro de la ficha del jugador, al fondo de todo, así que no se
+    /// encontraba: ahora también aparece acá, con el botón a la vista.
+    /// </summary>
+    private List<(Player Prime, Player Comun)> Fusionables()
+    {
+        var r = new List<(Player, Player)>();
+        foreach (var p in Game.Owned)
+        {
+            var fuente = Game.FuseSource(p);
+            if (fuente is not null) r.Add((p, fuente));
+        }
+        return r;
+    }
+
+    private void CambiarPrincipal(ChangeEventArgs e) =>
+        Game.SetColors(e.Value?.ToString() ?? "", Game.State.Secondary);
+
+    private void CambiarSecundario(ChangeEventArgs e) =>
+        Game.SetColors(Game.State.Primary, e.Value?.ToString() ?? "");
 
     private void RecalcularDescanso()
     {
@@ -250,6 +351,9 @@ else
     private static string Tier(Player p) => p.Rating >= 85 ? "" : p.Rating >= 75 ? "silver" : "bronze";
     private static string Short(string name)
     {
+        // Los primes se llaman "Lionel Messi (Prime 2012)": si tomamos la ultima
+        // palabra queda "2012)", asi que primero se corta la marca del prime.
+        name = PrimeDatabase.BaseName(name);
         var parts = name.Split(' ');
         return parts.Length == 1 ? name : parts[^1];
     }

@@ -47,17 +47,17 @@
         <div class="power mt">
             <div class="pbar">
                 <span class="pbar__lbl">GEN</span>
-                <div class="pbar__track"><div class="pbar__fill" style="width:@(pw.Overall)%"></div></div>
+                <div class="pbar__track"><div class="pbar__fill" style="width:@(Math.Min(100, pw.Overall))%"></div></div>
                 <span class="pbar__num">@pw.Overall</span>
             </div>
             <div class="pbar">
                 <span class="pbar__lbl">ATA</span>
-                <div class="pbar__track"><div class="pbar__fill atk" style="width:@(pw.Attack)%"></div></div>
+                <div class="pbar__track"><div class="pbar__fill atk" style="width:@(Math.Min(100, pw.Attack))%"></div></div>
                 <span class="pbar__num">@pw.Attack</span>
             </div>
             <div class="pbar">
                 <span class="pbar__lbl">DEF</span>
-                <div class="pbar__track"><div class="pbar__fill def" style="width:@(pw.Defense)%"></div></div>
+                <div class="pbar__track"><div class="pbar__fill def" style="width:@(Math.Min(100, pw.Defense))%"></div></div>
                 <span class="pbar__num">@pw.Defense</span>
             </div>
         </div>

@@ -1,5 +1,6 @@
 @* Cancha 2D vista desde arriba: reproduce el timeline con 22 jugadores + pelota *@
 @using OnceDeOro.Models
+@using OnceDeOro.Data
 @inject Loc Loc
 @inject Sfx Sfx
 
@@ -527,6 +528,9 @@
     private static string Pct(double v) => (v * 100).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + "%";
     private static string Short(string s)
     {
+        // Igual que en Equipo: sin esto, "Pele (Prime 1970)" salia a la cancha
+        // como "1970)".
+        s = PrimeDatabase.BaseName(s);
         var parts = s.Split(' ');
         var name = parts.Length == 1 ? s : parts[^1];
         return name.Length <= 12 ? name : name[..12];
