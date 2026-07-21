@@ -9,7 +9,11 @@ public enum SimEventType
     /// <summary>Penal cobrado DURANTE el partido (distinto de la tanda final).</summary>
     PenaltyAwarded,
     /// <summary>Saque de banda: la pelota salió por el costado.</summary>
-    ThrowIn
+    ThrowIn,
+    /// <summary>Tiro libre DIRECTO: se remata al arco por encima de la barrera.</summary>
+    FreeKick,
+    /// <summary>Tiro libre INDIRECTO: no se puede rematar, hay que tocarla antes.</summary>
+    FreeKickIndirect
 }
 
 /// <summary>Fase del partido (para el reloj y los rótulos).</summary>

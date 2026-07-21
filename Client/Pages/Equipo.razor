@@ -188,6 +188,60 @@ else
         </div>
     }
 
+    @* ---------------- Roles del equipo ---------------- *@
+    <div class="section-title"><span class="dot"></span> @Loc["🎖️ Roles del equipo"]</div>
+    <div class="card card--pad mb">
+        <div class="faint mb" style="font-size:12.5px;">
+            @Loc["Quién se hace cargo de cada pelota parada. Si dejás uno sin asignar, lo elige el equipo solo."]
+        </div>
+        <div class="roles">
+            @foreach (var r in GameService.Roles)
+            {
+                <label class="rolrow">
+                    <span class="rolrow__lbl">@r.Icono @Loc[r.Nombre]</span>
+                    <select class="mkt-select" value="@Game.RolDe(r.Key)"
+                            @onchange="e => Game.SetRol(r.Key, e.Value?.ToString() ?? string.Empty)">
+                        <option value="">@Loc["— lo elige el equipo —"]</option>
+                        @foreach (var p in Game.Starters.Where(x => x.Pos != Position.GK || r.Key == "cap"))
+                        {
+                            <option value="@p.Id">@p.Rating · @p.Name</option>
+                        }
+                    </select>
+                </label>
+            }
+        </div>
+    </div>
+
+    @* ---------------- Órdenes del DT ---------------- *@
+    <div class="section-title"><span class="dot"></span> @Loc["📋 Órdenes del DT"]</div>
+    <div class="card card--pad mb">
+        <div class="faint mb" style="font-size:12.5px;">
+            @Loc["Una instrucción por titular. Cambian de verdad el ataque y la defensa del equipo."]
+        </div>
+        <div class="grid" style="gap:8px;">
+            @foreach (var p in Game.Starters.Where(x => x.Pos != Position.GK))
+            {
+                var ops = GameService.OrdenesDe(p.Pos);
+                var actual = Game.OrdenDe(p.Id);
+                <div class="orden">
+                    <div class="orden__quien">
+                        <span class="pos pos--@p.Pos">@p.Pos.Label()</span>
+                        <b>@Short(p.Name)</b>
+                    </div>
+                    <div class="seg wrap orden__ops">
+                        <button class="@(actual == "" ? "on" : "")"
+                                @onclick="() => Game.SetOrden(p.Id, string.Empty)">@Loc["Libre"]</button>
+                        @foreach (var o in ops)
+                        {
+                            <button class="@(actual == o.Key ? "on" : "")" title="@Loc[o.Desc]"
+                                    @onclick="() => Game.SetOrden(p.Id, o.Key)">@Loc[o.Nombre]</button>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
     @* ---------------- Camiseta y estadio ---------------- *@
     <div class="section-title"><span class="dot"></span> @Loc["🎨 Camiseta y estadio"]</div>
     <div class="card card--pad mb">

@@ -65,7 +65,8 @@ public static class MatchSimulator
     public static MatchTimeline Simulate(
         string homeName, string homeFlag, TeamPower home, IReadOnlyList<Player> homeStarters,
         string awayName, string awayFlag, TeamPower away, IReadOnlyList<Player> awayStarters,
-        bool knockout, int seed)
+        bool knockout, int seed,
+        TeamRoles? homeRoles = null, TeamRoles? awayRoles = null)
     {
         var rng = new Random(seed);
         var events = new List<SimEvent>();
@@ -79,6 +80,22 @@ public static class MatchSimulator
         Player? Scorer(int team) => Pick(team == 0 ? homeStarters : awayStarters, rng);
         Player? Defender(int team) => PickDef(team == 0 ? homeStarters : awayStarters, rng);
         Player? Keeper(int team) => Gk(team == 0 ? homeStarters : awayStarters);
+
+        // Los designados por el DT. Si el puesto esta vacio -- o el jugador no
+        // esta en la cancha -- se elige como antes: no puede patear un suplente.
+        Player? Rol(int team, Func<TeamRoles, string> cual)
+        {
+            var roles = team == 0 ? homeRoles : awayRoles;
+            if (roles is null) return null;
+            string id = cual(roles);
+            if (string.IsNullOrEmpty(id)) return null;
+            var xi = team == 0 ? homeStarters : awayStarters;
+            return xi.FirstOrDefault(p => p.Id == id);
+        }
+        Player? PenaltyTaker(int team) => Rol(team, r => r.PenaltyId) ?? Scorer(team);
+        Player? FreeKickTaker(int team) => Rol(team, r => r.FreeKickId) ?? Scorer(team);
+        Player? CornerTaker(int team, bool derecha) =>
+            Rol(team, r => derecha ? r.CornerRightId : r.CornerLeftId) ?? Pick(team == 0 ? homeStarters : awayStarters, rng);
 
         static string Nm(Player? p, string fallback) => p?.Name ?? fallback;
         static string Idf(Player? p) => p?.Id ?? "";
@@ -104,7 +121,9 @@ public static class MatchSimulator
 
             double cx = team == 0 ? 0.985 : 0.015;      // banderin del corner
             double cy = rng.NextDouble() < 0.5 ? 0.04 : 0.96;
-            var pateaP = Pick(team == 0 ? homeStarters : awayStarters, rng);
+            // cy < 0.5 es la banda de arriba; para el equipo 0 (ataca a la
+            // derecha) esa es su banda IZQUIERDA vista desde su propio arco.
+            var pateaP = CornerTaker(team, derecha: team == 0 ? cy > 0.5 : cy < 0.5);
             string patea = Nm(pateaP, "N°7");
 
             Add(new SimEvent
@@ -166,6 +185,89 @@ public static class MatchSimulator
                 Phase = ph, Dur = 0.9, Actor = lanza, ActorId = Idf(lanzaP),
                 Text = $"↩️ Saque de banda para {(team == 0 ? homeName : awayName)}",
             });
+        }
+
+        // ---------------------------------------------------------------- TIRO LIBRE
+        // Directo: se remata al arco por arriba de la barrera. Indirecto: no se
+        // puede patear al arco, hay que tocarla antes, asi que sale un centro.
+        void TiroLibre(int team, int t, double x, double y, MatchPhase ph, bool directo)
+        {
+            var pateaP = directo ? FreeKickTaker(team) : Pick(team == 0 ? homeStarters : awayStarters, rng);
+            string patea = Nm(pateaP, "N°10");
+            string usName = team == 0 ? homeName : awayName;
+
+            Add(new SimEvent
+            {
+                Clock = t, Type = directo ? SimEventType.FreeKick : SimEventType.FreeKickIndirect,
+                Team = team, BallX = x, BallY = y, Phase = ph,
+                Dur = directo ? 1.9 : 1.2, Big = directo,
+                Actor = patea, ActorId = Idf(pateaP),
+                Text = directo
+                    ? $"🎯 Tiro libre para {usName}. La pone {patea}"
+                    : $"↗️ Tiro libre indirecto para {usName}",
+            });
+
+            if (!directo)
+            {
+                // Indirecto: centro al area y a pelear la segunda pelota.
+                Add(new SimEvent
+                {
+                    Clock = t, Type = SimEventType.Pass, Team = team, Player = 1 + rng.Next(10),
+                    BallX = team == 0 ? 0.86 : 0.14, BallY = 0.42 + rng.NextDouble() * 0.16,
+                    Phase = ph, Dur = 0.7,
+                });
+                return;
+            }
+
+            // Directo: el remate. Los tiros libres entran poco (~7 de cada 100).
+            if (team == 0) stats.ShotsHome++; else stats.ShotsAway++;
+            double r = rng.NextDouble();
+            double arco = team == 0 ? 0.985 : 0.015;
+
+            if (r < 0.07)
+            {
+                score[team]++;
+                if (team == 0) stats.OnTargetHome++; else stats.OnTargetAway++;
+                goals.Add(new Goal(Min(t), patea, team == 0));
+                Add(new SimEvent
+                {
+                    Clock = t, Type = SimEventType.Goal, Team = team, Player = 1 + rng.Next(10),
+                    BallX = arco, BallY = 0.5 + (rng.NextDouble() - 0.5) * 0.16,
+                    Phase = ph, Dur = 2.2, Big = true,
+                    Actor = patea, ActorId = Idf(pateaP), ScoreH = score[0], ScoreA = score[1],
+                    Text = $"⚽ ¡GOLAZO de tiro libre de {patea}!",
+                });
+            }
+            else if (r < 0.22)
+            {
+                var gkP = Keeper(1 - team);
+                if (team == 0) stats.OnTargetHome++; else stats.OnTargetAway++;
+                Add(new SimEvent
+                {
+                    Clock = t, Type = SimEventType.Save, Team = 1 - team,
+                    BallX = team == 0 ? 0.94 : 0.06, BallY = 0.42, Phase = ph, Dur = 1.0,
+                    Actor = Nm(gkP, "el arquero"), ActorId = Idf(gkP), Text = "🧤 ¡La saca al corner!",
+                });
+                Corner(team, t, ph);
+            }
+            else if (r < 0.30)
+            {
+                Add(new SimEvent
+                {
+                    Clock = t, Type = SimEventType.Post, Team = team,
+                    BallX = team == 0 ? 0.96 : 0.04, BallY = 0.38, Phase = ph, Dur = 1.2, Big = true,
+                    Actor = patea, Text = "😱 ¡Al travesaño!",
+                });
+            }
+            else
+            {
+                Add(new SimEvent
+                {
+                    Clock = t, Type = SimEventType.Miss, Team = team,
+                    BallX = team == 0 ? 0.99 : 0.01, BallY = 0.16, Phase = ph, Dur = 1.0,
+                    Actor = patea, Text = "😖 Se va por encima del travesaño",
+                });
+            }
         }
 
         void Period(int startSec, int endSec, MatchPhase ph)
@@ -236,13 +338,24 @@ public static class MatchSimulator
                     if (rng.NextDouble() < 0.008)   // lesiones MUY poco frecuentes
                         Add(new SimEvent { Clock = t, Type = SimEventType.Injury, Team = team, BallX = x, BallY = y, Phase = ph, Dur = 1.1, Actor = victim, ActorId = Idf(victimP), Text = $"🚑 {victim} queda golpeado y necesita atención" });
 
+                    // TIRO LIBRE. La falta ya se cobro; ahora se ejecuta, salvo que
+                    // haya sido dentro del area (eso es penal y se resuelve abajo).
+                    bool enArea = team == 0 ? x > 0.82 : x < 0.18;
+                    if (!enArea)
+                    {
+                        // Directo solo si esta a distancia de gol; si no, indirecto.
+                        double aArco = team == 0 ? 1 - x : x;
+                        bool directo = aArco < 0.32 && rng.NextDouble() < 0.75;
+                        TiroLibre(team, t, x, y, ph, directo);
+                    }
+
                     // ¿La falta fue DENTRO DEL ÁREA? Entonces es PENAL.
                     bool inBox = team == 0 ? x > 0.82 : x < 0.18;
                     // Un poco por encima del ritmo real (0,25/partido): a ese ritmo
                     // se veia uno cada 5 partidos y parecia que no existian.
                     if (inBox && rng.NextDouble() < 0.06)
                     {
-                        var takerP = Scorer(team);
+                        var takerP = PenaltyTaker(team);
                         var keeperP = Keeper(1 - team);
                         string taker = Nm(takerP, "N°10");
                         string keeper = Nm(keeperP, "el arquero");

@@ -252,7 +252,8 @@
                             or SimEventType.PenaltyAwarded
                             // Sin esto la pelota NO viaja al banderin ni al lateral y la
                             // jugada queda invisible: solo se veria el texto.
-                            or SimEventType.Corner or SimEventType.ThrowIn;
+                            or SimEventType.Corner or SimEventType.ThrowIn
+                            or SimEventType.FreeKick or SimEventType.FreeKickIndirect;
 
         if (live)
         {
@@ -314,6 +315,7 @@
                 if (e.Team is 0 or 1) _corners[e.Team]++;
                 AddKey(SimEventType.Corner, e);
                 break;
+            case SimEventType.FreeKick: AddKey(SimEventType.FreeKick, e); break;
             case SimEventType.PenaltyAwarded: AddKey(SimEventType.PenaltyAwarded, e); break;
             case SimEventType.PenaltyGoal:
             case SimEventType.PenaltyMiss:
@@ -343,6 +345,8 @@
             SimEventType.Yellow        => "🟨 " + F("Amarilla a {0}", a),
             SimEventType.Red           => "🟥 " + F("Roja a {0}", a),
             SimEventType.Corner        => "⛳ " + F("Corner. Lo tira {0}", a),
+            SimEventType.FreeKick      => "🎯 " + F("Tiro libre. La pone {0}", a),
+            SimEventType.FreeKickIndirect => "↗️ " + Loc["Tiro libre indirecto"],
             SimEventType.ThrowIn       => "↩️ " + Loc["Saque de banda"],
             SimEventType.Injury        => "🚑 " + F("{0} queda golpeado y necesita atención", a),
             SimEventType.Offside       => "🚩 " + F("Offside · posición adelantada de {0}", a),
@@ -427,6 +431,7 @@
             SimEventType.Injury => "🚑",
             SimEventType.Offside => "🚩",
             SimEventType.Corner => "⛳",
+            SimEventType.FreeKick => "🎯",
             SimEventType.PenaltyAwarded => "🎯",
             _ => "•"
         };
@@ -503,7 +508,8 @@
     private bool JugadaDetenida(SimEvent e)
     {
         if (e.Team is not (0 or 1)) return false;
-        if (e.Type is not (SimEventType.Corner or SimEventType.ThrowIn or SimEventType.PenaltyAwarded))
+        if (e.Type is not (SimEventType.Corner or SimEventType.ThrowIn or SimEventType.PenaltyAwarded
+                           or SimEventType.FreeKick or SimEventType.FreeKickIndirect))
             return false;
 
         int at = e.Team, df = 1 - at;               // ataca / defiende
@@ -542,6 +548,41 @@
                 double ang = (i - 1) / 9.0 * Math.PI - Math.PI / 2;
                 Poner(dx, dy, i, borde + dir * 0.02 * Math.Cos(ang), 0.5 + 0.34 * Math.Sin(ang));
             }
+            return true;
+        }
+
+        if (e.Type is SimEventType.FreeKick or SimEventType.FreeKickIndirect)
+        {
+            // La BARRERA es lo que hace que un tiro libre se vea como tal: cuatro
+            // defensores hombro con hombro a nueve metros, tapando el arco.
+            Poner(ax, ay, 1, e.BallX - dir * 0.035, e.BallY);            // el que patea
+
+            double haciaArco = Math.Atan2(0.5 - e.BallY, arcoRival - e.BallX);
+            double bx = e.BallX + Math.Cos(haciaArco) * 0.10;
+            double by = e.BallY + Math.Sin(haciaArco) * 0.10;
+            double perpX = -Math.Sin(haciaArco), perpY = Math.Cos(haciaArco);
+
+            for (int i = 1; i <= 4; i++)                                  // la barrera
+            {
+                double off = (i - 2.5) * 0.035;
+                Poner(dx, dy, i, bx + perpX * off, by + perpY * off);
+            }
+            Poner(dx, dy, 0, arcoRival, 0.5);                             // arquero al medio
+
+            // El resto de la defensa marca dentro del area
+            for (int i = 5; i < 11; i++)
+            {
+                double k = (i - 5) / 5.0;
+                Poner(dx, dy, i, arcoRival - dir * (0.10 + k * 0.05), 0.28 + k * 0.44);
+            }
+            // Los atacantes esperan el centro / el rebote
+            for (int i = 2; i <= 7; i++)
+            {
+                double k = (i - 2) / 5.0;
+                Poner(ax, ay, i, arcoRival - dir * (0.17 - k * 0.05), 0.30 + k * 0.40);
+            }
+            for (int i = 8; i < 11; i++)
+                Poner(ax, ay, i, 0.5 - dir * 0.08, 0.30 + (i - 8) * 0.20);
             return true;
         }
 

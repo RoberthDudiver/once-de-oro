@@ -1183,3 +1183,17 @@ a { color: inherit; text-decoration: none; }
     background: rgba(255, 90, 106, .16); color: #ff5a6a;
     border: 1px solid rgba(255, 90, 106, .45);
 }
+
+/* ---------------------------------------------------------------- roles y órdenes */
+.roles { display: grid; gap: 8px; }
+.rolrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.rolrow__lbl { font-size: 13px; color: var(--ink-dim); }
+.rolrow .mkt-select { flex: 1 1 200px; max-width: 320px; }
+
+.orden {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; flex-wrap: wrap;
+    padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px;
+}
+.orden__quien { display: flex; align-items: center; gap: 8px; font-size: 13.5px; }
+.orden__ops button { font-size: 11.5px; padding: 5px 9px; }

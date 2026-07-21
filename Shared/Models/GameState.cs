@@ -54,6 +54,20 @@ public sealed class LootPlayer
 }
 
 /// <summary>
+/// Quién se hace cargo de cada cosa en la cancha. Vacío = lo elige el simulador
+/// solo, como hacía antes (el mejor disponible para esa jugada).
+/// </summary>
+public sealed class TeamRoles
+{
+    public string CaptainId { get; set; } = "";
+    public string PenaltyId { get; set; } = "";
+    public string FreeKickId { get; set; } = "";
+    /// <summary>Córners por la banda derecha (y por la izquierda).</summary>
+    public string CornerRightId { get; set; } = "";
+    public string CornerLeftId { get; set; } = "";
+}
+
+/// <summary>
 /// Estado físico e historial de UN jugador tuyo: lo que se acumula partido a partido.
 /// </summary>
 public sealed class PlayerCondition
@@ -184,6 +198,12 @@ public sealed class GameState
 
     /// <summary>Tokens de mejora disponibles para subir de nivel a cualquier jugador.</summary>
     public int Tokens { get; set; }
+
+    /// <summary>Quién patea qué y quién lleva la cinta.</summary>
+    public TeamRoles Roles { get; set; } = new();
+
+    /// <summary>Orden táctica de cada jugador, por Id (ver GameService.Ordenes).</summary>
+    public Dictionary<string, string> Orders { get; set; } = new();
 
     /// <summary>Jugadores que te salieron de las cajas sorpresa.</summary>
     public List<LootPlayer> Loot { get; set; } = new();

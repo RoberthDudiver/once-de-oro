@@ -822,7 +822,29 @@ public sealed class GameService
         }
     }
 
-    public TeamPower Power => MatchEngine.PowerOf(EffectiveStarters, State.Style);
+    /// <summary>
+    /// La fuerza del equipo CON las órdenes del DT aplicadas. Los efectos de los
+    /// once se suman y se dividen por 3: si le pedís a los tres delanteros que se
+    /// desmarquen (+4 cada uno) el equipo gana 4 de ataque, no 12. Así una orden
+    /// se nota pero no rompe el partido.
+    /// </summary>
+    public TeamPower Power
+    {
+        get
+        {
+            var xi = EffectiveStarters;
+            var p = MatchEngine.PowerOf(xi, State.Style);
+            int atk = 0, def = 0;
+            foreach (var pl in xi)
+            {
+                var (a, d) = EfectoOrden(pl);
+                atk += a; def += d;
+            }
+            if (atk == 0 && def == 0) return p;
+            int C(int v) => Math.Clamp(v, 30, 109);
+            return new TeamPower(p.Overall, C(p.Attack + atk / 3), C(p.Defense + def / 3));
+        }
+    }
 
     /// <summary>Siempre se puede jugar: los huecos se cubren con cantera.</summary>
     public bool CanPlay => true;
@@ -912,6 +934,93 @@ public sealed class GameService
     /// El ingreso va en MILES para poder expresar los 500 mil de la tribuna
     /// más chica, que en millones enteros se perdería al redondear.
     /// </summary>
+    // ---------------------------------------------------------------- roles y ordenes
+    public sealed record Rol(string Key, string Nombre, string Icono, string Desc);
+
+    public static readonly Rol[] Roles =
+    {
+        new("cap",   "Capitán",           "🎖️", "Lleva la cinta."),
+        new("pen",   "Penales",           "🎯", "Patea los penales del partido."),
+        new("libre", "Tiros libres",      "⚽", "Le pega a los libres directos."),
+        new("cder",  "Córner derecho",    "⛳", "Los tira desde la banda derecha."),
+        new("cizq",  "Córner izquierdo",  "⛳", "Los tira desde la banda izquierda."),
+    };
+
+    public string RolDe(string key) => key switch
+    {
+        "cap" => State.Roles.CaptainId,
+        "pen" => State.Roles.PenaltyId,
+        "libre" => State.Roles.FreeKickId,
+        "cder" => State.Roles.CornerRightId,
+        _ => State.Roles.CornerLeftId,
+    };
+
+    public void SetRol(string key, string playerId)
+    {
+        switch (key)
+        {
+            case "cap": State.Roles.CaptainId = playerId; break;
+            case "pen": State.Roles.PenaltyId = playerId; break;
+            case "libre": State.Roles.FreeKickId = playerId; break;
+            case "cder": State.Roles.CornerRightId = playerId; break;
+            default: State.Roles.CornerLeftId = playerId; break;
+        }
+        Commit();
+    }
+
+    /// <summary>Una orden táctica: qué hace el jugador y qué le cambia.</summary>
+    public sealed record Orden(string Key, string Nombre, string Desc,
+                               int Ataque, int Defensa, bool SoloLateral = false);
+
+    /// <summary>
+    /// Las órdenes disponibles según el puesto. Los números son lo que le suma o
+    /// le resta a ESE jugador en el cálculo de la fuerza del equipo: pedirle a un
+    /// lateral que suba da ataque y cuesta defensa, y al revés.
+    /// </summary>
+    public static Orden[] OrdenesDe(Position pos) => pos switch
+    {
+        Position.FWD => new[]
+        {
+            new Orden("desmarque", "Desmarcarse",
+                "Rompe la línea defensiva y busca los balones en profundidad.", 4, -1),
+            new Orden("centro", "Quedarse en el centro",
+                "No se abre a las bandas: siempre de referencia en el área.", 3, 0),
+        },
+        Position.MID => new[]
+        {
+            new Orden("atras", "Quedarse atrás al atacar",
+                "No sube: cubre la zona de volantes para evitar contragolpes.", -2, 5),
+            new Orden("cortar", "Cortar líneas de pase",
+                "Intercepta en vez de ir a chocar.", 0, 4),
+        },
+        Position.DEF => new[]
+        {
+            new Orden("atras", "Quedarse atrás al atacar",
+                "No abandona su posición defensiva.", -1, 4),
+            new Orden("subir", "Avance por la banda",
+                "Sube a dar amplitud cuando tenés la pelota.", 5, -3, SoloLateral: true),
+        },
+        _ => Array.Empty<Orden>(),
+    };
+
+    public string OrdenDe(string id) => State.Orders.GetValueOrDefault(id, "");
+
+    public void SetOrden(string id, string key)
+    {
+        if (string.IsNullOrEmpty(key)) State.Orders.Remove(id);
+        else State.Orders[id] = key;
+        Commit();
+    }
+
+    /// <summary>Lo que la orden le cambia a un jugador, si tiene alguna puesta.</summary>
+    public (int atk, int def) EfectoOrden(Player p)
+    {
+        string k = OrdenDe(p.Id);
+        if (string.IsNullOrEmpty(k)) return (0, 0);
+        var o = OrdenesDe(p.Pos).FirstOrDefault(x => x.Key == k);
+        return o is null ? (0, 0) : (o.Ataque, o.Defensa);
+    }
+
     public sealed record StadiumTier(string Key, string Name, int Capacity,
                                      int IncomeK, int Cost, int GradaPx, string Desc);
 
@@ -1518,7 +1627,8 @@ public sealed class GameService
         var tl = MatchSimulator.Simulate(
             State.ClubName, "⚽", Power, home,
             opp.Name, opp.Flag, TeamPower.Flat(opp.Strength), away,
-            knockout: knockout, seed: _rng.Next());
+            knockout: knockout, seed: _rng.Next(),
+            homeRoles: State.Roles);   // tus designados patean penales, libres y corners
 
         LastMatch = tl.Result;
         LastTimeline = tl;
