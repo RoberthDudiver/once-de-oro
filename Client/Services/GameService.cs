@@ -1692,6 +1692,20 @@ public sealed class GameService
     /// Mete un cambio: sale uno del XI y entra un suplente. Sólo hasta tres, como
     /// en el fútbol de verdad.
     /// </summary>
+    /// <summary>
+    /// Ajuste del XI en la PREVIA: cambia un titular por un suplente sin gastar
+    /// cambios ni tocar el limite de tres. Es armar el equipo antes de arrancar.
+    /// </summary>
+    public bool SwapStarter(string saleId, string entraId)
+    {
+        if (!State.StartingIds.Contains(saleId)) return false;
+        var entra = Owned.FirstOrDefault(p => p.Id == entraId);
+        if (entra is null || State.StartingIds.Contains(entraId) || IsOut(entraId)) return false;
+        State.StartingIds[State.StartingIds.IndexOf(saleId)] = entraId;
+        Commit();
+        return true;
+    }
+
     public bool Cambiar(string saleId, string entraId)
     {
         if (_cambiosHechos >= MaxCambios) return false;

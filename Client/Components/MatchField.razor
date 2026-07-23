@@ -213,11 +213,9 @@
         for (int i = 0; i < 11; i++)
         {
             (_hx[i], _hy[i]) = _homeBase[i]; (_ax[i], _ay[i]) = _awayBase[i];
-            _homeNames[i] = NameAt(HomeStarters, i);
-            _awayNames[i] = NameAt(AwayStarters, i);
         }
-        _homeTakers = Takers(HomeStarters, HomeName);
-        _awayTakers = Takers(AwayStarters, AwayName);
+        CargarNombres();
+        _iniciado = true;
 
         await Sfx.LoadAsync();
         _sonido = Sfx.On;
@@ -228,6 +226,32 @@
     [Parameter] public EventCallback OnEntretiempo { get; set; }
 
     private TaskCompletionSource? _seguir;
+    private bool _iniciado;
+
+    /// <summary>
+    /// Relee los nombres del XI en la cancha. Se llama al reanudar el 2T: si el DT
+    /// metió un cambio, el que entró tiene que APARECER con su nombre. Antes esto
+    /// sólo pasaba al inicio, y por eso el cambio "no se notaba".
+    /// </summary>
+    private void CargarNombres()
+    {
+        for (int i = 0; i < 11; i++)
+        {
+            _homeNames[i] = NameAt(HomeStarters, i);
+            _awayNames[i] = NameAt(AwayStarters, i);
+        }
+        _homeTakers = Takers(HomeStarters, HomeName);
+        _awayTakers = Takers(AwayStarters, AwayName);
+    }
+
+    // Cuando el padre re-renderiza con un XI nuevo (un cambio del DT), Blazor
+    // actualiza HomeStarters y pasa por acá: recargamos los nombres para que el
+    // que entró APAREZCA. Antes esto lo hacía Reanudar(), que corría ANTES del
+    // re-render del padre y leía el XI viejo — por eso el cambio no se veía.
+    protected override void OnParametersSet()
+    {
+        if (_iniciado) CargarNombres();
+    }
 
     /// <summary>Lo llama la pantalla del partido cuando el DT termina en el vestuario.</summary>
     public void Reanudar() => _seguir?.TrySetResult();

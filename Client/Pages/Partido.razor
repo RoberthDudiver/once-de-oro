@@ -78,8 +78,27 @@ else
             </div>
         </div>
 
+        var lesionadosXI = Game.Starters.Where(p => Game.IsOut(p.Id)).ToList();
+        <div class="card card--pad mt">
+            <div class="row" style="justify-content:space-between; align-items:center;">
+                <h3 style="font-size:18px;">🔄 @Loc["Ajustar el equipo"]</h3>
+            </div>
+            @if (lesionadosXI.Count > 0)
+            {
+                <div class="clash mt">
+                    <div class="clash__txt">
+                        🚑 @Loc["Tenés en el XI a"] <b>@string.Join(", ", lesionadosXI.Select(p => Short(p.Name)))</b>
+                        @Loc["que no puede(n) jugar. Cambialo(s) antes de arrancar."]
+                    </div>
+                </div>
+            }
+            @PanelCambio(previa: true)
+        </div>
+
         <div class="center mt">
-            <button class="btn btn--gold btn--big" @onclick="Play">@Loc["▶ Ver el partido"]</button>
+            <button class="btn btn--gold btn--big"
+                    disabled="@(lesionadosXI.Count > 0)"
+                    @onclick="Play">@Loc["▶ Ver el partido"]</button>
         </div>
     }
     else if (_phase == Phase.Playing && _timeline is not null && opp is not null)
@@ -87,6 +106,7 @@ else
         @if (_vestuario)
         {
             @* ---------- ENTRETIEMPO: el momento del DT ---------- *@
+            var heridos = LesionadosObligatorios();
             <div class="card card--pad vest">
                 <div class="vest__ttl">🧴 @Loc["Entretiempo"] · @_result0</div>
 
@@ -102,48 +122,24 @@ else
                     @Loc["Ir al ataque cansa más a tus jugadores; meterse atrás, menos."]
                 </div>
 
-                <div class="muted mt" style="font-size:12px; letter-spacing:.2em; text-transform:uppercase;">
-                    @Loc["Cambios"] · @Game.CambiosDisponibles @Loc["disponibles"]
-                </div>
-                @if (Game.CambiosDisponibles > 0)
+                @if (heridos.Count > 0)
                 {
-                    <div class="row wrap mt" style="gap:8px; align-items:flex-end;">
-                        <label class="pickr" style="flex-direction:column; align-items:flex-start; gap:4px;">
-                            <span>@Loc["Sale"]</span>
-                            <select class="mkt-select" @bind="_sale">
-                                <option value="">—</option>
-                                @foreach (var p in Game.Starters)
-                                {
-                                    <option value="@p.Id">@p.Rating · @Short(p.Name)</option>
-                                }
-                            </select>
-                        </label>
-                        <label class="pickr" style="flex-direction:column; align-items:flex-start; gap:4px;">
-                            <span>@Loc["Entra"]</span>
-                            <select class="mkt-select" @bind="_entra">
-                                <option value="">—</option>
-                                @foreach (var p in Game.AvailableBench)
-                                {
-                                    <option value="@p.Id">@p.Rating · @Short(p.Name)</option>
-                                }
-                            </select>
-                        </label>
-                        <button class="btn btn--gold"
-                                disabled="@(string.IsNullOrEmpty(_sale) || string.IsNullOrEmpty(_entra))"
-                                @onclick="HacerCambio">🔄 @Loc["Cambiar"]</button>
-                    </div>
-                }
-                @if (_cambios.Count > 0)
-                {
-                    <div class="grid mt" style="gap:6px;">
-                        @foreach (var c in _cambios)
-                        {
-                            <div class="faint" style="font-size:12.5px;">🔄 @c</div>
-                        }
+                    <div class="clash mt">
+                        <div class="clash__txt">
+                            🚑 @Loc["Se lesionó"] <b>@string.Join(", ", heridos.Select(Short))</b>.
+                            @Loc["Tenés que cambiarlo(s) para seguir."]
+                        </div>
                     </div>
                 }
 
-                <button class="btn btn--gold btn--block mt" @onclick="SalirAlSegundoTiempo">
+                <div class="muted mt" style="font-size:12px; letter-spacing:.2em; text-transform:uppercase;">
+                    @Loc["Cambios"] · @Game.CambiosDisponibles @Loc["disponibles"]
+                </div>
+                @PanelCambio(previa: false)
+
+                <button class="btn btn--gold btn--block mt"
+                        disabled="@(heridos.Count > 0)"
+                        @onclick="SalirAlSegundoTiempo">
                     ▶ @Loc["Salir al segundo tiempo"]
                 </button>
             </div>
@@ -323,16 +319,89 @@ else
         StateHasChanged();
     }
 
-    private void HacerCambio()
+    /// <summary>
+    /// El panel de cambio, compartido entre la previa y el entretiempo. En la
+    /// previa (previa: true) no descuenta de los tres cambios: estás ARMANDO el
+    /// equipo, no cambiando en pleno partido.
+    /// </summary>
+    private RenderFragment PanelCambio(bool previa) => __builder =>
+    {
+        bool hayCupo = previa || Game.CambiosDisponibles > 0;
+        <div class="row wrap mt" style="gap:8px; align-items:flex-end;">
+            <label class="pickr" style="flex-direction:column; align-items:flex-start; gap:4px;">
+                <span>@Loc["Sale"]</span>
+                <select class="mkt-select" @bind="_sale">
+                    <option value="">—</option>
+                    @foreach (var pl in Game.Starters)
+                    {
+                        <option value="@pl.Id">@pl.Rating · @Short(pl.Name)</option>
+                    }
+                </select>
+            </label>
+            <label class="pickr" style="flex-direction:column; align-items:flex-start; gap:4px;">
+                <span>@Loc["Entra"]</span>
+                <select class="mkt-select" @bind="_entra">
+                    <option value="">—</option>
+                    @foreach (var pl in Game.AvailableBench)
+                    {
+                        <option value="@pl.Id">@pl.Rating · @Short(pl.Name)</option>
+                    }
+                </select>
+            </label>
+            <button class="btn btn--gold"
+                    disabled="@(!hayCupo || string.IsNullOrEmpty(_sale) || string.IsNullOrEmpty(_entra))"
+                    @onclick="() => HacerCambio(previa)">🔄 @Loc["Cambiar"]</button>
+        </div>
+        @if (previa ? _cambiosPrevia.Count > 0 : _cambios.Count > 0)
+        {
+            <div class="grid mt" style="gap:6px;">
+                @foreach (var c in (previa ? _cambiosPrevia : _cambios))
+                {
+                    <div class="faint" style="font-size:12.5px;">🔄 @c</div>
+                }
+            </div>
+        }
+    };
+
+    private readonly List<string> _cambiosPrevia = new();
+
+    private void HacerCambio(bool previa)
     {
         var sale = Game.Starters.FirstOrDefault(p => p.Id == _sale);
         var entra = Game.Owned.FirstOrDefault(p => p.Id == _entra);
         if (sale is null || entra is null) return;
+
+        if (previa)
+        {
+            // En la previa es un ajuste del XI, sin gastar cambios ni límite.
+            Game.SwapStarter(_sale, _entra);
+            _cambiosPrevia.Add($"{Short(sale.Name)} → {Short(entra.Name)}");
+            _sale = ""; _entra = "";
+            return;
+        }
+
         if (Game.Cambiar(_sale, _entra))
         {
             _cambios.Add($"{Short(sale.Name)} → {Short(entra.Name)}");
             _sale = ""; _entra = "";
         }
+    }
+
+    /// <summary>
+    /// Jugadores TUYOS que se lesionaron durante el primer tiempo y siguen en el
+    /// XI: hay que sacarlos sí o sí antes de salir al segundo tiempo.
+    /// </summary>
+    private List<string> LesionadosObligatorios()
+    {
+        if (_timeline is null) return new();
+        var enXI = Game.Starters.Select(p => p.Id).ToHashSet();
+        return _timeline.Events
+            .Where(e => e.Type == SimEventType.Injury && e.Team == 0 && !string.IsNullOrEmpty(e.ActorId))
+            .Select(e => e.ActorId!)
+            .Distinct()
+            .Where(id => enXI.Contains(id))
+            .Select(id => Game.Starters.First(p => p.Id == id).Name)
+            .ToList();
     }
 
     private void SalirAlSegundoTiempo()
