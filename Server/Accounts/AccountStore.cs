@@ -14,6 +14,7 @@ public sealed class AccountStore
 {
     private readonly IMongoCollection<UserAccount>? _users;
     private readonly IMongoCollection<SaveDocument>? _saves;
+    private readonly IMongoCollection<VisitorDoc>? _visitors;
 
     public bool Enabled { get; }
 
@@ -32,6 +33,7 @@ public sealed class AccountStore
         var db = new MongoClient(conn).GetDatabase(dbName);
         _users = db.GetCollection<UserAccount>("users");
         _saves = db.GetCollection<SaveDocument>("saves");
+        _visitors = db.GetCollection<VisitorDoc>("visitors");
 
         // Un email = una cuenta.
         _users.Indexes.CreateOne(new CreateIndexModel<UserAccount>(
@@ -94,5 +96,51 @@ public sealed class AccountStore
         var expected = Convert.FromBase64String(hash);
         var actual = Rfc2898DeriveBytes.Pbkdf2(password, Convert.FromBase64String(salt), Iterations, HashAlgorithmName.SHA256, 32);
         return CryptographicOperations.FixedTimeEquals(expected, actual);
+    }
+
+    // ---- Contador anónimo de jugadores ----
+    // Guardamos SOLO un UUID que genera el navegador, cuándo se lo vio, cuántos
+    // partidos jugó y el idioma. Nada personal: no hay email, ni IP, ni nombre.
+
+    /// <summary>Registra un ping del navegador y actualiza sus totales.</summary>
+    public async Task PingAsync(string visitorId, long matches, string lang)
+    {
+        if (_visitors is null || string.IsNullOrWhiteSpace(visitorId)) return;
+        if (visitorId.Length > 40) visitorId = visitorId[..40];
+        lang = lang is "es" or "en" or "pt" ? lang : "es";
+        var now = DateTime.UtcNow;
+
+        // matches del cliente NUNCA baja: es el máximo visto (por si borra el save).
+        await _visitors.UpdateOneAsync(
+            v => v.Id == visitorId,
+            Builders<VisitorDoc>.Update
+                .SetOnInsert(v => v.FirstSeen, now)
+                .Set(v => v.LastSeen, now)
+                .Set(v => v.Lang, lang)
+                .Max(v => v.Matches, matches),
+            new UpdateOptions { IsUpsert = true });
+    }
+
+    /// <summary>Los totales para el apartado de análisis.</summary>
+    public async Task<StatsResponse> StatsAsync()
+    {
+        if (_visitors is null || _users is null)
+            return new StatsResponse(0, 0, 0, 0, new());
+
+        long players = await _visitors.EstimatedDocumentCountAsync();
+        long accounts = await _users.EstimatedDocumentCountAsync();
+
+        var desde = DateTime.UtcNow.AddDays(-7);
+        long activos = await _visitors.CountDocumentsAsync(v => v.LastSeen >= desde);
+
+        // suma de partidos y reparto por idioma, en una sola pasada de agregación
+        var group = await _visitors.Aggregate()
+            .Group(v => v.Lang, g => new { Lang = g.Key, Matches = g.Sum(x => x.Matches) })
+            .ToListAsync();
+
+        long totalMatches = group.Sum(g => g.Matches);
+        var porIdioma = group.ToDictionary(g => g.Lang, g => g.Matches);
+
+        return new StatsResponse(players, totalMatches, accounts, activos, porIdioma);
     }
 }

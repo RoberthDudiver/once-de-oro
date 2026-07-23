@@ -39,6 +39,16 @@ public static class AccountEndpoints
         // ¿Hay cuentas disponibles en este despliegue?
         api.MapGet("/auth/status", (AccountStore store) => Results.Ok(new { enabled = store.Enabled }));
 
+        // Contador anónimo de jugadores. El ping no necesita cuenta ni token: es
+        // sólo un UUID de navegador y sus totales, sin nada personal.
+        api.MapPost("/stats/ping", async (PingRequest req, AccountStore store) =>
+        {
+            await store.PingAsync(req.VisitorId, req.Matches, req.Lang);
+            return Results.Ok();
+        });
+
+        api.MapGet("/stats", async (AccountStore store) => Results.Ok(await store.StatsAsync()));
+
         api.MapPost("/auth/register", async (RegisterRequest req, AccountStore store, IConfiguration cfg) =>
         {
             if (!store.Enabled) return Results.Problem("Las cuentas no están habilitadas en este servidor.", statusCode: 503);

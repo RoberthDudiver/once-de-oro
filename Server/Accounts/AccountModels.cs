@@ -48,8 +48,35 @@ public sealed class SaveDocument
     public int Progress { get; set; }
 }
 
+/// <summary>
+/// Un jugador ANONIMO, para el contador global. El "Id" es un UUID aleatorio que
+/// genera el navegador la primera vez: no tiene nada que ver con vos, ni email ni
+/// nombre. Sólo sirve para no contar dos veces al mismo navegador.
+/// </summary>
+public sealed class VisitorDoc
+{
+    [BsonId]
+    [BsonRepresentation(BsonType.String)]
+    public string Id { get; set; } = "";
+
+    public DateTime FirstSeen { get; set; } = DateTime.UtcNow;
+    public DateTime LastSeen { get; set; } = DateTime.UtcNow;
+
+    /// <summary>Cuántos partidos jugó este navegador (lo cuenta el propio cliente).</summary>
+    public long Matches { get; set; }
+    /// <summary>Idioma que tenía elegido, para el reparto por idioma. Nada más.</summary>
+    public string Lang { get; set; } = "es";
+}
+
 // ---- Contratos de la API (lo que viaja entre cliente y servidor) ----
 
 public sealed record RegisterRequest(string Email, string Password, string? DisplayName);
 public sealed record LoginRequest(string Email, string Password);
 public sealed record AuthResponse(string Token, string Email, string DisplayName);
+
+/// <summary>Lo que manda el navegador al arrancar: su UUID anónimo y sus totales.</summary>
+public sealed record PingRequest(string VisitorId, long Matches, string Lang);
+
+/// <summary>Los números públicos del contador.</summary>
+public sealed record StatsResponse(long Players, long Matches, long Accounts,
+                                   long Active7d, Dictionary<string, long> ByLang);

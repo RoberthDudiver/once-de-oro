@@ -15,5 +15,6 @@ builder.Services.AddScoped<GameService>();
 builder.Services.AddScoped<MultiplayerService>();
 builder.Services.AddScoped<Loc>();
 builder.Services.AddScoped<Sfx>();
+ builder.Services.AddScoped<StatsService>();
 
 await builder.Build().RunAsync();

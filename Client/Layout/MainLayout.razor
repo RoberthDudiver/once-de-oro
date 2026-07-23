@@ -4,6 +4,7 @@
 @inject Loc Loc
 @inject AuthService Auth
 @inject NavigationManager Nav
+@inject StatsService Stats
 
 <div class="shell">
     <header class="topbar">
@@ -57,7 +58,10 @@
 
     <footer class="foot">
         <span>Once de Oro · @Loc["Creado por"] <b>Roberth Dudiver</b> @Loc["y"] <b>Alexander Dudiver</b></span>
-        <a href="info">@Loc["Créditos, términos y privacidad"]</a>
+        <span style="display:flex; gap:14px;">
+            <a href="analiticas">@Loc["📊 Análisis"]</a>
+            <a href="info">@Loc["Créditos, términos y privacidad"]</a>
+        </span>
     </footer>
 </div>
 
@@ -74,6 +78,10 @@
 
         // Si la sesión seguía abierta, traemos/conciliamos la partida de la cuenta.
         if (Auth.IsLoggedIn) await Game.SyncAfterAuthAsync(justRegistered: false);
+
+        // Ping anónimo al contador de jugadores (UUID de navegador, sin datos
+        // personales). Silencioso si no hay servidor con base configurada.
+        await Stats.PingAsync(Game.State.MatchesPlayed);
     }
 
     private async Task ChangeLang(string code) => await Loc.SetLangAsync(code);
