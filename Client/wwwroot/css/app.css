@@ -1199,6 +1199,22 @@ a { color: inherit; text-decoration: none; }
 .orden__ops button { font-size: 11.5px; padding: 5px 9px; }
 
 /* ---------------------------------------------------------------- entretiempo */
+/* La cancha y su capa de entretiempo comparten el mismo marco: el panel del DT
+   aparece ENCIMA del estadio (no como una tarjeta suelta más abajo), así se
+   entiende que el partido está en pausa esperándote. */
+.match-stage { position: relative; }
+.vest-overlay {
+    position: absolute; inset: 0; z-index: 40;
+    display: flex; align-items: flex-start; justify-content: center;
+    padding: 14px 12px; overflow: auto;
+    background: rgba(6, 12, 24, .82);
+    -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+    border-radius: 16px;
+    animation: vestFade .2s ease;
+}
+.vest-overlay .vest { width: min(560px, 96%); margin: 4px 0; }
+@keyframes vestFade { from { opacity: 0; } to { opacity: 1; } }
+
 .vest {
     margin-bottom: 16px;
     border-color: var(--gold);

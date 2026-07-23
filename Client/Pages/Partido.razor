@@ -103,12 +103,15 @@ else
     }
     else if (_phase == Phase.Playing && _timeline is not null && opp is not null)
     {
+        <div class="match-stage" id="matchStage">
         @if (_vestuario)
         {
-            @* ---------- ENTRETIEMPO: el momento del DT ---------- *@
+            @* ---------- ENTRETIEMPO: el momento del DT (capa sobre el estadio) ---------- *@
             var heridos = LesionadosObligatorios();
+            <div class="vest-overlay">
             <div class="card card--pad vest">
                 <div class="vest__ttl">🧴 @Loc["Entretiempo"] · @_result0</div>
+                <div class="faint" style="font-size:12px; margin-top:2px;">@Loc["El partido está en pausa. Ajustá y salí al segundo tiempo."]</div>
 
                 <div class="muted mt" style="font-size:12px; letter-spacing:.2em; text-transform:uppercase;">@Loc["Planteo"]</div>
                 <div class="seg wrap mt">
@@ -143,6 +146,7 @@ else
                     ▶ @Loc["Salir al segundo tiempo"]
                 </button>
             </div>
+            </div>
         }
 
         <MatchField @ref="_campo" PararEnEntretiempo="true" OnEntretiempo="AbrirVestuario"
@@ -152,6 +156,7 @@ else
                     HomeStarters="Game.LastHomeStarters" AwayStarters="Game.LastAwaySquad"
                     Round="@($"{comp.Emblem} {Loc[comp.Name]} · {_stageLabel}")"
                     OnFinished="OnMatchFinished" />
+        </div>
     }
     else if (_phase == Phase.Done)
     {
