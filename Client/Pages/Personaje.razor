@@ -10,7 +10,8 @@
 
     @* ---------------- Vista grande + nombre ---------------- *@
     <div class="card card--pad center avatar-stage">
-        <div class="avatar-big"><AvatarView A="_a" Size="200" /></div>
+        <div class="avatar-big"><AvatarView A="_a" Size="200" Body="true"
+                                            Primary="@Game.State.Primary" Secondary="@Game.State.Secondary" /></div>
         <input class="search mt" style="text-align:center;" maxlength="20"
                placeholder="@Loc["Tu nombre"]" value="@_a.Name"
                @onchange="e => _a.Name = e.Value?.ToString() ?? string.Empty" />
@@ -107,6 +108,24 @@
         </div>
 
         <div class="card card--pad">
+            <div class="row" style="justify-content:space-between; align-items:center;">
+                <div class="ed-lbl" style="margin:0;">@Loc["✥ Ajuste fino"]</div>
+                <button class="btn btn--ghost" style="padding:6px 12px; font-size:12px;" @onclick="ResetAjuste">↺ @Loc["Centrar"]</button>
+            </div>
+            <div class="faint mb" style="font-size:11.5px; margin-top:4px;">@Loc["Estirá y movés cada rasgo, como en un Mii."]</div>
+
+            @Slider(Loc["Ancho de la cara"], _a.FaceW, 85, 118, v => _a.FaceW = v)
+            @Slider(Loc["Separación de ojos"], _a.EyeSpread, 8, 20, v => _a.EyeSpread = v)
+            @Slider(Loc["Altura de ojos"], _a.EyeY, 44, 56, v => _a.EyeY = v)
+            @Slider(Loc["Tamaño de ojos"], _a.EyeSize, 70, 135, v => _a.EyeSize = v)
+            @Slider(Loc["Altura de cejas"], _a.BrowY, 36, 47, v => _a.BrowY = v)
+            @Slider(Loc["Altura de nariz"], _a.NoseY, 54, 68, v => _a.NoseY = v)
+            @Slider(Loc["Altura de boca"], _a.MouthY, 66, 82, v => _a.MouthY = v)
+            @Slider(Loc["Tamaño de boca"], _a.MouthSize, 70, 135, v => _a.MouthSize = v)
+            @Slider(Loc["Alto del pelo"], _a.HairY, -6, 6, v => _a.HairY = v)
+        </div>
+
+        <div class="card card--pad">
             <div class="ed-lbl">@Loc["Detalles"]</div>
             <div class="seg wrap">
                 <button class="@(_a.Beard ? "on" : "")" @onclick="() => Set(a => a.Beard = !a.Beard)">🧔 @Loc["Barba"]</button>
@@ -133,6 +152,8 @@
             Hair = o.Hair, HairColor = o.HairColor, Eyes = o.Eyes, EyeColor = o.EyeColor,
             Brows = o.Brows, Nose = o.Nose, Mouth = o.Mouth, Beard = o.Beard,
             Glasses = o.Glasses, GlassesColor = o.GlassesColor,
+            FaceW = o.FaceW, EyeSpread = o.EyeSpread, EyeY = o.EyeY, EyeSize = o.EyeSize,
+            BrowY = o.BrowY, NoseY = o.NoseY, MouthY = o.MouthY, MouthSize = o.MouthSize, HairY = o.HairY,
         };
         if (string.IsNullOrEmpty(_a.Name)) _a.Name = Game.State.ClubName.Replace(" FC", "");
     }
@@ -147,9 +168,28 @@
             Name = _a.Name, Face = _a.Face, Skin = _a.Skin, Hair = _a.Hair, HairColor = _a.HairColor,
             Eyes = _a.Eyes, EyeColor = _a.EyeColor, Brows = _a.Brows, Nose = _a.Nose,
             Mouth = _a.Mouth, Beard = _a.Beard, Glasses = _a.Glasses, GlassesColor = _a.GlassesColor,
+            FaceW = _a.FaceW, EyeSpread = _a.EyeSpread, EyeY = _a.EyeY, EyeSize = _a.EyeSize,
+            BrowY = _a.BrowY, NoseY = _a.NoseY, MouthY = _a.MouthY, MouthSize = _a.MouthSize, HairY = _a.HairY,
         };
         cambio(c);
         return c;
+    }
+
+    /// <summary>Un control de ajuste fino: etiqueta + slider que actualiza en vivo.</summary>
+    private RenderFragment Slider(string label, int val, int min, int max, Action<int> set) => __builder =>
+    {
+        <div class="fine">
+            <span class="fine__l">@label</span>
+            <input type="range" min="@min" max="@max" value="@val"
+                   @oninput="e => { set(int.Parse(e.Value?.ToString() ?? val.ToString())); _guardado = false; }" />
+        </div>
+    };
+
+    private void ResetAjuste()
+    {
+        _a.FaceW = 100; _a.EyeSpread = 13; _a.EyeY = 50; _a.EyeSize = 100;
+        _a.BrowY = 41; _a.NoseY = 60; _a.MouthY = 73; _a.MouthSize = 100; _a.HairY = 0;
+        _guardado = false;
     }
 
     private void Aleatorio()

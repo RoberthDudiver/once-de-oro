@@ -74,6 +74,18 @@ public sealed class Avatar
     public bool Beard { get; set; }
     public bool Glasses { get; set; }
     public string GlassesColor { get; set; } = "#1a1a1a";
+
+    // ---- Ajuste fino (modo estiramiento, estilo Mii). Valores neutros por
+    //      defecto; cada uno mueve/escala un rasgo sin cambiar su forma. ----
+    public int FaceW { get; set; } = 100;      // ancho de la cara (85..118 %)
+    public int EyeSpread { get; set; } = 13;   // separación de los ojos desde el centro (8..20)
+    public int EyeY { get; set; } = 50;        // altura de los ojos (44..56)
+    public int EyeSize { get; set; } = 100;    // tamaño de los ojos (70..135 %)
+    public int BrowY { get; set; } = 41;       // altura de las cejas (36..47)
+    public int NoseY { get; set; } = 60;       // altura de la nariz (54..68)
+    public int MouthY { get; set; } = 73;      // altura de la boca (66..82)
+    public int MouthSize { get; set; } = 100;  // tamaño de la boca (70..135 %)
+    public int HairY { get; set; } = 0;        // el pelo un poco más arriba/abajo (-6..6)
 }
 
 /// <summary>
