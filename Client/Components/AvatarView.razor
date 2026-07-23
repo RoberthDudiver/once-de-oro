@@ -1,0 +1,146 @@
+@* Dibuja el avatar 2D (estilo Mii plano) a partir del modelo Avatar. Todo es SVG:
+   nítido a cualquier tamaño y sin una sola imagen. *@
+@using OnceDeOro.Models
+
+<svg class="avatar" viewBox="0 0 100 100" width="@Size" height="@Size"
+     role="img" aria-label="@(string.IsNullOrEmpty(A.Name) ? "Avatar" : A.Name)">
+    <defs>
+        <clipPath id="@_clip"><path d="@FacePath(A.Face)" /></clipPath>
+    </defs>
+
+    @* Pelo de atrás (nuca), para los peinados largos *@
+    @((MarkupString)HairBack(A.Hair, A.HairColor))
+
+    @* Cara *@
+    <path d="@FacePath(A.Face)" fill="@A.Skin" stroke="rgba(0,0,0,.14)" stroke-width="1" />
+    @* Orejas *@
+    <circle cx="16" cy="52" r="6" fill="@A.Skin" stroke="rgba(0,0,0,.10)" stroke-width="1" />
+    <circle cx="84" cy="52" r="6" fill="@A.Skin" stroke="rgba(0,0,0,.10)" stroke-width="1" />
+
+    @* Barba (bajo la cara, recortada a la cara) *@
+    @if (A.Beard)
+    {
+        <g clip-path="url(#@_clip)">
+            <path d="M 26 58 Q 50 92 74 58 L 74 78 Q 50 96 26 78 Z" fill="@Darken(A.HairColor)" opacity="0.92" />
+        </g>
+    }
+
+    @* Cejas *@
+    @((MarkupString)Brows(A.Brows))
+    @* Ojos *@
+    @((MarkupString)Eyes(A.Eyes, A.EyeColor))
+    @* Nariz *@
+    @((MarkupString)Nose(A.Nose))
+    @* Boca *@
+    @((MarkupString)Mouth(A.Mouth))
+
+    @* Anteojos *@
+    @if (A.Glasses)
+    {
+        <g fill="none" stroke="@A.GlassesColor" stroke-width="2.4">
+            <rect x="26" y="42" width="18" height="13" rx="4" />
+            <rect x="56" y="42" width="18" height="13" rx="4" />
+            <line x1="44" y1="47" x2="56" y2="47" />
+        </g>
+    }
+
+    @* Pelo de adelante (flequillos, encima de la cara) *@
+    @((MarkupString)HairFront(A.Hair, A.HairColor))
+</svg>
+
+@code {
+    [Parameter, EditorRequired] public Avatar A { get; set; } = new();
+    [Parameter] public int Size { get; set; } = 120;
+
+    // clip id único por instancia, para que no colisionen dos avatares en la página
+    private readonly string _clip = "fc" + Guid.NewGuid().ToString("N")[..6];
+
+    public const int Faces = 5, Hairs = 8, EyesN = 6, BrowsN = 4, NosesN = 3, MouthsN = 6;
+
+    private static string FacePath(int f) => f switch
+    {
+        0 => "M 50 12 C 74 12 82 30 82 50 C 82 74 68 88 50 88 C 32 88 18 74 18 50 C 18 30 26 12 50 12 Z", // ovalada
+        1 => "M 50 14 C 76 14 84 34 84 52 C 84 70 74 88 50 88 C 26 88 16 70 16 52 C 16 34 24 14 50 14 Z", // redonda
+        2 => "M 24 20 L 76 20 Q 82 20 82 30 L 82 66 Q 82 88 50 88 Q 18 88 18 66 L 18 30 Q 18 20 24 20 Z", // cuadrada
+        3 => "M 50 14 C 74 14 82 30 80 48 C 78 68 66 88 50 88 C 34 88 22 68 20 48 C 18 30 26 14 50 14 Z", // corazón
+        _ => "M 50 10 C 72 10 80 30 80 54 C 80 76 68 90 50 90 C 32 90 20 76 20 54 C 20 30 28 10 50 10 Z", // larga
+    };
+
+    // ---------- Pelo: parte trasera (nuca) ----------
+    private static string HairBack(int h, string c) => h switch
+    {
+        1 => $"<path d='M 14 46 Q 14 96 30 96 L 70 96 Q 86 96 86 46 Z' fill='{c}'/>",         // largo
+        4 => $"<path d='M 12 44 Q 10 100 34 100 L 66 100 Q 90 100 88 44 Z' fill='{c}'/>",      // muy largo
+        6 => $"<circle cx='50' cy='42' r='40' fill='{c}'/>",                                    // afro
+        _ => "",
+    };
+
+    // ---------- Pelo: parte delantera ----------
+    private static string HairFront(int h, string c) => h switch
+    {
+        0 => $"<path d='M 18 46 C 18 20 34 10 50 10 C 66 10 82 20 82 46 C 74 30 70 28 62 30 C 56 22 44 22 38 30 C 30 28 26 30 18 46 Z' fill='{c}'/>", // corto
+        1 => $"<path d='M 16 50 C 14 22 34 10 50 10 C 66 10 86 22 84 50 C 80 34 72 30 64 32 C 58 22 42 22 36 32 C 28 30 20 34 16 50 Z' fill='{c}'/>", // largo (flequillo)
+        2 => $"<path d='M 20 40 C 24 22 36 14 50 14 C 64 14 76 22 80 40 C 76 30 66 26 50 26 C 34 26 24 30 20 40 Z' fill='{c}'/>",                     // rapado
+        3 => $"<path d='M 18 46 C 18 18 36 10 50 10 C 64 10 82 18 82 46 C 78 34 70 30 62 32 L 58 20 L 52 32 L 46 20 L 42 32 C 34 30 26 32 18 46 Z' fill='{c}'/>", // con puntas
+        4 => $"<path d='M 14 52 C 12 20 34 10 50 10 C 66 10 88 20 86 52 C 82 36 74 32 66 34 C 60 22 40 22 34 34 C 26 32 18 36 14 52 Z' fill='{c}'/>", // largo con flequillo
+        5 => $"<path d='M 22 36 C 26 20 38 14 50 14 C 62 14 74 20 78 36 C 68 30 60 44 50 40 C 40 44 32 30 22 36 Z' fill='{c}'/>",                      // fringe lateral
+        6 => $"<path d='M 16 44 C 16 16 36 8 50 8 C 64 8 84 16 84 44 C 78 30 66 28 50 28 C 34 28 22 30 16 44 Z' fill='{c}'/>",                          // afro (borde frontal)
+        _ => "", // 7 = pelado (calvo): nada
+    };
+
+    // ---------- Ojos ----------
+    private static string Eyes(int e, string c)
+    {
+        string L, R;
+        (L, R) = e switch
+        {
+            0 => ("<ellipse cx='37' cy='50' rx='5' ry='6' fill='#fff'/><circle cx='37' cy='50' r='3' fill='{C}'/>",
+                  "<ellipse cx='63' cy='50' rx='5' ry='6' fill='#fff'/><circle cx='63' cy='50' r='3' fill='{C}'/>"),
+            1 => ("<circle cx='37' cy='50' r='4' fill='{C}'/>", "<circle cx='63' cy='50' r='4' fill='{C}'/>"), // puntitos
+            2 => ("<path d='M 31 50 Q 37 43 43 50' fill='none' stroke='{C}' stroke-width='2.6' stroke-linecap='round'/>",
+                  "<path d='M 57 50 Q 63 43 69 50' fill='none' stroke='{C}' stroke-width='2.6' stroke-linecap='round'/>"), // felices ^^
+            3 => ("<ellipse cx='37' cy='50' rx='6' ry='7' fill='#fff'/><circle cx='38' cy='51' r='3.4' fill='{C}'/>",
+                  "<ellipse cx='63' cy='50' rx='6' ry='7' fill='#fff'/><circle cx='62' cy='51' r='3.4' fill='{C}'/>"), // grandes
+            4 => ("<path d='M 31 50 Q 37 55 43 50' fill='none' stroke='{C}' stroke-width='2.6' stroke-linecap='round'/>",
+                  "<path d='M 57 50 Q 63 55 69 50' fill='none' stroke='{C}' stroke-width='2.6' stroke-linecap='round'/>"), // cansados
+            _ => ("<rect x='32' y='48' width='11' height='5' rx='2.5' fill='#fff' stroke='{C}' stroke-width='1.4'/><circle cx='37' cy='50.5' r='2.4' fill='{C}'/>",
+                  "<rect x='57' y='48' width='11' height='5' rx='2.5' fill='#fff' stroke='{C}' stroke-width='1.4'/><circle cx='63' cy='50.5' r='2.4' fill='{C}'/>"), // entornados
+        };
+        return (L + R).Replace("{C}", c);
+    }
+
+    // ---------- Cejas ----------
+    private static string Brows(int b) => b switch
+    {
+        0 => "<path d='M 31 41 Q 37 38 43 41' fill='none' stroke='#3a2c1c' stroke-width='2.4' stroke-linecap='round'/><path d='M 57 41 Q 63 38 69 41' fill='none' stroke='#3a2c1c' stroke-width='2.4' stroke-linecap='round'/>", // curvas
+        1 => "<line x1='31' y1='41' x2='43' y2='41' stroke='#3a2c1c' stroke-width='2.6' stroke-linecap='round'/><line x1='57' y1='41' x2='69' y2='41' stroke='#3a2c1c' stroke-width='2.6' stroke-linecap='round'/>", // rectas
+        2 => "<path d='M 31 43 Q 37 39 43 42' fill='none' stroke='#3a2c1c' stroke-width='2.6' stroke-linecap='round'/><path d='M 57 42 Q 63 39 69 43' fill='none' stroke='#3a2c1c' stroke-width='2.6' stroke-linecap='round'/>", // enojadas
+        _ => "<path d='M 31 42 Q 37 45 43 42' fill='none' stroke='#3a2c1c' stroke-width='2.4' stroke-linecap='round'/><path d='M 57 42 Q 63 45 69 42' fill='none' stroke='#3a2c1c' stroke-width='2.4' stroke-linecap='round'/>", // preocupadas
+    };
+
+    // ---------- Nariz ----------
+    private static string Nose(int n) => n switch
+    {
+        0 => "<path d='M 50 54 L 47 63 Q 50 66 53 63 Z' fill='rgba(0,0,0,.10)'/>",
+        1 => "<path d='M 48 56 Q 50 66 52 56' fill='none' stroke='rgba(0,0,0,.22)' stroke-width='2' stroke-linecap='round'/>",
+        _ => "<ellipse cx='50' cy='62' rx='3.5' ry='2.4' fill='rgba(0,0,0,.12)'/>",
+    };
+
+    // ---------- Boca ----------
+    private static string Mouth(int m) => m switch
+    {
+        0 => "<path d='M 40 72 Q 50 80 60 72' fill='none' stroke='#7a3b34' stroke-width='2.6' stroke-linecap='round'/>", // sonrisa
+        1 => "<line x1='42' y1='73' x2='58' y2='73' stroke='#7a3b34' stroke-width='2.6' stroke-linecap='round'/>",       // neutra
+        2 => "<path d='M 40 76 Q 50 68 60 76' fill='none' stroke='#7a3b34' stroke-width='2.6' stroke-linecap='round'/>", // triste
+        3 => "<path d='M 40 71 Q 50 82 60 71 Q 50 76 40 71 Z' fill='#a24b42'/>",                                          // riendo (dientes)
+        4 => "<ellipse cx='50' cy='74' rx='5' ry='6' fill='#7a3b34'/>",                                                  // 'o'
+        _ => "<path d='M 40 72 Q 50 79 60 72' fill='none' stroke='#7a3b34' stroke-width='2.6' stroke-linecap='round'/><path d='M 44 72 L 44 76 M 50 73 L 50 77 M 56 72 L 56 76' stroke='#7a3b34' stroke-width='1' opacity='.5'/>", // media sonrisa
+    };
+
+    private static string Darken(string hex)
+    {
+        if (hex.Length != 7) return hex;
+        int R(int i) => Math.Max(0, Convert.ToInt32(hex.Substring(i, 2), 16) - 24);
+        return $"#{R(1):x2}{R(3):x2}{R(5):x2}";
+    }
+}

@@ -1,0 +1,176 @@
+@page "/personaje"
+@inherits GamePageBase
+@inject NavigationManager Nav
+
+<PageTitle>Tu personaje — Once de Oro</PageTitle>
+
+<div class="section-title"><span class="dot"></span> @Loc["🧑 Tu personaje"]</div>
+
+<div class="grid" style="grid-template-columns:minmax(0,260px) 1fr; gap:18px; align-items:start;">
+
+    @* ---------------- Vista grande + nombre ---------------- *@
+    <div class="card card--pad center avatar-stage">
+        <div class="avatar-big"><AvatarView A="_a" Size="200" /></div>
+        <input class="search mt" style="text-align:center;" maxlength="20"
+               placeholder="@Loc["Tu nombre"]" value="@_a.Name"
+               @onchange="e => _a.Name = e.Value?.ToString() ?? string.Empty" />
+        <button class="btn btn--gold btn--block mt" @onclick="Guardar">✓ @Loc["Guardar personaje"]</button>
+        @if (_guardado)
+        {
+            <div class="pill pill--green mt" style="width:100%; justify-content:center;">@Loc["¡Listo! Sos vos."]</div>
+        }
+    </div>
+
+    @* ---------------- Editor ---------------- *@
+    <div class="grid" style="gap:12px;">
+
+        <div class="card card--pad">
+            <div class="ed-lbl">@Loc["Cara"]</div>
+            <div class="chips">
+                @for (int i = 0; i < AvatarView.Faces; i++)
+                {
+                    var v = i;
+                    <button class="chip @(_a.Face == v ? "on" : "")" @onclick="() => Set(a => a.Face = v)">
+                        <AvatarView A="Preview(a => a.Face = v)" Size="42" />
+                    </button>
+                }
+            </div>
+            <div class="ed-lbl mt">@Loc["Tono de piel"]</div>
+            <div class="chips">
+                @foreach (var c in GameService.Skins)
+                {
+                    <button class="swatch @(_a.Skin == c ? "on" : "")" style="background:@c" @onclick="() => Set(a => a.Skin = c)"></button>
+                }
+            </div>
+        </div>
+
+        <div class="card card--pad">
+            <div class="ed-lbl">@Loc["Pelo"]</div>
+            <div class="chips">
+                @for (int i = 0; i < AvatarView.Hairs; i++)
+                {
+                    var v = i;
+                    <button class="chip @(_a.Hair == v ? "on" : "")" @onclick="() => Set(a => a.Hair = v)">
+                        <AvatarView A="Preview(a => a.Hair = v)" Size="42" />
+                    </button>
+                }
+            </div>
+            <div class="ed-lbl mt">@Loc["Color de pelo"]</div>
+            <div class="chips">
+                @foreach (var c in GameService.HairColors)
+                {
+                    <button class="swatch @(_a.HairColor == c ? "on" : "")" style="background:@c" @onclick="() => Set(a => a.HairColor = c)"></button>
+                }
+            </div>
+        </div>
+
+        <div class="card card--pad">
+            <div class="ed-lbl">@Loc["Ojos"]</div>
+            <div class="chips">
+                @for (int i = 0; i < AvatarView.EyesN; i++)
+                {
+                    var v = i;
+                    <button class="chip @(_a.Eyes == v ? "on" : "")" @onclick="() => Set(a => a.Eyes = v)">
+                        <AvatarView A="Preview(a => a.Eyes = v)" Size="42" />
+                    </button>
+                }
+            </div>
+            <div class="ed-lbl mt">@Loc["Cejas"]</div>
+            <div class="seg wrap">
+                @for (int i = 0; i < AvatarView.BrowsN; i++)
+                {
+                    var v = i;
+                    <button class="@(_a.Brows == v ? "on" : "")" @onclick="() => Set(a => a.Brows = v)">@(v + 1)</button>
+                }
+            </div>
+        </div>
+
+        <div class="card card--pad">
+            <div class="ed-lbl">@Loc["Nariz"]</div>
+            <div class="seg wrap">
+                @for (int i = 0; i < AvatarView.NosesN; i++)
+                {
+                    var v = i;
+                    <button class="@(_a.Nose == v ? "on" : "")" @onclick="() => Set(a => a.Nose = v)">@(v + 1)</button>
+                }
+            </div>
+            <div class="ed-lbl mt">@Loc["Boca"]</div>
+            <div class="chips">
+                @for (int i = 0; i < AvatarView.MouthsN; i++)
+                {
+                    var v = i;
+                    <button class="chip @(_a.Mouth == v ? "on" : "")" @onclick="() => Set(a => a.Mouth = v)">
+                        <AvatarView A="Preview(a => a.Mouth = v)" Size="42" />
+                    </button>
+                }
+            </div>
+        </div>
+
+        <div class="card card--pad">
+            <div class="ed-lbl">@Loc["Detalles"]</div>
+            <div class="seg wrap">
+                <button class="@(_a.Beard ? "on" : "")" @onclick="() => Set(a => a.Beard = !a.Beard)">🧔 @Loc["Barba"]</button>
+                <button class="@(_a.Glasses ? "on" : "")" @onclick="() => Set(a => a.Glasses = !a.Glasses)">👓 @Loc["Anteojos"]</button>
+                <button @onclick="Aleatorio">🎲 @Loc["Al azar"]</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+@code {
+    private Avatar _a = new();
+    private bool _guardado;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        // Se edita una COPIA: si te vas sin guardar, no se pisa lo que tenías.
+        var o = Game.State.Avatar;
+        _a = new Avatar
+        {
+            Creado = o.Creado, Name = o.Name, Face = o.Face, Skin = o.Skin,
+            Hair = o.Hair, HairColor = o.HairColor, Eyes = o.Eyes, EyeColor = o.EyeColor,
+            Brows = o.Brows, Nose = o.Nose, Mouth = o.Mouth, Beard = o.Beard,
+            Glasses = o.Glasses, GlassesColor = o.GlassesColor,
+        };
+        if (string.IsNullOrEmpty(_a.Name)) _a.Name = Game.State.ClubName.Replace(" FC", "");
+    }
+
+    private void Set(Action<Avatar> cambio) { cambio(_a); _guardado = false; }
+
+    /// <summary>Una copia del avatar con un cambio, para dibujar la miniatura de esa opción.</summary>
+    private Avatar Preview(Action<Avatar> cambio)
+    {
+        var c = new Avatar
+        {
+            Name = _a.Name, Face = _a.Face, Skin = _a.Skin, Hair = _a.Hair, HairColor = _a.HairColor,
+            Eyes = _a.Eyes, EyeColor = _a.EyeColor, Brows = _a.Brows, Nose = _a.Nose,
+            Mouth = _a.Mouth, Beard = _a.Beard, Glasses = _a.Glasses, GlassesColor = _a.GlassesColor,
+        };
+        cambio(c);
+        return c;
+    }
+
+    private void Aleatorio()
+    {
+        var r = new Random();
+        _a.Face = r.Next(AvatarView.Faces);
+        _a.Skin = GameService.Skins[r.Next(GameService.Skins.Length)];
+        _a.Hair = r.Next(AvatarView.Hairs);
+        _a.HairColor = GameService.HairColors[r.Next(GameService.HairColors.Length)];
+        _a.Eyes = r.Next(AvatarView.EyesN);
+        _a.Brows = r.Next(AvatarView.BrowsN);
+        _a.Nose = r.Next(AvatarView.NosesN);
+        _a.Mouth = r.Next(AvatarView.MouthsN);
+        _a.Beard = r.Next(3) == 0;
+        _a.Glasses = r.Next(3) == 0;
+        _guardado = false;
+    }
+
+    private void Guardar()
+    {
+        Game.SaveAvatar(_a);
+        _guardado = true;
+    }
+}

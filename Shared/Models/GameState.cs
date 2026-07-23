@@ -54,6 +54,29 @@ public sealed class LootPlayer
 }
 
 /// <summary>
+/// El "vos" del juego: un avatar 2D estilizado, tipo Mii pero plano. Cada campo
+/// es un índice o un color; el dibujo lo arma AvatarView a partir de esto.
+/// </summary>
+public sealed class Avatar
+{
+    public bool Creado { get; set; }          // false = todavía no lo armaste
+    public string Name { get; set; } = "";
+
+    public int Face { get; set; }             // forma de la cara
+    public string Skin { get; set; } = "#f1c9a5";
+    public int Hair { get; set; }             // peinado
+    public string HairColor { get; set; } = "#2b2016";
+    public int Eyes { get; set; }
+    public string EyeColor { get; set; } = "#4a3524";
+    public int Brows { get; set; }
+    public int Nose { get; set; }
+    public int Mouth { get; set; }
+    public bool Beard { get; set; }
+    public bool Glasses { get; set; }
+    public string GlassesColor { get; set; } = "#1a1a1a";
+}
+
+/// <summary>
 /// Quién se hace cargo de cada cosa en la cancha. Vacío = lo elige el simulador
 /// solo, como hacía antes (el mejor disponible para esa jugada).
 /// </summary>
@@ -198,6 +221,9 @@ public sealed class GameState
 
     /// <summary>Tokens de mejora disponibles para subir de nivel a cualquier jugador.</summary>
     public int Tokens { get; set; }
+
+    /// <summary>Tu avatar 2D (el DT). Se muestra en la barra de arriba.</summary>
+    public Avatar Avatar { get; set; } = new();
 
     /// <summary>Quién patea qué y quién lleva la cinta.</summary>
     public TeamRoles Roles { get; set; } = new();

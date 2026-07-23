@@ -1128,6 +1128,20 @@ public sealed class GameService
         ("Blanco",    "#f2f2f2", "#111111"),
     };
 
+    // ---------------------------------------------------------------- avatar (DT)
+    public static readonly string[] Skins =
+        { "#ffe0bd", "#f1c9a5", "#e0ac82", "#c68642", "#8d5524", "#5c3a1e" };
+    public static readonly string[] HairColors =
+        { "#2b2016", "#4a3524", "#8a5a2b", "#c9973f", "#e8c56a", "#b0b0b0", "#e34b4b", "#4ea3ff" };
+
+    /// <summary>Guarda el avatar (y lo marca creado la primera vez).</summary>
+    public void SaveAvatar(Avatar a)
+    {
+        a.Creado = true;
+        State.Avatar = a;
+        Commit();
+    }
+
     public void SetColors(string primary, string secondary)
     {
         if (!string.IsNullOrWhiteSpace(primary)) State.Primary = primary;

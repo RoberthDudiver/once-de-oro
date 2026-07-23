@@ -1223,3 +1223,42 @@ a { color: inherit; text-decoration: none; }
 .langrow__bar { flex: 1; height: 8px; border-radius: 999px; background: rgba(255,255,255,.08); overflow: hidden; }
 .langrow__bar i { display: block; height: 100%; background: var(--gold); }
 .langrow__n { flex: 0 0 40px; text-align: right; font-family: var(--font-head); font-size: 13px; color: var(--gold-2); }
+
+/* ---------------------------------------------------------------- creador de personaje */
+.avatar { display: block; }
+.topbar__crest {
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden; text-decoration: none;
+}
+.topbar__crest .avatar { border-radius: 50%; }
+
+.avatar-stage { position: sticky; top: 12px; }
+.avatar-big {
+    display: inline-flex; padding: 10px; border-radius: 50%;
+    background: radial-gradient(circle at 50% 35%, rgba(245,197,66,.14), transparent 70%);
+}
+.avatar-big .avatar {
+    border-radius: 50%;
+    background: linear-gradient(180deg, #223055, #12203c);
+    border: 2px solid var(--line);
+}
+
+.ed-lbl { font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-dim); margin-bottom: 8px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+    width: 50px; height: 50px; padding: 3px; cursor: pointer;
+    border: 2px solid var(--line); border-radius: 12px; background: #12203c;
+    display: flex; align-items: center; justify-content: center;
+}
+.chip.on { border-color: var(--gold-2); box-shadow: 0 0 12px rgba(245,197,66,.5); }
+.chip .avatar { border-radius: 8px; }
+.swatch {
+    width: 34px; height: 34px; padding: 0; cursor: pointer;
+    border: 2px solid var(--line); border-radius: 50%;
+}
+.swatch.on { border-color: var(--gold-2); box-shadow: 0 0 10px rgba(245,197,66,.6); }
+
+@media (max-width: 620px) {
+    .grid[style*="260px"] { grid-template-columns: 1fr !important; }
+    .avatar-stage { position: static; }
+}
