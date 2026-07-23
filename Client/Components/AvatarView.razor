@@ -1,40 +1,50 @@
-@* Avatar 2D estilo caricatura simple y amigable (nada realista, para no caer en el
-   "valle inquietante"). Colores planos, ojitos redondos con brillo, sonrisa clara.
-   Cada rasgo se posiciona/escala con los valores de ajuste fino (modo estiramiento). *@
+@* Avatar 2D estilo retrato de creador de personaje (tipo Sims / Dark Souls pero
+   estilizado): rostro con volumen por sombreado suave y consistente (luz desde
+   arriba-izquierda), rasgos definidos pero no realistas. Cada rasgo se posiciona
+   y escala con los valores de ajuste fino (modo estiramiento / estructura). *@
 @using OnceDeOro.Models
 
-<svg class="avatar" viewBox="0 0 100 @(Body ? 132 : 100)" width="@Size" height="@(Body ? Size * 1.32 : Size)"
+<svg class="avatar" viewBox="0 0 100 @(Body ? 134 : 100)" width="@Size" height="@(Body ? Size * 1.34 : Size)"
      role="img" aria-label="@(string.IsNullOrEmpty(A.Name) ? "Avatar" : A.Name)">
     <defs>
-        @if (A.Beard)
-        {
-            <clipPath id="@_clip"><path d="@FacePath(A.Face)" /></clipPath>
-        }
+        <clipPath id="@_clip"><path d="@FacePath(A.Face, A.JawW)" /></clipPath>
+        @* brillo de la piel: luz suave arriba-izquierda *@
+        <radialGradient id="@_gSheen" cx="0.4" cy="0.32" r="0.75">
+            <stop offset="0" stop-color="@Shade(A.Skin, 20)" />
+            <stop offset="0.6" stop-color="@A.Skin" />
+            <stop offset="1" stop-color="@Shade(A.Skin, -6)" />
+        </radialGradient>
         @if (Body)
         {
-            <linearGradient id="@_gJersey" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stop-color="@Shade(Primary, 14)" />
-                <stop offset="1" stop-color="@Shade(Primary, -16)" />
+            <linearGradient id="@_gJersey" x1="0.3" y1="0" x2="0.7" y2="1">
+                <stop offset="0" stop-color="@Shade(Primary, 16)" />
+                <stop offset="1" stop-color="@Shade(Primary, -20)" />
             </linearGradient>
         }
     </defs>
 
-    @* ---------- Cuerpo (torso con la camiseta del club) ---------- *@
+    @* ---------- Busto con la camiseta del club ---------- *@
     @if (Body)
     {
-        <ellipse cx="50" cy="130" rx="28" ry="4.5" fill="rgba(0,0,0,.14)" />
+        <ellipse cx="50" cy="131" rx="30" ry="4.5" fill="rgba(0,0,0,.14)" />
         <g>
-            @* cuello *@
-            <rect x="43" y="83" width="14" height="13" rx="5" fill="@A.Skin" />
-            @* camiseta *@
-            <path d="M 27 101 Q 29 94 39 93 L 44 92 Q 50 99 56 92 L 61 93 Q 71 94 73 101 L 79 109 L 71 116 L 71 132 L 29 132 L 29 116 L 21 109 Z"
+            @* cuello con sombra bajo el mentón *@
+            <path d="M 42 82 L 58 82 L 58 95 Q 50 99 42 95 Z" fill="@A.Skin" />
+            <path d="M 42 84 Q 50 92 58 84 L 58 90 Q 50 95 42 90 Z" fill="@Shade(A.Skin, -26)" opacity=".5" />
+            @* hombros / camiseta *@
+            <path d="M 24 104 Q 27 95 40 92 L 44 91 Q 50 99 56 91 L 60 92 Q 73 95 76 104 L 82 116 L 72 121 L 72 134 L 28 134 L 28 121 L 18 116 Z"
                   fill="url(#@_gJersey)" />
-            @* mangas del color secundario *@
-            <path d="M 27 101 L 21 109 L 28 115 L 34 104 Z" fill="@Secondary" />
-            <path d="M 73 101 L 79 109 L 72 115 L 66 104 Z" fill="@Secondary" />
+            @* sombreado de la tela *@
+            <path d="M 28 121 L 28 134 L 37 134 L 36 122 Z" fill="rgba(0,0,0,.13)" />
+            <path d="M 72 121 L 72 134 L 63 134 L 64 122 Z" fill="rgba(255,255,255,.08)" />
+            @* mangas del color secundario, con puño *@
+            <path d="M 24 104 L 18 116 L 27 121 L 34 106 Z" fill="@Secondary" />
+            <path d="M 76 104 L 82 116 L 73 121 L 66 106 Z" fill="@Secondary" />
+            <path d="M 22 113 L 27 110 L 30 115 L 25 118 Z" fill="@Shade(Secondary, -20)" />
+            <path d="M 78 113 L 73 110 L 70 115 L 75 118 Z" fill="@Shade(Secondary, -20)" />
             @* cuello redondo del color secundario *@
-            <path d="M 44 92 Q 50 99 56 92 L 53 96 Q 50 100 47 96 Z" fill="@Secondary" />
-            <path d="M 42 93 Q 50 90 58 93 L 56 91 Q 50 88.5 44 91 Z" fill="@Secondary" />
+            <path d="M 44 91 Q 50 99 56 91 L 53 95 Q 50 100 47 95 Z" fill="@Secondary" />
+            <path d="M 41 92 Q 50 89 59 92 L 57 90 Q 50 87 43 90 Z" fill="@Secondary" />
         </g>
     }
 
@@ -43,44 +53,64 @@
         @* pelo de atrás (nuca) *@
         @((MarkupString)HairBack(A.Hair, A.HairColor, A.HairY))
 
-        @* orejas *@
-        <circle cx="17" cy="53" r="6" fill="@A.Skin" stroke="rgba(0,0,0,.08)" stroke-width="1" />
-        <circle cx="83" cy="53" r="6" fill="@A.Skin" stroke="rgba(0,0,0,.08)" stroke-width="1" />
+        @* orejas con sombra *@
+        <ellipse cx="17" cy="54" rx="5.5" ry="7.5" fill="@A.Skin" stroke="rgba(0,0,0,.08)" stroke-width="0.8" />
+        <ellipse cx="83" cy="54" rx="5.5" ry="7.5" fill="@A.Skin" stroke="rgba(0,0,0,.08)" stroke-width="0.8" />
+        <path d="M 15 50 Q 19 54 16 59" fill="none" stroke="@Shade(A.Skin, -34)" stroke-width="1.2" stroke-linecap="round" opacity=".55" />
+        <path d="M 85 50 Q 81 54 84 59" fill="none" stroke="@Shade(A.Skin, -34)" stroke-width="1.2" stroke-linecap="round" opacity=".55" />
 
-        @* cara (color plano) *@
-        <path d="@FacePath(A.Face)" fill="@A.Skin" stroke="rgba(0,0,0,.09)" stroke-width="1" />
+        @* cara base *@
+        <path d="@FacePath(A.Face, A.JawW)" fill="url(#@_gSheen)" stroke="rgba(0,0,0,.10)" stroke-width="1" />
 
-        @* mejillas *@
-        <circle cx="@F(50 - A.EyeSpread - 7)" cy="@F(A.EyeY + 12)" r="4.5" fill="#ff8f8f" opacity=".22" />
-        <circle cx="@F(50 + A.EyeSpread + 7)" cy="@F(A.EyeY + 12)" r="4.5" fill="#ff8f8f" opacity=".22" />
+        @* --- sombreado del rostro (recortado a la cara) para dar volumen --- *@
+        <g clip-path="url(#@_clip)">
+            @* sombra del lado derecho (luz viene de la izquierda) *@
+            <path d="M 58 20 Q 82 34 80 56 Q 76 82 50 92 Q 66 80 68 56 Q 69 38 56 26 Z"
+                  fill="@Shade(A.Skin, -22)" opacity=".16" />
+            @* hueco de las mejillas (pómulos) *@
+            <path d="M 62 60 Q 70 64 66 72 Q 61 68 60 62 Z" fill="@Shade(A.Skin, -22)" opacity=".13" />
+            <path d="M 38 60 Q 30 64 34 72 Q 39 68 40 62 Z" fill="@Shade(A.Skin, -22)" opacity=".10" />
+            @* sombra bajo el mentón *@
+            <path d="M 33 80 Q 50 92 67 80 Q 55 88 50 88 Q 45 88 33 80 Z" fill="@Shade(A.Skin, -22)" opacity=".14" />
+            @* brillo de la frente *@
+            <ellipse cx="42" cy="34" rx="14" ry="9" fill="@Shade(A.Skin, 22)" opacity=".28" />
+        </g>
+
+        @* mejillas (rubor) *@
+        <ellipse cx="@F(50 - A.EyeSpread - 7)" cy="@F(A.EyeY + 12)" rx="5" ry="3.4" fill="#ff8a8a" opacity=".17" />
+        <ellipse cx="@F(50 + A.EyeSpread + 7)" cy="@F(A.EyeY + 12)" rx="5" ry="3.4" fill="#ff8a8a" opacity=".17" />
 
         @if (A.Beard)
         {
-            <path d="M @F(50 - A.EyeSpread - 12) @F(A.MouthY - 6) Q 50 @F(A.MouthY + 20) @F(50 + A.EyeSpread + 12) @F(A.MouthY - 6) L @F(50 + A.EyeSpread + 12) 84 Q 50 92 @F(50 - A.EyeSpread - 12) 84 Z"
-                  fill="@A.HairColor" opacity=".9" clip-path="url(#@_clip)" />
+            <g clip-path="url(#@_clip)">
+                <path d="M 22 54 Q 50 74 78 54 L 78 82 Q 50 96 22 82 Z" fill="@Shade(A.HairColor, -6)" opacity=".88" />
+                @* bigote insinuado *@
+                <path d="M @F(50 - A.EyeSpread) @F(A.MouthY - 6) Q 50 @F(A.MouthY - 2) @F(50 + A.EyeSpread) @F(A.MouthY - 6)"
+                      fill="none" stroke="@Shade(A.HairColor, -6)" stroke-width="3" stroke-linecap="round" opacity=".88" />
+            </g>
         }
 
         @* ---- Cejas ---- *@
         <g transform="translate(@F(50 - A.EyeSpread),@A.BrowY)">@((MarkupString)Brow(A.Brows, false, A.HairColor))</g>
         <g transform="translate(@F(50 + A.EyeSpread),@A.BrowY)">@((MarkupString)Brow(A.Brows, true, A.HairColor))</g>
 
-        @* ---- Ojos (redondos, con brillo — nada realista) ---- *@
+        @* ---- Ojos ---- *@
         <g transform="translate(@F(50 - A.EyeSpread),@A.EyeY) scale(@F(A.EyeSize / 100.0))">@((MarkupString)Eye(A.Eyes, A.EyeColor, false))</g>
         <g transform="translate(@F(50 + A.EyeSpread),@A.EyeY) scale(@F(A.EyeSize / 100.0))">@((MarkupString)Eye(A.Eyes, A.EyeColor, true))</g>
 
-        @* ---- Nariz (mínima) ---- *@
-        <g transform="translate(50,@A.NoseY)">@((MarkupString)Nose(A.Nose, A.Skin))</g>
+        @* ---- Nariz (con ancho ajustable) ---- *@
+        <g transform="translate(50,@A.NoseY) scale(@F(A.NoseW / 100.0),1)">@((MarkupString)Nose(A.Nose, A.Skin))</g>
 
         @* ---- Boca ---- *@
         <g transform="translate(50,@A.MouthY) scale(@F(A.MouthSize / 100.0))">@((MarkupString)Mouth(A.Mouth))</g>
 
         @if (A.Glasses)
         {
-            <g fill="rgba(180,210,235,.14)" stroke="@A.GlassesColor" stroke-width="2.2"
+            <g fill="rgba(180,210,235,.13)" stroke="@A.GlassesColor" stroke-width="2"
                transform="translate(0,@(A.EyeY - 50))">
-                <rect x="@F(50 - A.EyeSpread - 8)" y="43" width="16" height="13" rx="6" />
-                <rect x="@F(50 + A.EyeSpread - 8)" y="43" width="16" height="13" rx="6" />
-                <line x1="@F(50 - A.EyeSpread + 8)" y1="48" x2="@F(50 + A.EyeSpread - 8)" y2="48" stroke-width="2.2" />
+                <rect x="@F(50 - A.EyeSpread - 8)" y="43" width="16" height="12" rx="5" />
+                <rect x="@F(50 + A.EyeSpread - 8)" y="43" width="16" height="12" rx="5" />
+                <line x1="@F(50 - A.EyeSpread + 8)" y1="48" x2="@F(50 + A.EyeSpread - 8)" y2="48" stroke-width="2" />
             </g>
         }
 
@@ -92,126 +122,179 @@
 @code {
     [Parameter, EditorRequired] public Avatar A { get; set; } = new();
     [Parameter] public int Size { get; set; } = 120;
-    /// <summary>Si true, dibuja también el torso con la camiseta.</summary>
+    /// <summary>Si true, dibuja también el busto con la camiseta.</summary>
     [Parameter] public bool Body { get; set; }
     [Parameter] public string Primary { get; set; } = "#e23b3b";
     [Parameter] public string Secondary { get; set; } = "#ffffff";
 
     private readonly string _uid = "a" + Guid.NewGuid().ToString("N")[..6];
     private string _clip => _uid + "c";
+    private string _gSheen => _uid + "g";
     private string _gJersey => _uid + "j";
 
     public const int Faces = 5, Hairs = 8, EyesN = 6, BrowsN = 4, NosesN = 3, MouthsN = 6;
 
     private static string F(double v) => v.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
 
-    private static string FacePath(int f) => f switch
+    // La cara: la mitad inferior (mandíbula/mentón) se ensancha/afina con JawW.
+    private static string FacePath(int f, int jawW)
     {
-        // ovalada suave
-        0 => "M 50 14 C 70 14 79 31 79 51 C 79 72 67 88 50 88 C 33 88 21 72 21 51 C 21 31 30 14 50 14 Z",
-        // redonda (cachetona)
-        1 => "M 50 16 C 72 16 82 34 82 54 C 82 73 68 88 50 88 C 32 88 18 73 18 54 C 18 34 28 16 50 16 Z",
-        // redondeada con mentón suave
-        2 => "M 28 30 Q 28 18 42 17 Q 50 16 58 17 Q 72 18 72 30 L 78 52 Q 78 74 50 88 Q 22 74 22 52 Z",
-        // corazón (mentón un poco más fino)
-        3 => "M 50 16 C 72 16 81 32 78 51 C 75 72 61 88 50 88 C 39 88 25 72 22 51 C 19 32 28 16 50 16 Z",
-        // alargada suave
-        _ => "M 50 12 C 69 12 78 31 78 55 C 78 76 66 89 50 89 C 34 89 22 76 22 55 C 22 31 31 12 50 12 Z",
-    };
+        double j = jawW / 100.0;
+        double L(double x) => 50 + (x - 50) * j;   // escala hacia el centro sólo el ancho del mentón
+        // puntos de la mandíbula que se mueven con JawW
+        string jl = F(L(24)), jr = F(L(76)), cl = F(L(38)), cr = F(L(62));
+        return f switch
+        {
+            // ovalada
+            0 => $"M 50 13 C 70 13 79 30 79 48 C 79 62 74 72 {jr} 80 Q {cr} 88 50 89 Q {cl} 88 {jl} 80 C 26 72 21 62 21 48 C 21 30 30 13 50 13 Z",
+            // redonda
+            1 => $"M 50 15 C 72 15 82 33 82 52 C 82 66 76 75 {jr} 82 Q {cr} 89 50 89 Q {cl} 89 {jl} 82 C 24 75 18 66 18 52 C 18 33 28 15 50 15 Z",
+            // mentón marcado (cuadrada)
+            2 => $"M 30 28 Q 30 18 42 17 Q 50 16 58 17 Q 70 18 70 28 L 77 54 Q 76 74 {jr} 82 Q {cr} 89 50 89 Q {cl} 89 {jl} 82 Q 24 74 23 54 Z",
+            // corazón (mentón fino)
+            3 => $"M 50 15 C 72 15 81 31 79 50 C 77 64 72 74 {jr} 82 Q {cr} 89 50 89 Q {cl} 88 {jl} 82 C 28 74 23 64 21 50 C 19 31 28 15 50 15 Z",
+            // alargada
+            _ => $"M 50 12 C 69 12 78 30 78 52 C 78 68 73 78 {jr} 84 Q {cr} 90 50 90 Q {cl} 90 {jl} 84 C 27 78 22 68 22 52 C 22 30 31 12 50 12 Z",
+        };
+    }
 
     private static string HairBack(int h, string c, int dy)
     {
         string d = h switch
         {
             1 => "M 15 46 Q 14 92 32 92 L 68 92 Q 86 92 85 46 Q 80 64 50 64 Q 20 64 15 46 Z",
-            4 => "M 13 44 Q 11 98 34 98 L 66 98 Q 89 98 87 44 Q 80 66 50 66 Q 20 66 13 44 Z",
-            6 => "M 50 6 C 76 6 88 28 88 48 C 88 59 83 64 77 64 L 23 64 C 17 64 12 59 12 48 C 12 28 24 6 50 6 Z",
-            7 => "M 16 48 Q 15 88 30 94 L 34 76 Q 50 82 66 76 L 70 94 Q 85 88 84 48 Z",
+            4 => "M 13 44 Q 11 100 34 100 L 66 100 Q 89 100 87 44 Q 80 68 50 68 Q 20 68 13 44 Z",
+            6 => "M 50 6 C 76 6 88 28 88 48 C 88 60 83 66 77 66 L 23 66 C 17 66 12 60 12 48 C 12 28 24 6 50 6 Z",
+            7 => "M 16 48 Q 15 90 30 96 L 34 76 Q 50 82 66 76 L 70 96 Q 85 90 84 48 Z",
             _ => "",
         };
-        return string.IsNullOrEmpty(d) ? "" : $"<path transform='translate(0,{dy})' d='{d}' fill='{c}'/>";
+        if (string.IsNullOrEmpty(d)) return "";
+        return $"<g transform='translate(0,{dy})'><path d='{d}' fill='{Shade(c, -14)}'/><path d='{d}' fill='{c}' transform='scale(0.96)' transform-origin='50 40'/></g>";
     }
 
     private static string HairFront(int h, string c, int dy)
     {
         string body = h switch
         {
-            0 => "M 19 49 C 19 24 34 13 50 13 C 66 13 81 24 81 49 C 75 36 69 32 61 33 C 55 25 45 25 39 33 C 31 32 25 36 19 49 Z",
-            1 => "M 17 53 C 15 26 34 14 50 14 C 66 14 85 26 83 53 C 78 38 71 34 63 35 C 57 26 43 26 37 35 C 29 34 22 38 17 53 Z",
-            2 => "M 21 43 C 24 25 37 17 50 17 C 63 17 76 25 79 43 C 73 33 63 30 50 30 C 37 30 27 33 21 43 Z",
-            3 => "M 19 49 C 19 22 35 13 50 13 C 65 13 81 22 81 49 C 76 37 69 33 61 35 L 56 24 L 50 35 L 44 24 L 39 35 C 31 33 24 37 19 49 Z",
-            4 => "M 15 55 C 13 24 34 14 50 14 C 66 14 87 24 85 55 C 80 39 72 35 64 36 C 58 26 42 26 36 36 C 28 35 20 39 15 55 Z",
-            5 => "M 23 40 C 27 25 38 18 50 18 C 62 18 73 25 77 40 C 68 35 60 46 50 42 C 40 46 32 35 23 40 Z",
-            6 => "M 17 47 C 17 20 35 12 50 12 C 65 12 83 20 83 47 C 77 34 66 32 50 32 C 34 32 23 34 17 47 Z",
-            7 => "M 18 51 C 16 26 34 15 50 15 C 66 15 84 26 82 51 C 76 34 70 46 59 41 C 53 32 43 45 35 41 C 27 45 23 36 18 51 Z",
-            _ => "",
+            0 => "M 19 49 C 19 24 34 12 50 12 C 66 12 81 24 81 49 C 74 35 68 31 60 32 C 55 24 45 24 40 32 C 32 31 26 35 19 49 Z",
+            1 => "M 17 53 C 15 25 34 13 50 13 C 66 13 85 25 83 53 C 77 37 70 33 62 34 C 56 25 44 25 38 34 C 30 33 23 37 17 53 Z",
+            2 => "M 21 43 C 24 24 37 16 50 16 C 63 16 76 24 79 43 C 72 32 62 29 50 29 C 38 29 28 32 21 43 Z",
+            3 => "M 19 49 C 19 22 35 12 50 12 C 65 12 81 22 81 49 C 75 36 68 32 60 34 L 55 23 L 50 34 L 45 23 L 40 34 C 32 32 25 36 19 49 Z",
+            4 => "M 15 55 C 13 24 34 13 50 13 C 66 13 87 24 85 55 C 79 39 71 34 63 35 C 57 26 43 26 37 35 C 29 34 21 39 15 55 Z",
+            5 => "M 23 40 C 27 25 38 17 50 17 C 62 17 73 25 77 40 C 68 34 60 45 50 41 C 40 45 32 34 23 40 Z",
+            6 => "M 17 47 C 17 20 35 11 50 11 C 65 11 83 20 83 47 C 76 34 66 32 50 32 C 34 32 24 34 17 47 Z",
+            _ => "M 18 51 C 16 26 34 14 50 14 C 66 14 84 26 82 51 C 75 34 69 45 58 40 C 52 31 42 44 34 40 C 26 45 23 36 18 51 Z",
         };
         if (string.IsNullOrEmpty(body)) return "";
-        // un brillo suave del mismo pelo, más claro
-        string shine = $"<path d='M 31 22 Q 43 15 55 19' fill='none' stroke='{Shade(c, 34)}' stroke-width='3' stroke-linecap='round' opacity='.4'/>";
-        return $"<g transform='translate(0,{dy})'><path d='{body}' fill='{c}'/>{shine}</g>";
+        string dark = $"<path d='{body}' fill='{Shade(c, -22)}'/>";
+        string main = $"<path d='{body}' fill='{c}' transform='translate(0,-0.6)'/>";
+        string shine = $"<path d='M 30 22 Q 42 15 55 19' fill='none' stroke='{Shade(c, 36)}' stroke-width='2.6' stroke-linecap='round' opacity='.4'/>";
+        string shine2 = $"<path d='M 34 28 Q 44 22 52 25' fill='none' stroke='{Shade(c, 24)}' stroke-width='1.6' stroke-linecap='round' opacity='.3'/>";
+        return $"<g transform='translate(0,{dy})'>{dark}{main}{shine}{shine2}</g>";
     }
 
-    // ---- Un ojo. Redondo y sólido con un brillo: tierno, nunca "realista". ----
-    private static string Eye(int e, string c, bool derecho)
+    // ---- Un ojo estilizado: almendra con iris, brillo y línea de pestañas suave ----
+    private static string Eye(int e, string iris, bool derecho)
     {
         int s = derecho ? -1 : 1;
-        const string dark = "#2b2622";
-        string shine = "<circle cx='-1.3' cy='-1.6' r='1.1' fill='#fff'/>";
+        const string sclera = "#f6f1ea";
+        const string lash = "#39291f";
+        string P = Shade(iris, -40);   // pupila: iris muy oscurecido
+        string shine = $"<circle cx='{F(-1.4 * s)}' cy='-1.7' r='1' fill='#fff' opacity='.9'/>";
         return e switch
         {
-            // redondo normal
-            0 => $"<circle cx='0' cy='0' r='3.7' fill='{dark}'/>{shine}",
-            // grande (ojazos)
-            1 => $"<circle cx='0' cy='0' r='4.6' fill='{dark}'/><circle cx='-1.6' cy='-2' r='1.4' fill='#fff'/>",
-            // feliz (arquito hacia arriba, ojo cerrado)
-            2 => $"<path d='M {-4.5 * s} 1.5 Q 0 -3.5 {4.5 * s} 1.5' fill='none' stroke='{dark}' stroke-width='2.4' stroke-linecap='round'/>",
+            // almendra (por defecto)
+            0 => $"<path d='M -5.5 0 Q 0 -4.2 5.5 0 Q 0 3.8 -5.5 0 Z' fill='{sclera}'/>" +
+                 $"<circle cx='0' cy='0.3' r='3' fill='{iris}'/><circle cx='0' cy='0.3' r='1.5' fill='{P}'/>{shine}" +
+                 $"<path d='M -6 -0.4 Q 0 -4.8 6 -0.4' fill='none' stroke='{lash}' stroke-width='1.7' stroke-linecap='round'/>" +
+                 $"<path d='M -5 1.6 Q 0 3 5 1.6' fill='none' stroke='rgba(0,0,0,.2)' stroke-width='0.9' stroke-linecap='round'/>",
+            // grandes / expresivos
+            1 => $"<ellipse cx='0' cy='0' rx='5.4' ry='5' fill='{sclera}'/>" +
+                 $"<circle cx='0' cy='0.4' r='3.5' fill='{iris}'/><circle cx='0' cy='0.4' r='1.8' fill='{P}'/><circle cx='-1.7' cy='-1.8' r='1.2' fill='#fff' opacity='.9'/>" +
+                 $"<path d='M -6 -1.2 Q 0 -5.4 6 -1.2' fill='none' stroke='{lash}' stroke-width='1.9' stroke-linecap='round'/>",
+            // rasgados / afilados
+            2 => $"<path d='M -6 0.4 Q 0 -3.4 6 0.4 Q 0 2.4 -6 0.4 Z' fill='{sclera}'/>" +
+                 $"<circle cx='{F(0.8 * s)}' cy='0' r='2.7' fill='{iris}'/><circle cx='{F(0.8 * s)}' cy='0' r='1.4' fill='{P}'/>" +
+                 $"<path d='M -6.5 -0.2 Q 0 -3.8 6.5 -0.6' fill='none' stroke='{lash}' stroke-width='1.8' stroke-linecap='round'/>",
             // ovalado vertical
-            3 => $"<ellipse cx='0' cy='0' rx='3' ry='4.2' fill='{dark}'/><circle cx='-1' cy='-1.6' r='1' fill='#fff'/>",
-            // guiño / dormido (arquito hacia abajo)
-            4 => $"<path d='M {-4.5 * s} -1 Q 0 3.5 {4.5 * s} -1' fill='none' stroke='{dark}' stroke-width='2.4' stroke-linecap='round'/>",
-            // pequeño
-            _ => $"<circle cx='0' cy='0' r='2.8' fill='{dark}'/><circle cx='-1' cy='-1.2' r='.9' fill='#fff'/>",
+            3 => $"<ellipse cx='0' cy='0' rx='4' ry='5' fill='{sclera}'/>" +
+                 $"<circle cx='0' cy='0.4' r='2.9' fill='{iris}'/><circle cx='0' cy='0.4' r='1.5' fill='{P}'/><circle cx='-1.2' cy='-1.6' r='1' fill='#fff' opacity='.9'/>" +
+                 $"<path d='M -4.6 -2 Q 0 -5 4.6 -2' fill='none' stroke='{lash}' stroke-width='1.7' stroke-linecap='round'/>",
+            // feliz (cerrado, arco hacia arriba)
+            4 => $"<path d='M {-5 * s} 1.4 Q 0 -3.4 {5 * s} 1.4' fill='none' stroke='{lash}' stroke-width='2.1' stroke-linecap='round'/>",
+            // sereno / entrecerrado
+            _ => $"<path d='M -5.5 0 Q 0 -2.6 5.5 0 Q 0 2 -5.5 0 Z' fill='{sclera}'/>" +
+                 $"<circle cx='0' cy='0' r='2.4' fill='{iris}'/><circle cx='0' cy='0' r='1.2' fill='{P}'/>" +
+                 $"<path d='M -6 -0.6 Q 0 -3 6 -0.6' fill='none' stroke='{lash}' stroke-width='1.7' stroke-linecap='round'/>",
         };
     }
 
+    // Ceja rellena y definida (más "creador de personaje")
     private static string Brow(int b, bool derecho, string c)
     {
         int s = derecho ? -1 : 1;
-        string col = Shade(c, -18);
+        string col = Shade(c, -14);
+        double X(double x) => x * s;
         return b switch
         {
-            0 => $"<path d='M {-5 * s} 0.5 Q 0 -2 {5 * s} 0.5' fill='none' stroke='{col}' stroke-width='2' stroke-linecap='round' opacity='.85'/>",
-            1 => $"<path d='M {-5 * s} 0 L {5 * s} 0' stroke='{col}' stroke-width='2.2' stroke-linecap='round' opacity='.85'/>",
-            2 => $"<path d='M {-5 * s} 1.5 Q 0 -1.5 {5 * s} 0' fill='none' stroke='{col}' stroke-width='2.2' stroke-linecap='round' opacity='.85'/>",
-            _ => $"<path d='M {-5 * s} 0 Q 0 2.5 {5 * s} 0' fill='none' stroke='{col}' stroke-width='2' stroke-linecap='round' opacity='.85'/>",
+            // arqueada
+            0 => $"<path d='M {F(X(-6))} 1 Q {F(X(-1))} -2.6 {F(X(5.5))} -0.8 Q {F(X(6.5))} -0.4 {F(X(6))} 0.6 Q {F(X(1))} -0.8 {F(X(-5))} 1.8 Z' fill='{col}'/>",
+            // recta
+            1 => $"<path d='M {F(X(-6))} -0.4 L {F(X(6))} -0.9 L {F(X(6))} 1 L {F(X(-6))} 1.6 Z' fill='{col}'/>",
+            // decidida (hacia adentro)
+            2 => $"<path d='M {F(X(-6.5))} -0.6 Q {F(X(-1))} -1.8 {F(X(6))} 1.2 L {F(X(5.5))} 2.4 Q {F(X(-1))} -0.2 {F(X(-6))} 1.2 Z' fill='{col}'/>",
+            // suave / fina
+            _ => $"<path d='M {F(X(-5.5))} 0.4 Q 0 -1.6 {F(X(5.5))} 0.4' fill='none' stroke='{col}' stroke-width='1.8' stroke-linecap='round'/>",
         };
     }
 
-    // nariz mínima, apenas insinuada
-    private static string Nose(int n, string skin) => n switch
+    // Nariz con puente, luz y sombra de fosas (centrada en 0,0)
+    private static string Nose(int n, string skin)
     {
-        0 => $"<circle cx='0' cy='1' r='1.6' fill='{Shade(skin, -22)}' opacity='.5'/>",
-        1 => $"<path d='M 0 -3 L 0 2.5' stroke='{Shade(skin, -24)}' stroke-width='1.6' stroke-linecap='round' opacity='.5'/>",
-        _ => $"<path d='M -2 0 Q 0 2.5 2 0' fill='none' stroke='{Shade(skin, -24)}' stroke-width='1.6' stroke-linecap='round' opacity='.5'/>",
-    };
+        string sh = Shade(skin, -20), sh2 = Shade(skin, -32), hi = Shade(skin, 16);
+        return n switch
+        {
+            // recta con puente
+            0 => $"<path d='M 0.8 -6 Q 2.6 1 3.4 3.2 Q 2 5 0 4.4' fill='none' stroke='{sh}' stroke-width='1.3' stroke-linecap='round' opacity='.55'/>" +
+                 $"<path d='M -1.2 -5 L -1.2 2' stroke='{hi}' stroke-width='1.4' stroke-linecap='round' opacity='.5'/>" +
+                 $"<ellipse cx='-2' cy='3.6' rx='1.1' ry='.8' fill='{sh2}' opacity='.5'/><ellipse cx='2' cy='3.6' rx='1.1' ry='.8' fill='{sh2}' opacity='.5'/>",
+            // botón (corta)
+            1 => $"<path d='M 0 0 Q 3 3.4 0 4.4 Q -3 3.4 0 0' fill='{sh}' opacity='.45'/>" +
+                 $"<ellipse cx='-1.7' cy='3.6' rx='1' ry='.7' fill='{sh2}' opacity='.45'/><ellipse cx='1.7' cy='3.6' rx='1' ry='.7' fill='{sh2}' opacity='.45'/>",
+            // aguileña (curva)
+            _ => $"<path d='M -0.5 -6 Q 3 -1 3.6 3 Q 2 5 0 4.4' fill='none' stroke='{sh}' stroke-width='1.4' stroke-linecap='round' opacity='.55'/>" +
+                 $"<ellipse cx='-1.8' cy='3.8' rx='1.1' ry='.8' fill='{sh2}' opacity='.5'/><ellipse cx='1.8' cy='3.8' rx='1.1' ry='.8' fill='{sh2}' opacity='.5'/>",
+        };
+    }
 
-    // bocas simples y amables
-    private static string Mouth(int m) => m switch
+    // Boca con labios de dos tonos (centrada en 0,0)
+    private static string Mouth(int m)
     {
-        // sonrisa
-        0 => "<path d='M -8 -1 Q 0 5 8 -1' fill='none' stroke='#c05a4e' stroke-width='2.4' stroke-linecap='round'/>",
-        // neutra
-        1 => "<path d='M -6 0 L 6 0' stroke='#c05a4e' stroke-width='2.4' stroke-linecap='round'/>",
-        // sonrisa grande (rellena, sin dientes, tierna)
-        2 => "<path d='M -8 -1 Q 0 8 8 -1 Q 0 3 -8 -1 Z' fill='#c05a4e'/>",
-        // pícara (media sonrisa)
-        3 => "<path d='M -7 0 Q 0 4 8 -2' fill='none' stroke='#c05a4e' stroke-width='2.4' stroke-linecap='round'/>",
-        // boquita 'o'
-        4 => "<circle cx='0' cy='1' r='3' fill='#c05a4e'/>",
-        // seria
-        _ => "<path d='M -7 1.5 Q 0 -1.5 7 1.5' fill='none' stroke='#c05a4e' stroke-width='2.4' stroke-linecap='round'/>",
-    };
+        const string lip = "#c07268", lipHi = "#d99b90", lipDk = "#9c534b";
+        return m switch
+        {
+            // sonrisa cerrada
+            0 => $"<path d='M -8 -0.5 Q -4 -2.6 0 -1.6 Q 4 -2.6 8 -0.5 Q 4 3.6 0 3.8 Q -4 3.6 -8 -0.5 Z' fill='{lip}'/>" +
+                 $"<path d='M -8 -0.5 Q 0 2.2 8 -0.5' fill='none' stroke='{lipDk}' stroke-width='1.1' stroke-linecap='round'/>" +
+                 $"<path d='M -5 2.2 Q 0 3.2 5 2.2' fill='none' stroke='{lipHi}' stroke-width='1.2' stroke-linecap='round' opacity='.7'/>",
+            // neutra
+            1 => $"<path d='M -7 -1 Q -3.5 -2.4 0 -1.6 Q 3.5 -2.4 7 -1 Q 3.5 2.4 0 2.6 Q -3.5 2.4 -7 -1 Z' fill='{lip}'/>" +
+                 $"<path d='M -7 -1 Q 0 1 7 -1' fill='none' stroke='{lipDk}' stroke-width='1.1' stroke-linecap='round'/>",
+            // sonrisa amplia
+            2 => $"<path d='M -9 -1.4 Q -4.5 -3 0 -2 Q 4.5 -3 9 -1.4 Q 4.5 5.2 0 5.6 Q -4.5 5.2 -9 -1.4 Z' fill='{lip}'/>" +
+                 $"<path d='M -9 -1.4 Q 0 1.6 9 -1.4' fill='none' stroke='{lipDk}' stroke-width='1.1'/>" +
+                 $"<path d='M -6.5 -0.8 Q 0 0.6 6.5 -0.8 Q 0 2.4 -6.5 -0.8 Z' fill='#fff' opacity='.85'/>",
+            // pícara (media)
+            3 => $"<path d='M -8 -0.5 Q -4 -2.4 0 -1.6 Q 4 -2.4 8 -1.4 Q 5 3.4 0 3.4 Q -4 3.6 -8 -0.5 Z' fill='{lip}'/>" +
+                 $"<path d='M -7.5 -0.4 Q 0 1.6 8 -1' fill='none' stroke='{lipDk}' stroke-width='1.1' stroke-linecap='round'/>",
+            // boquita 'o'
+            4 => $"<ellipse cx='0' cy='0.6' rx='3.2' ry='3.8' fill='{lipDk}'/><ellipse cx='0' cy='1.6' rx='2' ry='2.2' fill='#7a3a35'/>" +
+                 $"<path d='M -3.2 -0.6 Q 0 -2.4 3.2 -0.6' fill='none' stroke='{lip}' stroke-width='1.6' stroke-linecap='round'/>",
+            // seria
+            _ => $"<path d='M -7 0 Q -3.5 -1.6 0 -1 Q 3.5 -1.6 7 0 Q 3.5 2.6 0 2.8 Q -3.5 2.6 -7 0 Z' fill='{lip}'/>" +
+                 $"<path d='M -7 0 Q 0 1.4 7 0' fill='none' stroke='{lipDk}' stroke-width='1.1' stroke-linecap='round'/>",
+        };
+    }
 
     private static string Shade(string hex, int d)
     {

@@ -86,6 +86,8 @@ public sealed class Avatar
     public int MouthY { get; set; } = 73;      // altura de la boca (66..82)
     public int MouthSize { get; set; } = 100;  // tamaño de la boca (70..135 %)
     public int HairY { get; set; } = 0;        // el pelo un poco más arriba/abajo (-6..6)
+    public int NoseW { get; set; } = 100;      // ancho de la nariz (70..130 %)
+    public int JawW { get; set; } = 100;       // ancho de la mandíbula/mentón (82..116 %)
 }
 
 /// <summary>
