@@ -21,7 +21,8 @@ public sealed class AdminService
     /// <summary>Un usuario tal como lo muestra el panel (coincide con AdminUserRow del servidor).</summary>
     public sealed record AdminUser(
         string Id, string Email, string DisplayName, DateTime CreatedAt, DateTime LastLoginAt,
-        bool Banned, string ClubName, int Money, int MatchesPlayed, int Wins, int Honours, int Progress);
+        bool Banned, string ClubName, int Money, int MatchesPlayed, int Wins, int Honours, int Progress,
+        bool IsAdmin, bool IsRoot);
 
     private HttpRequestMessage Req(HttpMethod m, string url)
     {
@@ -80,6 +81,19 @@ public sealed class AdminService
         {
             var req = Req(HttpMethod.Post, $"api/admin/users/{id}/ban");
             req.Content = JsonContent.Create(new { banned });
+            var resp = await _http.SendAsync(req);
+            return resp.IsSuccessStatusCode;
+        }
+        catch { return false; }
+    }
+
+    /// <summary>Nombra (o quita) admin a otra cuenta. Devuelve true si quedó aplicado.</summary>
+    public async Task<bool> SetAdminAsync(string id, bool isAdmin)
+    {
+        try
+        {
+            var req = Req(HttpMethod.Post, $"api/admin/users/{id}/admin");
+            req.Content = JsonContent.Create(new { isAdmin });
             var resp = await _http.SendAsync(req);
             return resp.IsSuccessStatusCode;
         }

@@ -31,6 +31,9 @@ public sealed class UserAccount
 
     /// <summary>Cuenta suspendida por un administrador: no puede iniciar sesión ni guardar en la nube.</summary>
     public bool Banned { get; set; }
+
+    /// <summary>Admin nombrado desde el panel (además, el/los emails de Admin__Emails son admin raíz).</summary>
+    public bool IsAdmin { get; set; }
 }
 
 /// <summary>
@@ -89,8 +92,10 @@ public sealed record StatsResponse(long Players, long Matches, long Accounts,
 /// <summary>Una fila de la tabla de usuarios del panel de administrador.</summary>
 public sealed record AdminUserRow(
     string Id, string Email, string DisplayName, DateTime CreatedAt, DateTime LastLoginAt,
-    bool Banned, string ClubName, int Money, int MatchesPlayed, int Wins, int Honours, int Progress);
+    bool Banned, string ClubName, int Money, int MatchesPlayed, int Wins, int Honours, int Progress,
+    bool IsAdmin, bool IsRoot);
 
 public sealed record AdjustMoneyRequest(int Delta);
 public sealed record SetMoneyRequest(int Money);
 public sealed record BanRequest(bool Banned);
+public sealed record SetAdminRequest(bool IsAdmin);

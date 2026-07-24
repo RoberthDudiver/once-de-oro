@@ -28,10 +28,19 @@ public static class AccountEndpoints
                   .Select(e => e.ToLowerInvariant()).ToArray();
     }
 
-    private static bool IsAdmin(ClaimsPrincipal me, IConfiguration cfg)
+    /// <summary>Admin RAÍZ: el email está en Admin__Emails. No se puede quitar desde el panel.</summary>
+    private static bool IsRootAdmin(ClaimsPrincipal me, IConfiguration cfg)
     {
         var email = (me.FindFirstValue(JwtRegisteredClaimNames.Email) ?? me.FindFirstValue(ClaimTypes.Email) ?? "").ToLowerInvariant();
         return !string.IsNullOrEmpty(email) && AdminEmails(cfg).Contains(email);
+    }
+
+    /// <summary>Admin = raíz (por email) O nombrado desde el panel (flag en la base).</summary>
+    private static async Task<bool> IsAdminAsync(ClaimsPrincipal me, IConfiguration cfg, AccountStore store)
+    {
+        if (IsRootAdmin(me, cfg)) return true;
+        var id = UserId(me);
+        return id is not null && await store.IsAccountAdminAsync(id);
     }
 
     private static string? UserId(ClaimsPrincipal me) =>
@@ -137,18 +146,18 @@ public static class AccountEndpoints
         var admin = api.MapGroup("/admin").RequireAuthorization();
 
         // ¿El que pregunta es admin? Lo usa el cliente para mostrar (o no) el panel.
-        admin.MapGet("/me", (ClaimsPrincipal me, IConfiguration cfg) =>
-            Results.Ok(new { isAdmin = IsAdmin(me, cfg) }));
+        admin.MapGet("/me", async (ClaimsPrincipal me, IConfiguration cfg, AccountStore store) =>
+            Results.Ok(new { isAdmin = await IsAdminAsync(me, cfg, store) }));
 
         admin.MapGet("/users", async (ClaimsPrincipal me, IConfiguration cfg, AccountStore store) =>
         {
-            if (!IsAdmin(me, cfg)) return Results.Forbid();
-            return Results.Ok(await store.AdminUsersAsync());
+            if (!await IsAdminAsync(me, cfg, store)) return Results.Forbid();
+            return Results.Ok(await store.AdminUsersAsync(AdminEmails(cfg)));
         });
 
         admin.MapPost("/users/{id}/money", async (string id, AdjustMoneyRequest req, ClaimsPrincipal me, IConfiguration cfg, AccountStore store) =>
         {
-            if (!IsAdmin(me, cfg)) return Results.Forbid();
+            if (!await IsAdminAsync(me, cfg, store)) return Results.Forbid();
             var money = await store.AdjustMoneyAsync(id, req.Delta);
             return money is null
                 ? Results.NotFound(new { error = "Ese usuario todavía no tiene partida guardada." })
@@ -157,7 +166,7 @@ public static class AccountEndpoints
 
         admin.MapPost("/users/{id}/set-money", async (string id, SetMoneyRequest req, ClaimsPrincipal me, IConfiguration cfg, AccountStore store) =>
         {
-            if (!IsAdmin(me, cfg)) return Results.Forbid();
+            if (!await IsAdminAsync(me, cfg, store)) return Results.Forbid();
             var money = await store.SetMoneyAsync(id, req.Money);
             return money is null
                 ? Results.NotFound(new { error = "Ese usuario todavía no tiene partida guardada." })
@@ -166,10 +175,26 @@ public static class AccountEndpoints
 
         admin.MapPost("/users/{id}/ban", async (string id, BanRequest req, ClaimsPrincipal me, IConfiguration cfg, AccountStore store) =>
         {
-            if (!IsAdmin(me, cfg)) return Results.Forbid();
+            if (!await IsAdminAsync(me, cfg, store)) return Results.Forbid();
             if (id == UserId(me)) return Results.BadRequest(new { error = "No podés banearte a vos mismo." });
             await store.SetBannedAsync(id, req.Banned);
             return Results.Ok(new { banned = req.Banned });
+        });
+
+        // Nombrar (o quitar) admin a otra cuenta. Sólo un admin puede; no podés
+        // tocar tu propio estado ni el de un admin RAÍZ (los de Admin__Emails).
+        admin.MapPost("/users/{id}/admin", async (string id, SetAdminRequest req, ClaimsPrincipal me, IConfiguration cfg, AccountStore store) =>
+        {
+            if (!await IsAdminAsync(me, cfg, store)) return Results.Forbid();
+            if (id == UserId(me)) return Results.BadRequest(new { error = "No podés cambiar tu propio rol de admin." });
+
+            var target = await store.FindByIdAsync(id);
+            if (target is null) return Results.NotFound(new { error = "No existe ese usuario." });
+            if (AdminEmails(cfg).Contains(target.Email))
+                return Results.BadRequest(new { error = "Ese usuario es admin raíz (por email) y no se cambia desde acá." });
+
+            await store.SetAdminAsync(id, req.IsAdmin);
+            return Results.Ok(new { isAdmin = req.IsAdmin });
         });
     }
 }

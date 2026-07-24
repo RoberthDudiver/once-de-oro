@@ -83,9 +83,10 @@ public sealed class AccountStore
     // ---- Administración ----
 
     /// <summary>Todos los usuarios con los datos clave de su partida, para el panel de admin.</summary>
-    public async Task<List<AdminUserRow>> AdminUsersAsync()
+    public async Task<List<AdminUserRow>> AdminUsersAsync(IEnumerable<string> rootEmails)
     {
         if (_users is null || _saves is null) return new();
+        var roots = rootEmails.ToHashSet();
 
         var users = await _users.Find(_ => true).SortByDescending(u => u.LastLoginAt).ToListAsync();
         var saves = await _saves.Find(_ => true).ToListAsync();
@@ -95,11 +96,29 @@ public sealed class AccountStore
         {
             byId.TryGetValue(u.Id, out var sd);
             var st = sd?.State;
+            bool isRoot = roots.Contains(u.Email);
             return new AdminUserRow(
                 u.Id, u.Email, u.DisplayName, u.CreatedAt, u.LastLoginAt, u.Banned,
                 st?.ClubName ?? "—", st?.Money ?? 0, st?.MatchesPlayed ?? 0, st?.Wins ?? 0,
-                st?.Honours.Count ?? 0, sd?.Progress ?? 0);
+                st?.Honours.Count ?? 0, sd?.Progress ?? 0,
+                u.IsAdmin || isRoot, isRoot);
         }).ToList();
+    }
+
+    /// <summary>Nombra (o quita) admin a una cuenta desde el panel.</summary>
+    public async Task SetAdminAsync(string userId, bool isAdmin)
+    {
+        if (_users is null) return;
+        await _users.UpdateOneAsync(u => u.Id == userId,
+            Builders<UserAccount>.Update.Set(u => u.IsAdmin, isAdmin));
+    }
+
+    /// <summary>¿La cuenta tiene el flag de admin en la base? (los emails raíz se chequean aparte).</summary>
+    public async Task<bool> IsAccountAdminAsync(string userId)
+    {
+        if (_users is null) return false;
+        var u = await _users.Find(x => x.Id == userId).FirstOrDefaultAsync();
+        return u?.IsAdmin ?? false;
     }
 
     /// <summary>Suma (o resta) dinero a la partida de un usuario. Devuelve el nuevo total, o null si no hay partida.</summary>
