@@ -60,8 +60,11 @@
         <a href="equipo" class="@Active("equipo")"><span class="ico">👕</span>@Loc["Equipo"]</a>
         <a href="academia" class="@Active("academia")"><span class="ico">🎓</span>@Loc["Academia"]</a>
         <a href="torneos" class="@Active("torneos")"><span class="ico">🏆</span>@Loc["Torneos"]</a>
+        <a href="logros" class="@Active("logros")"><span class="ico">🏅</span>@Loc["Logros"]</a>
         <a href="online" class="@Active("online")"><span class="ico">🌐</span>@Loc["Online"]</a>
     </nav>
+
+    <AchievementToast />
 
     @Body
 
@@ -83,6 +86,7 @@
         Nav.LocationChanged += OnLocation;
         await Loc.LoadAsync();
         await Game.LoadAsync();
+        Game.SyncAchievementsSilently();   // marca lo ya conseguido, sin popups
         await Auth.InitAsync();
 
         // Si la sesión seguía abierta, traemos/conciliamos la partida de la cuenta.

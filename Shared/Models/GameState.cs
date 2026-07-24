@@ -269,4 +269,25 @@ public sealed class GameState
     public RunState? Run { get; set; }
 
     public bool HasSeenIntro { get; set; }
+
+    // ---- Logros (trofeos estilo PlayStation) ----
+    /// <summary>Ids de los logros ya desbloqueados (ver AchievementCatalog).</summary>
+    public List<string> UnlockedAchievements { get; set; } = new();
+    /// <summary>Victorias consecutivas actuales (se corta con empate o derrota).</summary>
+    public int WinStreak { get; set; }
+    /// <summary>Partidos consecutivos con el arco en cero.</summary>
+    public int CleanSheetStreak { get; set; }
+    /// <summary>Goles marcados con cada club (por nombre): para "100 goles con un mismo club".</summary>
+    public Dictionary<string, int> GoalsByClub { get; set; } = new();
+    /// <summary>Ids de torneos que ganaste alguna vez (para liga/copa/continental/triplete).</summary>
+    public List<string> TitlesWon { get; set; } = new();
+    /// <summary>Mundiales ganados de forma consecutiva (se corta al perder uno).</summary>
+    public int ConsecutiveWorldCups { get; set; }
+    public bool SignedAnyPlayer { get; set; }
+    public bool ChangedTacticsInMatch { get; set; }
+    public bool YouthDebuted { get; set; }
+    /// <summary>Fuiste campeón con un juvenil de la academia en el once.</summary>
+    public bool YouthTitle { get; set; }
+    /// <summary>Ganaste una Champions o un Mundial con un equipo de puras leyendas.</summary>
+    public bool LegendTitle { get; set; }
 }

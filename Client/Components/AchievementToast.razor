@@ -1,0 +1,58 @@
+@* Popup estilo PlayStation: aparece cuando se desbloquea un logro. Encola varios
+   y los muestra uno por uno con un sonido. *@
+@using OnceDeOro.Models
+@implements IDisposable
+@inject GameService Game
+@inject Loc Loc
+@inject Sfx Sfx
+
+@if (_current is not null)
+{
+    <div class="ach-toast ach-toast--@Cls(_current.Tier)" @key="_current.Id">
+        <div class="ach-toast__badge"><span>@_current.Emoji</span></div>
+        <div class="ach-toast__txt">
+            <div class="ach-toast__k">🏅 @Loc["Logro desbloqueado"]</div>
+            <div class="ach-toast__n">@Loc[_current.Name]</div>
+            <div class="ach-toast__d">@Loc[_current.Desc]</div>
+        </div>
+    </div>
+}
+
+@code {
+    private readonly Queue<Achievement> _q = new();
+    private Achievement? _current;
+    private bool _running;
+
+    protected override void OnInitialized() => Game.AchievementUnlocked += OnUnlocked;
+
+    private void OnUnlocked(Achievement a)
+    {
+        _q.Enqueue(a);
+        if (!_running) _ = InvokeAsync(Loop);
+    }
+
+    private async Task Loop()
+    {
+        _running = true;
+        while (_q.Count > 0)
+        {
+            _current = _q.Dequeue();
+            StateHasChanged();
+            try { Sfx.Play("jackpot"); } catch { /* sin audio, no pasa nada */ }
+            await Task.Delay(4200);
+        }
+        _current = null;
+        _running = false;
+        StateHasChanged();
+    }
+
+    private static string Cls(AchievementTier t) => t switch
+    {
+        AchievementTier.Bronce => "bronce",
+        AchievementTier.Plata => "plata",
+        AchievementTier.Oro => "oro",
+        _ => "platino",
+    };
+
+    public void Dispose() => Game.AchievementUnlocked -= OnUnlocked;
+}

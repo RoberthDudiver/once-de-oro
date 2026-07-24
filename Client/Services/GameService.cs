@@ -897,6 +897,8 @@ public sealed class GameService
         State.Money -= BuyPrice(p);
         State.OwnedIds.Add(id);
         AutoAssignIfSlotFree(p);
+        State.SignedAnyPlayer = true;
+        EvaluateAchievements();
         Commit();
         return true;
     }
@@ -1699,6 +1701,8 @@ public sealed class GameService
     {
         State.Style = s;
         StyleSegundoTiempo = s;
+        State.ChangedTacticsInMatch = true;
+        EvaluateAchievements();
         Commit();
     }
 
@@ -1730,6 +1734,8 @@ public sealed class GameService
         int i = State.StartingIds.IndexOf(saleId);
         State.StartingIds[i] = entraId;
         _cambiosHechos++;
+        State.ChangedTacticsInMatch = true;
+        EvaluateAchievements();
         Commit();
         return true;
     }
@@ -1861,7 +1867,9 @@ public sealed class GameService
 
         run.MoneyWon += reward;
         State.Money += reward;
-        if (run.Champion) { State.Honours.Add(comp.Name); if (run.CleanRun) State.AchievedSevenZero = true; }
+        if (run.Champion) { State.Honours.Add(comp.Name); if (run.CleanRun) State.AchievedSevenZero = true; RecordTitle(comp); }
+        TrackMatchStats(r);
+        EvaluateAchievements();
         return reward;
     }
 
@@ -1982,8 +1990,11 @@ public sealed class GameService
             State.Honours.Add(comp.Name);
             if (run.CleanRun) // campeón sin recibir goles = 7-0 espiritual
                 State.AchievedSevenZero = true;
+            RecordTitle(comp);
         }
 
+        TrackMatchStats(r);
+        EvaluateAchievements();
         return reward;
     }
 
@@ -2005,6 +2016,9 @@ public sealed class GameService
                     : $"eliminado en {StageReached(run, c)}";
             State.History.Insert(0, $"{c.Emblem} {c.Name} — {outcome} · GF {run.GoalsFor}/GC {run.GoalsAgainst} · +${run.MoneyWon}M");
             if (State.History.Count > 25) State.History.RemoveAt(State.History.Count - 1);
+
+            // La racha de Mundiales seguidos se corta si el Mundial no se ganó.
+            if (c.Id == "mundial" && !run.Champion) State.ConsecutiveWorldCups = 0;
         }
         State.Run = null;
         LastMatch = null;
@@ -2020,4 +2034,96 @@ public sealed class GameService
         int ko = run.Stage - koOffset;
         return ko < c.KnockoutRounds.Length ? FullRound(c.KnockoutRounds[ko]).ToLowerInvariant() : "eliminatorias";
     }
+
+    // ================================================================ logros
+    /// <summary>Se dispara cuando se DESBLOQUEA un logro nuevo (para el popup estilo PS).</summary>
+    public event Action<Achievement>? AchievementUnlocked;
+
+    /// <summary>Datos de un partido que suman a los logros (racha, vallas, goles, debut juvenil).</summary>
+    private void TrackMatchStats(MatchResult r)
+    {
+        State.WinStreak = r.HomeWon ? State.WinStreak + 1 : 0;
+        State.CleanSheetStreak = r.AwayGoals == 0 ? State.CleanSheetStreak + 1 : 0;
+
+        State.GoalsByClub.TryGetValue(State.ClubName, out var g);
+        State.GoalsByClub[State.ClubName] = g + r.HomeGoals;
+
+        if (!State.YouthDebuted && Starters.Any(p => State.Academy.Any(a => a.Id == p.Id)))
+            State.YouthDebuted = true;
+    }
+
+    /// <summary>Registra un título ganado: cuenta para liga/copa/continental/mundial y marcas especiales.</summary>
+    private void RecordTitle(Competition comp)
+    {
+        if (!State.TitlesWon.Contains(comp.Id)) State.TitlesWon.Add(comp.Id);
+        if (comp.Id == "mundial") State.ConsecutiveWorldCups++;
+
+        var xi = EffectiveStarters;
+        if (xi.Any(p => State.Academy.Any(a => a.Id == p.Id))) State.YouthTitle = true;
+        if ((comp.Id == "mundial" || comp.Id == "champions") && xi.Count > 0 && xi.All(p => p.IsLegend))
+            State.LegendTitle = true;
+    }
+
+    private int BestClubGoals() => State.GoalsByClub.Count == 0 ? 0 : State.GoalsByClub.Values.Max();
+    private bool TitleKindWon(CompetitionKind k) =>
+        State.TitlesWon.Any(id => CompetitionDatabase.All.FirstOrDefault(c => c.Id == id)?.Kind == k);
+
+    /// <summary>¿Se cumple la condición de un logro AHORA mismo?</summary>
+    public bool IsAchieved(string id) => id switch
+    {
+        "first-match"      => State.MatchesPlayed >= 1,
+        "first-win"        => State.Wins >= 1,
+        "first-signing"    => State.SignedAnyPlayer,
+        "tactician"        => State.ChangedTacticsInMatch,
+        "win-streak-5"     => State.WinStreak >= 5,
+        "wall-5"           => State.CleanSheetStreak >= 5,
+        "goal-machine-100" => BestClubGoals() >= 100,
+        "youth-debut"      => State.YouthDebuted,
+        "league-champ"     => TitleKindWon(CompetitionKind.Liga),
+        "cup-king"         => TitleKindWon(CompetitionKind.CopaNacional),
+        "continental"      => TitleKindWon(CompetitionKind.Continental),
+        "treble"           => TitleKindWon(CompetitionKind.Liga) && TitleKindWon(CompetitionKind.CopaNacional) && TitleKindWon(CompetitionKind.Continental),
+        "world-champ"      => State.TitlesWon.Contains("mundial"),
+        "messi-dream"      => State.ConsecutiveWorldCups >= 2,
+        "better-than-pele" => State.ConsecutiveWorldCups >= 3,
+        "youth-glory"      => State.YouthTitle,
+        "legend-leader"    => State.LegendTitle,
+        _ => false,
+    };
+
+    /// <summary>Progreso numérico de un logro (cur/max) para la barra de la tarjeta, o null si es binario.</summary>
+    public (int cur, int max)? AchievementProgress(string id) => id switch
+    {
+        "win-streak-5"     => (Math.Min(State.WinStreak, 5), 5),
+        "wall-5"           => (Math.Min(State.CleanSheetStreak, 5), 5),
+        "goal-machine-100" => (Math.Min(BestClubGoals(), 100), 100),
+        "messi-dream"      => (Math.Min(State.ConsecutiveWorldCups, 2), 2),
+        "better-than-pele" => (Math.Min(State.ConsecutiveWorldCups, 3), 3),
+        _ => null,
+    };
+
+    /// <summary>Revisa todos los logros y avisa (popup) por cada uno nuevo. NO hace Commit.</summary>
+    private void EvaluateAchievements()
+    {
+        List<Achievement>? nuevos = null;
+        foreach (var a in AchievementCatalog.All)
+        {
+            if (State.UnlockedAchievements.Contains(a.Id) || !IsAchieved(a.Id)) continue;
+            State.UnlockedAchievements.Add(a.Id);
+            (nuevos ??= new()).Add(a);
+        }
+        if (nuevos is not null)
+            foreach (var a in nuevos) AchievementUnlocked?.Invoke(a);
+    }
+
+    /// <summary>Al cargar la partida: marca lo ya conseguido SIN mostrar popups.</summary>
+    public void SyncAchievementsSilently()
+    {
+        foreach (var a in AchievementCatalog.All)
+            if (!State.UnlockedAchievements.Contains(a.Id) && IsAchieved(a.Id))
+                State.UnlockedAchievements.Add(a.Id);
+    }
+
+    public int AchievementsUnlockedCount => State.UnlockedAchievements.Count;
+    public int AchievementsTotal => AchievementCatalog.All.Count;
 }

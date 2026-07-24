@@ -1,0 +1,88 @@
+@page "/logros"
+@inherits GamePageBase
+@using OnceDeOro.Data
+
+<PageTitle>Logros — Once de Oro</PageTitle>
+
+<div class="section-title"><span class="dot"></span> @Loc["🏅 Logros"]</div>
+
+@{
+    int total = Game.AchievementsTotal;
+    int got = AchievementCatalog.All.Count(a => On(a.Id));
+    int pct = total > 0 ? (int)Math.Round(100.0 * got / total) : 0;
+    bool platino = AchievementCatalog.ByTier(AchievementTier.Platino).All(a => On(a.Id));
+}
+
+<div class="card card--pad ach-head">
+    <div class="ach-head__ring" style="--p:@pct">
+        <div class="ach-head__num">@got<span>/@total</span></div>
+    </div>
+    <div class="ach-head__txt">
+        <div class="ach-head__ttl">@(platino ? Loc["¡Leyenda total!"] : Loc["Tu vitrina de trofeos"])</div>
+        <div class="faint">@Loc["Desbloqueá logros dirigiendo, fichando y ganando títulos. Cada uno se guarda con tu partida."]</div>
+        <div class="ach-head__bar mt"><i style="width:@pct%"></i></div>
+    </div>
+</div>
+
+@foreach (var tier in new[] { AchievementTier.Bronce, AchievementTier.Plata, AchievementTier.Oro, AchievementTier.Platino })
+{
+    var items = AchievementCatalog.ByTier(tier).ToList();
+    int gotT = items.Count(a => On(a.Id));
+    <div class="ach-tier-ttl">
+        <span class="ach-dot ach-dot--@Cls(tier)"></span> @Loc[TierName(tier)]
+        <span class="ach-tier-count">@gotT / @items.Count</span>
+    </div>
+    <div class="ach-grid">
+        @foreach (var a in items)
+        {
+            bool on = On(a.Id);
+            var prog = Game.AchievementProgress(a.Id);
+            <div class="trophy trophy--@Cls(tier) @(on ? "is-on" : "is-off")">
+                <div class="trophy__badge">
+                    <span class="trophy__emoji">@a.Emoji</span>
+                    @if (!on) { <span class="trophy__lock">🔒</span> }
+                </div>
+                <div class="trophy__body">
+                    <div class="trophy__name">@Loc[a.Name]</div>
+                    <div class="trophy__desc">@Loc[a.Desc]</div>
+                    @if (prog is { } p && !on)
+                    {
+                        <div class="trophy__bar"><i style="width:@(p.max > 0 ? 100 * p.cur / p.max : 0)%"></i></div>
+                        <div class="trophy__prog">@p.cur / @p.max</div>
+                    }
+                </div>
+                @if (on)
+                {
+                    <div class="trophy__check">✓</div>
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Game.SyncAchievementsSilently();   // deja registrado lo ya conseguido al abrir
+    }
+
+    /// <summary>Desbloqueado = ya registrado, o la condición se cumple ahora mismo.</summary>
+    private bool On(string id) => Game.State.UnlockedAchievements.Contains(id) || Game.IsAchieved(id);
+
+    private static string Cls(AchievementTier t) => t switch
+    {
+        AchievementTier.Bronce => "bronce",
+        AchievementTier.Plata => "plata",
+        AchievementTier.Oro => "oro",
+        _ => "platino",
+    };
+
+    private static string TierName(AchievementTier t) => t switch
+    {
+        AchievementTier.Bronce => "Bronce",
+        AchievementTier.Plata => "Plata",
+        AchievementTier.Oro => "Oro",
+        _ => "Platino",
+    };
+}
