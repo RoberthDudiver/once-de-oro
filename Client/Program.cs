@@ -11,6 +11,7 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.
 
 builder.Services.AddSingleton<MatchEngine>();
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<AdminService>();
 builder.Services.AddScoped<GameService>();
 builder.Services.AddScoped<MultiplayerService>();
 builder.Services.AddScoped<Loc>();

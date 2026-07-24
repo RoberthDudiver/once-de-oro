@@ -5,6 +5,7 @@
 @inject AuthService Auth
 @inject NavigationManager Nav
 @inject StatsService Stats
+@inject AdminService Admin
 
 <div class="shell">
     <header class="topbar">
@@ -72,6 +73,10 @@
         <span>Once de Oro · @Loc["Creado por"] <b>Roberth Dudiver</b> @Loc["y"] <b>Alexander Dudiver</b></span>
         <span style="display:flex; gap:14px;">
             <a href="analiticas">@Loc["📊 Análisis"]</a>
+            @if (Admin.IsAdmin)
+            {
+                <a href="admin">🛠️ @Loc["Admin"]</a>
+            }
             <a href="info">@Loc["Créditos, términos y privacidad"]</a>
         </span>
     </footer>
@@ -91,6 +96,9 @@
 
         // Si la sesión seguía abierta, traemos/conciliamos la partida de la cuenta.
         if (Auth.IsLoggedIn) await Game.SyncAfterAuthAsync(justRegistered: false);
+
+        // ¿Es admin? Si lo es, aparece el link al panel en el pie.
+        await Admin.CheckAdminAsync();
 
         // Ping anónimo al contador de jugadores (UUID de navegador, sin datos
         // personales). Silencioso si no hay servidor con base configurada.

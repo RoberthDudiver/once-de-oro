@@ -80,6 +80,67 @@ public sealed class AccountStore
     public static int ProgressScore(GameState s) =>
         s.MatchesPlayed * 10 + s.Honours.Count * 100 + s.History.Count * 20 + s.OwnedIds.Count;
 
+    // ---- Administración ----
+
+    /// <summary>Todos los usuarios con los datos clave de su partida, para el panel de admin.</summary>
+    public async Task<List<AdminUserRow>> AdminUsersAsync()
+    {
+        if (_users is null || _saves is null) return new();
+
+        var users = await _users.Find(_ => true).SortByDescending(u => u.LastLoginAt).ToListAsync();
+        var saves = await _saves.Find(_ => true).ToListAsync();
+        var byId = saves.ToDictionary(s => s.UserId);
+
+        return users.Select(u =>
+        {
+            byId.TryGetValue(u.Id, out var sd);
+            var st = sd?.State;
+            return new AdminUserRow(
+                u.Id, u.Email, u.DisplayName, u.CreatedAt, u.LastLoginAt, u.Banned,
+                st?.ClubName ?? "—", st?.Money ?? 0, st?.MatchesPlayed ?? 0, st?.Wins ?? 0,
+                st?.Honours.Count ?? 0, sd?.Progress ?? 0);
+        }).ToList();
+    }
+
+    /// <summary>Suma (o resta) dinero a la partida de un usuario. Devuelve el nuevo total, o null si no hay partida.</summary>
+    public async Task<int?> AdjustMoneyAsync(string userId, int delta)
+    {
+        if (_saves is null) return null;
+        var save = await _saves.Find(s => s.UserId == userId).FirstOrDefaultAsync();
+        if (save is null) return null;
+        save.State.Money = Math.Max(0, save.State.Money + delta);
+        save.UpdatedAt = DateTime.UtcNow;
+        await _saves.ReplaceOneAsync(s => s.UserId == userId, save);
+        return save.State.Money;
+    }
+
+    /// <summary>Fija el dinero exacto de la partida de un usuario. Devuelve el nuevo total, o null si no hay partida.</summary>
+    public async Task<int?> SetMoneyAsync(string userId, int money)
+    {
+        if (_saves is null) return null;
+        var save = await _saves.Find(s => s.UserId == userId).FirstOrDefaultAsync();
+        if (save is null) return null;
+        save.State.Money = Math.Max(0, money);
+        save.UpdatedAt = DateTime.UtcNow;
+        await _saves.ReplaceOneAsync(s => s.UserId == userId, save);
+        return save.State.Money;
+    }
+
+    /// <summary>Suspende o rehabilita una cuenta.</summary>
+    public async Task SetBannedAsync(string userId, bool banned)
+    {
+        if (_users is null) return;
+        await _users.UpdateOneAsync(u => u.Id == userId,
+            Builders<UserAccount>.Update.Set(u => u.Banned, banned));
+    }
+
+    public async Task<bool> IsBannedAsync(string userId)
+    {
+        if (_users is null) return false;
+        var u = await _users.Find(x => x.Id == userId).FirstOrDefaultAsync();
+        return u?.Banned ?? false;
+    }
+
     // ---- Contraseñas: PBKDF2-SHA256, 210k iteraciones ----
     private const int Iterations = 210_000;
 

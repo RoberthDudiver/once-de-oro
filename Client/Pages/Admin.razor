@@ -1,0 +1,167 @@
+@page "/admin"
+@inject AdminService Adm
+@inject AuthService Auth
+@inject Loc Loc
+@inject NavigationManager Nav
+
+<PageTitle>Administración — Once de Oro</PageTitle>
+
+<div class="section-title"><span class="dot"></span> 🛠️ @Loc["Administración"]</div>
+
+@if (!_ready)
+{
+    <div class="card card--pad center muted">@Loc["Cargando…"]</div>
+}
+else if (!Auth.Available)
+{
+    <div class="card card--pad center">
+        <div class="empty__ico">📴</div>
+        <p class="muted">@Loc["Este servidor no tiene cuentas habilitadas."]</p>
+    </div>
+}
+else if (!Auth.IsLoggedIn)
+{
+    <div class="card card--pad center">
+        <div class="empty__ico">🔒</div>
+        <p class="muted">@Loc["Iniciá sesión con tu cuenta de administrador."]</p>
+        <button class="btn btn--gold mt" @onclick='() => Nav.NavigateTo("cuenta")'>@Loc["Ir a mi cuenta"]</button>
+    </div>
+}
+else if (!Adm.IsAdmin)
+{
+    <div class="card card--pad center">
+        <div class="empty__ico">⛔</div>
+        <p class="muted">@Loc["Acceso restringido: esta cuenta no es administrador."]</p>
+    </div>
+}
+else
+{
+    <div class="card card--pad">
+        <div class="row wrap" style="gap:10px; align-items:center;">
+            <input class="search" style="flex:1; min-width:180px;" placeholder="@Loc["Buscar por email o club…"]"
+                   value="@_q" @oninput="e => _q = e.Value?.ToString() ?? string.Empty" />
+            <button class="btn btn--ghost" @onclick="Load">↻ @Loc["Actualizar"]</button>
+            <span class="pill">@Filtered.Count / @(_users?.Count ?? 0)</span>
+        </div>
+    </div>
+
+    @if (_users is null)
+    {
+        <div class="card card--pad center muted mt">@Loc["No se pudieron cargar los usuarios."]</div>
+    }
+    else if (Filtered.Count == 0)
+    {
+        <div class="card card--pad center muted mt">@Loc["No hay usuarios que coincidan."]</div>
+    }
+    else
+    {
+        <div class="grid mt" style="gap:10px;">
+            @foreach (var u in Filtered)
+            {
+                <div class="admin-row @(u.Banned ? "is-banned" : "")">
+                    <div class="admin-row__id">
+                        <div class="admin-row__email">
+                            @u.Email
+                            @if (u.Banned) { <span class="pill pill--red">@Loc["baneado"]</span> }
+                        </div>
+                        <div class="faint">👕 @u.ClubName · @u.DisplayName</div>
+                        <div class="faint" style="font-size:11.5px;">
+                            ⚽ @u.MatchesPlayed · 🏆 @u.Wins · 🏅 @u.Honours ·
+                            @Loc["últ."] @u.LastLoginAt.ToLocalTime().ToString("dd/MM/yy")
+                        </div>
+                    </div>
+
+                    <div class="admin-row__money">
+                        <div class="admin-money">$@u.Money<span>M</span></div>
+                        <div class="row" style="gap:6px; align-items:center;">
+                            <input type="number" class="search" style="width:92px; padding:6px 8px;"
+                                   value="@Amt(u.Id)" @onchange="e => SetAmt(u.Id, e.Value?.ToString())" />
+                            <button class="btn btn--ghost" title="@Loc["Restar"]" @onclick="() => Money(u, -Amt(u.Id))">−</button>
+                            <button class="btn btn--gold" title="@Loc["Sumar"]" @onclick="() => Money(u, Amt(u.Id))">+</button>
+                            <button class="btn btn--ghost" @onclick="() => SetMoney(u)">@Loc["Fijar"]</button>
+                        </div>
+                    </div>
+
+                    <div class="admin-row__act">
+                        <button class="btn @(u.Banned ? "btn--gold" : "btn--ghost")" @onclick="() => Ban(u)">
+                            @(u.Banned ? "✓ " + Loc["Reactivar"] : "⛔ " + Loc["Banear"])
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+        @if (!string.IsNullOrEmpty(_msg))
+        {
+            <div class="pill pill--green mt">@_msg</div>
+        }
+    }
+}
+
+@code {
+    private bool _ready;
+    private List<AdminService.AdminUser>? _users;
+    private readonly Dictionary<string, int> _amt = new();
+    private string _q = "";
+    private string _msg = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        // La sesión puede tardar en cargar (AuthService.InitAsync corre en el layout).
+        await Auth.InitAsync();
+        await Adm.CheckAdminAsync();
+        if (Adm.IsAdmin) await Load();
+        _ready = true;
+    }
+
+    private async Task Load()
+    {
+        _users = await Adm.UsersAsync();
+        _msg = "";
+    }
+
+    private List<AdminService.AdminUser> Filtered
+    {
+        get
+        {
+            if (_users is null) return new();
+            if (string.IsNullOrWhiteSpace(_q)) return _users;
+            var q = _q.Trim().ToLowerInvariant();
+            return _users.Where(u => u.Email.ToLowerInvariant().Contains(q)
+                                  || u.ClubName.ToLowerInvariant().Contains(q)
+                                  || u.DisplayName.ToLowerInvariant().Contains(q)).ToList();
+        }
+    }
+
+    private int Amt(string id) => _amt.TryGetValue(id, out var v) ? v : 100;
+    private void SetAmt(string id, string? raw) => _amt[id] = int.TryParse(raw, out var v) ? Math.Abs(v) : 100;
+
+    private async Task Money(AdminService.AdminUser u, int delta)
+    {
+        var nuevo = await Adm.AdjustMoneyAsync(u.Id, delta);
+        if (nuevo is int m) { Patch(u with { Money = m }); _msg = $"{u.Email}: ${m}M"; }
+        else _msg = Loc["Ese usuario todavía no tiene partida guardada."];
+    }
+
+    private async Task SetMoney(AdminService.AdminUser u)
+    {
+        var nuevo = await Adm.SetMoneyAsync(u.Id, Amt(u.Id));
+        if (nuevo is int m) { Patch(u with { Money = m }); _msg = $"{u.Email}: ${m}M"; }
+        else _msg = Loc["Ese usuario todavía no tiene partida guardada."];
+    }
+
+    private async Task Ban(AdminService.AdminUser u)
+    {
+        if (await Adm.SetBanAsync(u.Id, !u.Banned))
+        {
+            Patch(u with { Banned = !u.Banned });
+            _msg = u.Banned ? $"{u.Email}: reactivado" : $"{u.Email}: baneado";
+        }
+    }
+
+    private void Patch(AdminService.AdminUser updated)
+    {
+        if (_users is null) return;
+        var i = _users.FindIndex(x => x.Id == updated.Id);
+        if (i >= 0) _users[i] = updated;
+    }
+}

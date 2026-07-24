@@ -28,6 +28,9 @@ public sealed class UserAccount
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime LastLoginAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>Cuenta suspendida por un administrador: no puede iniciar sesión ni guardar en la nube.</summary>
+    public bool Banned { get; set; }
 }
 
 /// <summary>
@@ -80,3 +83,14 @@ public sealed record PingRequest(string VisitorId, long Matches, string Lang);
 /// <summary>Los números públicos del contador.</summary>
 public sealed record StatsResponse(long Players, long Matches, long Accounts,
                                    long Active7d, Dictionary<string, long> ByLang);
+
+// ---- Administración (sólo para el/los admin configurados) ----
+
+/// <summary>Una fila de la tabla de usuarios del panel de administrador.</summary>
+public sealed record AdminUserRow(
+    string Id, string Email, string DisplayName, DateTime CreatedAt, DateTime LastLoginAt,
+    bool Banned, string ClubName, int Money, int MatchesPlayed, int Wins, int Honours, int Progress);
+
+public sealed record AdjustMoneyRequest(int Delta);
+public sealed record SetMoneyRequest(int Money);
+public sealed record BanRequest(bool Banned);

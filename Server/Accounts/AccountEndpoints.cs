@@ -15,6 +15,28 @@ public static class AccountEndpoints
 
     private const string Issuer = "once-de-oro";
 
+    /// <summary>
+    /// Emails con permiso de administrador. Se configuran por entorno
+    /// (Admin__Emails="a@x.com;b@y.com"); si no, sólo el dueño del juego.
+    /// El email NO es un secreto, así que puede vivir en el repo público.
+    /// </summary>
+    private static string[] AdminEmails(IConfiguration cfg)
+    {
+        var raw = cfg["Admin:Emails"];
+        if (string.IsNullOrWhiteSpace(raw)) return new[] { "rdudiver@gmail.com" };
+        return raw.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                  .Select(e => e.ToLowerInvariant()).ToArray();
+    }
+
+    private static bool IsAdmin(ClaimsPrincipal me, IConfiguration cfg)
+    {
+        var email = (me.FindFirstValue(JwtRegisteredClaimNames.Email) ?? me.FindFirstValue(ClaimTypes.Email) ?? "").ToLowerInvariant();
+        return !string.IsNullOrEmpty(email) && AdminEmails(cfg).Contains(email);
+    }
+
+    private static string? UserId(ClaimsPrincipal me) =>
+        me.FindFirstValue(JwtRegisteredClaimNames.Sub) ?? me.FindFirstValue(ClaimTypes.NameIdentifier);
+
     private static string CreateToken(UserAccount user, IConfiguration cfg)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(JwtSecret(cfg)));
@@ -84,6 +106,9 @@ public static class AccountEndpoints
             if (user is null || !AccountStore.VerifyPassword(req.Password, user.PasswordHash, user.PasswordSalt))
                 return Results.Json(new { error = "Email o contraseña incorrectos." }, statusCode: 401);
 
+            if (user.Banned)
+                return Results.Json(new { error = "Esta cuenta fue suspendida." }, statusCode: 403);
+
             await store.TouchLoginAsync(user.Id);
             return Results.Ok(new AuthResponse(CreateToken(user, cfg), user.Email, user.DisplayName));
         });
@@ -103,8 +128,48 @@ public static class AccountEndpoints
         {
             var id = me.FindFirstValue(JwtRegisteredClaimNames.Sub) ?? me.FindFirstValue(ClaimTypes.NameIdentifier);
             if (id is null) return Results.Unauthorized();
+            if (await store.IsBannedAsync(id)) return Results.Json(new { error = "Cuenta suspendida." }, statusCode: 403);
             await store.UpsertSaveAsync(id, state);
             return Results.Ok(new { saved = true });
+        });
+
+        // ---- Administración (ver usuarios, tocar su dinero, banear) ----
+        var admin = api.MapGroup("/admin").RequireAuthorization();
+
+        // ¿El que pregunta es admin? Lo usa el cliente para mostrar (o no) el panel.
+        admin.MapGet("/me", (ClaimsPrincipal me, IConfiguration cfg) =>
+            Results.Ok(new { isAdmin = IsAdmin(me, cfg) }));
+
+        admin.MapGet("/users", async (ClaimsPrincipal me, IConfiguration cfg, AccountStore store) =>
+        {
+            if (!IsAdmin(me, cfg)) return Results.Forbid();
+            return Results.Ok(await store.AdminUsersAsync());
+        });
+
+        admin.MapPost("/users/{id}/money", async (string id, AdjustMoneyRequest req, ClaimsPrincipal me, IConfiguration cfg, AccountStore store) =>
+        {
+            if (!IsAdmin(me, cfg)) return Results.Forbid();
+            var money = await store.AdjustMoneyAsync(id, req.Delta);
+            return money is null
+                ? Results.NotFound(new { error = "Ese usuario todavía no tiene partida guardada." })
+                : Results.Ok(new { money });
+        });
+
+        admin.MapPost("/users/{id}/set-money", async (string id, SetMoneyRequest req, ClaimsPrincipal me, IConfiguration cfg, AccountStore store) =>
+        {
+            if (!IsAdmin(me, cfg)) return Results.Forbid();
+            var money = await store.SetMoneyAsync(id, req.Money);
+            return money is null
+                ? Results.NotFound(new { error = "Ese usuario todavía no tiene partida guardada." })
+                : Results.Ok(new { money });
+        });
+
+        admin.MapPost("/users/{id}/ban", async (string id, BanRequest req, ClaimsPrincipal me, IConfiguration cfg, AccountStore store) =>
+        {
+            if (!IsAdmin(me, cfg)) return Results.Forbid();
+            if (id == UserId(me)) return Results.BadRequest(new { error = "No podés banearte a vos mismo." });
+            await store.SetBannedAsync(id, req.Banned);
+            return Results.Ok(new { banned = req.Banned });
         });
     }
 }
