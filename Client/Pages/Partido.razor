@@ -91,6 +91,14 @@ else
                         @Loc["que no puede(n) jugar. Cambialo(s) antes de arrancar."]
                     </div>
                 </div>
+                <div class="row wrap mt" style="gap:8px;">
+                    @foreach (var h in lesionadosXI)
+                    {
+                        <button class="btn btn--ghost" @onclick="() => Game.ReemplazarPorCantera(h.Id)">
+                            🎓 @Loc["Que entre un juvenil por"] @Short(h.Name)
+                        </button>
+                    }
+                </div>
             }
             @PanelCambio(previa: true)
         </div>
@@ -129,9 +137,17 @@ else
                 {
                     <div class="clash mt">
                         <div class="clash__txt">
-                            🚑 @Loc["Se lesionó"] <b>@string.Join(", ", heridos.Select(Short))</b>.
-                            @Loc["Tenés que cambiarlo(s) para seguir."]
+                            🚑 @Loc["Se lesionó"] <b>@string.Join(", ", heridos.Select(p => Short(p.Name)))</b>.
+                            @Loc["Cambialo(s) por un suplente, o que entre un juvenil."]
                         </div>
+                    </div>
+                    <div class="row wrap mt" style="gap:8px;">
+                        @foreach (var h in heridos)
+                        {
+                            <button class="btn btn--ghost" @onclick="() => Game.ReemplazarPorCantera(h.Id)">
+                                🎓 @Loc["Que entre un juvenil por"] @Short(h.Name)
+                            </button>
+                        }
                     </div>
                 }
 
@@ -396,16 +412,16 @@ else
     /// Jugadores TUYOS que se lesionaron durante el primer tiempo y siguen en el
     /// XI: hay que sacarlos sí o sí antes de salir al segundo tiempo.
     /// </summary>
-    private List<string> LesionadosObligatorios()
+    private List<Player> LesionadosObligatorios()
     {
         if (_timeline is null) return new();
-        var enXI = Game.Starters.Select(p => p.Id).ToHashSet();
+        var enXI = Game.Starters.ToDictionary(p => p.Id);
         return _timeline.Events
             .Where(e => e.Type == SimEventType.Injury && e.Team == 0 && !string.IsNullOrEmpty(e.ActorId))
             .Select(e => e.ActorId!)
             .Distinct()
-            .Where(id => enXI.Contains(id))
-            .Select(id => Game.Starters.First(p => p.Id == id).Name)
+            .Where(id => enXI.ContainsKey(id))
+            .Select(id => enXI[id])
             .ToList();
     }
 

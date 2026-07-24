@@ -1735,6 +1735,18 @@ public sealed class GameService
     }
 
     /// <summary>
+    /// Saca a un jugador del XI cuando NO tenés a quién meter (banco vacío y un
+    /// lesionado obligatorio): el puesto lo cubre un juvenil de cantera y el
+    /// partido puede seguir. Es la red de seguridad para no quedar trabado.
+    /// </summary>
+    public void ReemplazarPorCantera(string saleId)
+    {
+        if (State.StartingIds.Remove(saleId)) Commit();
+        // Al sacarlo del XI, EffectiveStarters completa el hueco con un juvenil
+        // de cantera de esa posición, así siempre se puede jugar.
+    }
+
+    /// <summary>
     /// Juega el segundo tiempo con el equipo y el planteo que quedaron. Devuelve
     /// el timeline COMPLETO (el del 1T con el 2T agregado atrás).
     /// </summary>
