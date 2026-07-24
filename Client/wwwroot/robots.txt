@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://oncedeoro.dudiver.net/sitemap.xml
