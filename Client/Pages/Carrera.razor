@@ -3,6 +3,7 @@
 @using OnceDeOro.Services
 @implements IDisposable
 @inject CareerService Career
+@inject GameService Game
 @inject Loc Loc
 
 <PageTitle>Carrera del jugador — Once de Oro</PageTitle>
@@ -40,6 +41,17 @@
             <button class="@(_pos == Position.FWD ? "on" : "")" @onclick="() => _pos = Position.FWD">DC</button>
         </div>
 
+        <div class="ed-lbl mt">@Loc["Camiseta"]</div>
+        <div class="row" style="align-items:center; gap:14px; flex-wrap:wrap;">
+            <div class="chips">
+                @foreach (var c in Kits)
+                {
+                    <button class="swatch @(_kit == c ? "on" : "")" style="background:@c" @onclick="() => _kit = c"></button>
+                }
+            </div>
+            <div class="career-shirt">@((MarkupString)Shirt(_kit, _number))</div>
+        </div>
+
         <div class="grid mt" style="grid-template-columns:1fr 1fr; gap:12px;">
             <label class="ed-lbl2">@Loc["Nacionalidad"]
                 <select class="mkt-select" @bind="_nation">
@@ -67,6 +79,7 @@ else
 
     @* ---------------- Ficha del jugador ---------------- *@
     <div class="career-card">
+        <div class="career-shirt career-shirt--big">@((MarkupString)Shirt(cp.Kit, cp.Number))</div>
         <div class="career-ovr">
             <div class="career-ovr__n">@cp.Ovr</div>
             <div class="career-ovr__l">OVR</div>
@@ -137,6 +150,21 @@ else
                     }
                 </div>
             }
+
+            @* Sumar la leyenda a tu club del modo manager *@
+            <div class="mt">
+                @if (cp.AddedToClub)
+                {
+                    <div class="pill pill--green">✓ @cp.Surname.ToUpperInvariant() @Loc["ya juega en tu club"]</div>
+                }
+                else
+                {
+                    <button class="btn btn--gold btn--big" @onclick="AddLegend">
+                        ⭐ @Loc["Sumar a mi club como leyenda"] (OVR @LegendRating(cp))
+                    </button>
+                    <div class="faint mt" style="font-size:11.5px;">@Loc["Entra gratis a tu plantel del modo manager, listo para jugar."]</div>
+                }
+            </div>
         </div>
     }
 
@@ -186,7 +214,11 @@ else
     private Position _pos = Position.FWD;
     private string _nation = "Argentina";
     private int _every = 2;
+    private string _kit = "#e23b3b";
     private bool _confirmReset;
+
+    private static readonly string[] Kits =
+        { "#e23b3b", "#2f6fed", "#12b76a", "#f5c542", "#7c3aed", "#0f172a", "#ffffff", "#ff7a1a" };
 
     protected override async Task OnInitializedAsync()
     {
@@ -197,9 +229,49 @@ else
 
     private void OnChanged() => InvokeAsync(StateHasChanged);
 
-    private void Start() => Career.Start(_surname, _number, _foot, _nation, _pos, _every);
+    private void Start() => Career.Start(_surname, _number, _foot, _nation, _pos, _every, _kit);
     private void Choose(CareerOption o) => Career.Choose(o);
     private async Task Reset() { _confirmReset = false; await Career.ResetAsync(); }
+
+    private static int LegendRating(CareerPlayer cp) => Math.Clamp((cp.PeakOvr * 2 + cp.Ovr) / 3, 45, 97);
+
+    private void AddLegend()
+    {
+        var cp = Career.Current;
+        if (cp is null || cp.AddedToClub) return;
+        Game.AddCareerLegend(cp.Surname, cp.Pos, cp.Nation, LegendRating(cp));
+        Career.MarkAddedToClub();
+    }
+
+    /// <summary>Una camiseta de fútbol en SVG con el dorsal.</summary>
+    private static string Shirt(string color, int number)
+    {
+        string dark = Shade(color, -34);
+        string ink = IsLight(color) ? "#1a1a1a" : "#ffffff";
+        return $@"<svg viewBox='0 0 100 108' width='100%'>
+  <path d='M32 16 L44 10 Q50 18 56 10 L68 16 L86 30 L76 44 L76 100 L24 100 L24 44 L14 30 Z'
+        fill='{color}' stroke='rgba(0,0,0,.25)' stroke-width='1.5'/>
+  <path d='M32 16 L24 44 L30 46 L37 22 Z' fill='{dark}' opacity='.5'/>
+  <path d='M68 16 L76 44 L70 46 L63 22 Z' fill='{dark}' opacity='.5'/>
+  <path d='M44 10 Q50 18 56 10 L52 16 Q50 20 48 16 Z' fill='{Shade(color, 40)}'/>
+  <text x='50' y='78' text-anchor='middle' font-family='Anton, sans-serif' font-size='40'
+        fill='{ink}' stroke='rgba(0,0,0,.25)' stroke-width='.6'>{number}</text>
+</svg>";
+    }
+
+    private static bool IsLight(string hex)
+    {
+        if (hex.Length != 7) return false;
+        int R = Convert.ToInt32(hex.Substring(1, 2), 16), G = Convert.ToInt32(hex.Substring(3, 2), 16), B = Convert.ToInt32(hex.Substring(5, 2), 16);
+        return (R * 299 + G * 587 + B * 114) / 1000 > 150;
+    }
+
+    private static string Shade(string hex, int d)
+    {
+        if (hex.Length != 7) return hex;
+        int C(int i) => Math.Clamp(Convert.ToInt32(hex.Substring(i, 2), 16) + d, 0, 255);
+        return $"#{C(1):x2}{C(3):x2}{C(5):x2}";
+    }
 
     private static string Money(int k) =>
         k >= 1000 ? "€" + (k / 1000.0).ToString("0.#") + "M" : "€" + k + "K";

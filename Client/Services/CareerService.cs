@@ -36,9 +36,17 @@ public sealed class CareerService
         Changed?.Invoke();
     }
 
-    public void Start(string surname, int number, Foot foot, string nation, Position pos, int decisionEvery)
+    public void Start(string surname, int number, Foot foot, string nation, Position pos, int decisionEvery, string kit)
     {
-        Current = CareerEngine.NewCareer(surname, number, foot, nation, pos, decisionEvery);
+        Current = CareerEngine.NewCareer(surname, number, foot, nation, pos, decisionEvery, kit);
+        Save();
+    }
+
+    /// <summary>Marca que la leyenda ya se sumó al club (para no duplicarla).</summary>
+    public void MarkAddedToClub()
+    {
+        if (Current is null) return;
+        Current.AddedToClub = true;
         Save();
     }
 

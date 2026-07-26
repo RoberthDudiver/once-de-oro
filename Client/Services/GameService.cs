@@ -1253,8 +1253,35 @@ public sealed class GameService
     public static Player ToPlayer(AcademyPlayer a) => new()
     {
         Id = a.Id, Name = a.Name, Nation = a.Nation, Flag = a.Flag,
-        Pos = a.Pos, Rating = a.Rating, Era = 2026,
+        Pos = a.Pos, Rating = a.Rating, Era = 2026, IsLegend = a.IsLegend,
     };
+
+    /// <summary>
+    /// Suma al plantel una LEYENDA retirada del modo Carrera. Es gratis: es el
+    /// premio por terminar una carrera. Entra como jugador propio (academia).
+    /// </summary>
+    public Player AddCareerLegend(string name, Position pos, string nation, int rating)
+    {
+        var clean = (name ?? "").Trim();
+        if (clean.Length == 0) clean = "Leyenda";
+        if (clean.Length > 22) clean = clean[..22];
+
+        var p = new AcademyPlayer
+        {
+            Id = $"leg-{Guid.NewGuid():N}"[..12],
+            Name = clean,
+            Nation = string.IsNullOrWhiteSpace(nation) ? "Leyenda" : nation.Trim(),
+            Flag = "⭐",
+            Pos = pos,
+            Rating = Math.Clamp(rating, 45, 97),
+            Potential = 99, Age = 33,
+            IsLegend = true,
+        };
+        State.Academy.Add(p);
+        State.OwnedIds.Add(p.Id);
+        Commit();
+        return ToPlayer(p);
+    }
 
     /// <summary>Todos los jugadores existentes: los del mercado más los tuyos de academia.</summary>
     public IEnumerable<Player> AllPlayers =>

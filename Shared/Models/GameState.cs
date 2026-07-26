@@ -30,6 +30,9 @@ public sealed class AcademyPlayer
     public int Xp { get; set; }
     public int Sessions { get; set; }
     public int Matches { get; set; }
+
+    /// <summary>Es una leyenda (p. ej. un jugador retirado del modo Carrera).</summary>
+    public bool IsLegend { get; set; }
 }
 
 /// <summary>

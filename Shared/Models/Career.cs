@@ -49,6 +49,7 @@ public sealed class CareerPlayer
     public string NationCode { get; set; } = "ARG";
     public int NationTier { get; set; } = 1;    // 1 = potencia mundial … 4 = modesta
     public Position Pos { get; set; } = Position.FWD;
+    public string Kit { get; set; } = "#e23b3b"; // color de la camiseta
     public int DecisionEvery { get; set; } = 2; // dificultad: temporadas entre decisiones
 
     // ---- Progreso ----
@@ -74,6 +75,9 @@ public sealed class CareerPlayer
 
     /// <summary>La decisión que está esperando al jugador ahora (null si se retiró).</summary>
     public CareerDecision? Pending { get; set; }
+
+    /// <summary>Ya se sumó como leyenda al club del modo manager (para no duplicar).</summary>
+    public bool AddedToClub { get; set; }
 
     public string ShortPos => Pos switch
     {

@@ -20,7 +20,7 @@ public static class CareerEngine
     private static int Level(int ovr) => ovr >= 84 ? 5 : ovr >= 76 ? 4 : ovr >= 66 ? 3 : ovr >= 56 ? 2 : 1;
 
     // ---- Arranque ----
-    public static CareerPlayer NewCareer(string surname, int number, Foot foot, string nationName, Position pos, int decisionEvery)
+    public static CareerPlayer NewCareer(string surname, int number, Foot foot, string nationName, Position pos, int decisionEvery, string kit)
     {
         var nat = CareerData.NationByName(nationName);
         var cp = new CareerPlayer
@@ -30,6 +30,7 @@ public static class CareerEngine
             Foot = foot,
             Nation = nat.Name, NationCode = nat.Code, NationTier = nat.Tier,
             Pos = pos,
+            Kit = string.IsNullOrWhiteSpace(kit) ? "#e23b3b" : kit,
             DecisionEvery = Math.Clamp(decisionEvery, 1, 3),
         };
         cp.Pending = FirstOffer(cp);
@@ -94,9 +95,33 @@ public static class CareerEngine
         double form = Math.Clamp(cp.Ovr / 80.0, 0.4, 1.4);
         int goals = (int)Math.Round(apps * gpa * form * (0.7 + Rng.NextDouble() * 0.7));
         int assists = (int)Math.Round(apps * (gpa * 0.5 + 0.05) * form * (0.6 + Rng.NextDouble() * 0.7));
+
+        // Altibajos: la carrera no es una línea recta. Un año podés romperla, otro
+        // caer en un bajón o pasarlo entre lesiones.
+        string formNote = "";
+        bool injury = false;
+        double dice = Rng.NextDouble();
+        if (dice < 0.09)   // año con lesiones
+        {
+            injury = true;
+            apps = (int)(apps * 0.45); goals = (int)(goals * 0.4); assists = (int)(assists * 0.4);
+            formNote = "🤕 Año con lesiones";
+        }
+        else if (dice < 0.20) // bajón de forma
+        {
+            goals = (int)(goals * 0.6); assists = (int)(assists * 0.7);
+            formNote = "📉 Bajón de forma";
+        }
+        else if (dice > 0.90) // temporada consagratoria
+        {
+            goals = (int)(goals * 1.4); assists = (int)(assists * 1.25);
+            formNote = "🔥 Temporada consagratoria";
+        }
+
         bool performed = (goals + assists) >= apps * 0.35 || (cp.Pos == Position.GK && starter);
 
-        cp.Ovr = Math.Clamp(cp.Ovr + Growth(cp.Age, tier, performed), 40, 99);
+        int growth = Growth(cp.Age, tier, performed) - (injury ? 1 : 0);
+        cp.Ovr = Math.Clamp(cp.Ovr + growth, 40, 99);
         cp.PeakOvr = Math.Max(cp.PeakOvr, cp.Ovr);
         cp.Apps += apps; cp.Goals += goals; cp.Assists += assists;
         cp.ValueK = Value(cp.Ovr, cp.Age);
@@ -137,6 +162,8 @@ public static class CareerEngine
             if (cp.Ovr >= 82 && Rng.NextDouble() < natChance)
             { cp.Trophies.Add($"🌍 Título con {cp.NationCode}"); note = $"🌍 Campeón con {cp.Nation}"; }
         }
+
+        if (note == "") note = formNote;   // si no hubo título, mostrar el altibajo
 
         cp.Timeline.Add(new CareerYear
         {

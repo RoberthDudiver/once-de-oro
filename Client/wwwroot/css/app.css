@@ -1403,3 +1403,7 @@ a { color: inherit; text-decoration: none; }
 .career-opt--retire:hover { border-color: #e23b3b; }
 
 .career-retire { border-color: rgba(245,197,66,.5); }
+
+/* camiseta del jugador de carrera */
+.career-shirt { flex: 0 0 auto; width: 56px; }
+.career-shirt--big { width: 66px; filter: drop-shadow(0 4px 10px rgba(0,0,0,.35)); }
