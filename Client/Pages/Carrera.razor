@@ -1,0 +1,228 @@
+@page "/carrera"
+@using OnceDeOro.Data
+@using OnceDeOro.Services
+@implements IDisposable
+@inject CareerService Career
+@inject Loc Loc
+
+<PageTitle>Carrera del jugador — Once de Oro</PageTitle>
+
+<div class="section-title"><span class="dot"></span> 🎮 @Loc["Carrera del jugador"]</div>
+
+@if (Career.Current is null)
+{
+    @* ---------------- Alta ---------------- *@
+    <div class="card card--pad">
+        <p class="faint">@Loc["Creá un jugador desde cero y viví su carrera: elegí origen, tomá decisiones clave y dejá que el destino te lleve a una trayectoria única de títulos, estadísticas y momentos decisivos."]</p>
+
+        <div class="grid mt" style="grid-template-columns:1fr 1fr; gap:12px;">
+            <label class="ed-lbl2">@Loc["Apellido"]
+                <input class="search" maxlength="14" placeholder="@Loc["Apellido"]" value="@_surname"
+                       @oninput="e => _surname = e.Value?.ToString() ?? string.Empty" />
+            </label>
+            <label class="ed-lbl2">@Loc["Número"]
+                <input class="search" type="number" min="1" max="99" value="@_number"
+                       @oninput="e => int.TryParse(e.Value?.ToString(), out _number)" />
+            </label>
+        </div>
+
+        <div class="ed-lbl mt">@Loc["Pierna hábil"]</div>
+        <div class="seg wrap">
+            <button class="@(_foot == Foot.Izquierda ? "on" : "")" @onclick="() => _foot = Foot.Izquierda">@Loc["Izquierda"]</button>
+            <button class="@(_foot == Foot.Derecha ? "on" : "")" @onclick="() => _foot = Foot.Derecha">@Loc["Derecha"]</button>
+        </div>
+
+        <div class="ed-lbl mt">@Loc["Posición"]</div>
+        <div class="seg wrap">
+            <button class="@(_pos == Position.GK ? "on" : "")" @onclick="() => _pos = Position.GK">POR</button>
+            <button class="@(_pos == Position.DEF ? "on" : "")" @onclick="() => _pos = Position.DEF">DFC</button>
+            <button class="@(_pos == Position.MID ? "on" : "")" @onclick="() => _pos = Position.MID">MC</button>
+            <button class="@(_pos == Position.FWD ? "on" : "")" @onclick="() => _pos = Position.FWD">DC</button>
+        </div>
+
+        <div class="grid mt" style="grid-template-columns:1fr 1fr; gap:12px;">
+            <label class="ed-lbl2">@Loc["Nacionalidad"]
+                <select class="mkt-select" @bind="_nation">
+                    @foreach (var n in CareerData.Nations)
+                    {
+                        <option value="@n.Name">@n.Name (@n.Code)</option>
+                    }
+                </select>
+            </label>
+            <label class="ed-lbl2">@Loc["Ritmo de decisiones"]
+                <select class="mkt-select" @bind="_every">
+                    <option value="1">@Loc["Intensa (cada temporada)"]</option>
+                    <option value="2">@Loc["Normal (cada 2)"]</option>
+                    <option value="3">@Loc["Exprés (cada 3)"]</option>
+                </select>
+            </label>
+        </div>
+
+        <button class="btn btn--gold btn--block mt" @onclick="Start">▶ @Loc["Comenzar carrera"]</button>
+    </div>
+}
+else
+{
+    var cp = Career.Current;
+
+    @* ---------------- Ficha del jugador ---------------- *@
+    <div class="career-card">
+        <div class="career-ovr">
+            <div class="career-ovr__n">@cp.Ovr</div>
+            <div class="career-ovr__l">OVR</div>
+        </div>
+        <div class="career-id">
+            <div class="career-id__name">@cp.NationCode · #@cp.Number @cp.Surname.ToUpperInvariant()</div>
+            <div class="career-id__club">@(string.IsNullOrEmpty(cp.Club) ? "Libre" : cp.Club) · @cp.ShortPos · @(cp.Foot == Foot.Izquierda ? "Zurdo" : "Diestro")</div>
+            <div class="career-stats">
+                <span><b>@cp.Age</b> @Loc["años"]</span>
+                <span><b>@Money(cp.ValueK)</b></span>
+                <span><b>@cp.Apps</b> PJ</span>
+                <span><b>@cp.Goals</b> GLS</span>
+                <span><b>@cp.Assists</b> AST</span>
+                @if (cp.Caps > 0) { <span>🎽 <b>@cp.Caps</b></span> }
+                <span>🏆 <b>@cp.Trophies.Count</b></span>
+            </div>
+        </div>
+    </div>
+
+    @if (cp.Timeline.Count > 1)
+    {
+        <div class="card card--pad mt">
+            <div class="ed-lbl">@Loc["Evolución del OVR"]</div>
+            @((MarkupString)OvrChart(cp))
+        </div>
+    }
+
+    @* ---------------- Decisión pendiente ---------------- *@
+    @if (!cp.Retired && cp.Pending is { } dec)
+    {
+        <div class="card card--pad mt career-decision">
+            <div class="career-decision__ttl">@dec.Title</div>
+            <div class="faint mb">@dec.Text</div>
+            <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px;">
+                @foreach (var o in dec.Options)
+                {
+                    <button class="career-opt @(o.Kind == "retire" ? "career-opt--retire" : "")" @onclick="() => Choose(o)">
+                        <div class="career-opt__label">@o.Label</div>
+                        <div class="career-opt__sub">@o.Sub</div>
+                    </button>
+                }
+            </div>
+        </div>
+    }
+
+    @* ---------------- Retiro ---------------- *@
+    @if (cp.Retired)
+    {
+        <div class="card card--pad mt center career-retire">
+            <div style="font-size:44px;">🎬</div>
+            <h2 style="font-family:var(--font-display); color:var(--gold-2); margin-top:4px;">@CareerEngine.Legacy(cp)</h2>
+            <p class="muted">@cp.Surname.ToUpperInvariant() · @cp.Nation · @Loc["se retiró a los"] @cp.Age</p>
+            <div class="grid mt" style="grid-template-columns:repeat(auto-fit,minmax(90px,1fr)); gap:10px;">
+                <div class="statbox"><div class="statbox__n">@cp.PeakOvr</div><div class="statbox__l">@Loc["OVR máximo"]</div></div>
+                <div class="statbox"><div class="statbox__n">@cp.Apps</div><div class="statbox__l">@Loc["Partidos"]</div></div>
+                <div class="statbox"><div class="statbox__n">@cp.Goals</div><div class="statbox__l">@Loc["Goles"]</div></div>
+                <div class="statbox"><div class="statbox__n">@cp.Assists</div><div class="statbox__l">@Loc["Asistencias"]</div></div>
+                <div class="statbox"><div class="statbox__n">@cp.Caps</div><div class="statbox__l">🎽 @Loc["Selección"]</div></div>
+                <div class="statbox"><div class="statbox__n">@cp.Ballons</div><div class="statbox__l">🥇 @Loc["Balones de Oro"]</div></div>
+            </div>
+            @if (cp.Trophies.Count > 0)
+            {
+                <div class="ed-lbl mt">🏆 @Loc["Vitrina"] (@cp.Trophies.Count)</div>
+                <div class="row wrap" style="gap:6px; justify-content:center;">
+                    @foreach (var g in cp.Trophies.GroupBy(t => t).OrderByDescending(g => g.Count()))
+                    {
+                        <span class="pill pill--gold">@g.Key ×@g.Count()</span>
+                    }
+                </div>
+            }
+        </div>
+    }
+
+    @* ---------------- Línea de tiempo ---------------- *@
+    @if (cp.Timeline.Count > 0)
+    {
+        <div class="section-title" style="margin-top:22px;"><span class="dot"></span> @Loc["Trayectoria"]</div>
+        <div class="card table-wrap">
+            <table class="ltable">
+                <thead>
+                    <tr><th>@Loc["Edad"]</th><th class="ltable__team">@Loc["Club"]</th><th>OVR</th><th>PJ</th><th>GLS</th><th>AST</th><th class="ltable__team">@Loc["Hito"]</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var y in cp.Timeline)
+                    {
+                        <tr>
+                            <td>@y.Age</td>
+                            <td class="ltable__team">@y.Club</td>
+                            <td class="ltable__pts">@y.Ovr</td>
+                            <td>@y.Apps</td><td>@y.Goals</td><td>@y.Assists</td>
+                            <td class="ltable__team" style="color:var(--gold-2); font-size:12px;">@y.Note</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    <div class="center mt">
+        @if (_confirmReset)
+        {
+            <span class="faint">@Loc["¿Seguro? Se borra esta carrera."]</span>
+            <button class="btn btn--gold" style="margin-left:8px;" @onclick="Reset">@Loc["Sí, nueva carrera"]</button>
+            <button class="btn btn--ghost" style="margin-left:6px;" @onclick="() => _confirmReset = false">@Loc["Cancelar"]</button>
+        }
+        else
+        {
+            <button class="btn btn--ghost" @onclick="() => _confirmReset = true">↺ @Loc["Nueva carrera"]</button>
+        }
+    </div>
+}
+
+@code {
+    private string _surname = "";
+    private int _number = 10;
+    private Foot _foot = Foot.Derecha;
+    private Position _pos = Position.FWD;
+    private string _nation = "Argentina";
+    private int _every = 2;
+    private bool _confirmReset;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Career.Changed += OnChanged;
+        Loc.Changed += OnChanged;
+        await Career.LoadAsync();
+    }
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    private void Start() => Career.Start(_surname, _number, _foot, _nation, _pos, _every);
+    private void Choose(CareerOption o) => Career.Choose(o);
+    private async Task Reset() { _confirmReset = false; await Career.ResetAsync(); }
+
+    private static string Money(int k) =>
+        k >= 1000 ? "€" + (k / 1000.0).ToString("0.#") + "M" : "€" + k + "K";
+
+    /// <summary>Un mini-gráfico SVG del OVR a lo largo de las edades.</summary>
+    private static string OvrChart(CareerPlayer cp)
+    {
+        var pts = cp.Timeline;
+        if (pts.Count < 2) return "";
+        int w = 320, h = 70, pad = 6;
+        int a0 = pts[0].Age, a1 = pts[^1].Age;
+        double X(int age) => pad + (a1 == a0 ? 0 : (age - a0) / (double)(a1 - a0)) * (w - 2 * pad);
+        double Y(int ovr) => pad + (99 - ovr) / (99.0 - 40.0) * (h - 2 * pad);
+        var poly = string.Join(" ", pts.Select(p => $"{X(p.Age).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)},{Y(p.Ovr).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)}"));
+        var dots = string.Concat(pts.Where(p => !string.IsNullOrEmpty(p.Note)).Select(p =>
+            $"<circle cx='{X(p.Age).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)}' cy='{Y(p.Ovr).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)}' r='2.6' fill='#f5c542'/>"));
+        return $"<svg viewBox='0 0 {w} {h}' width='100%' style='max-width:420px'>" +
+               $"<polyline points='{poly}' fill='none' stroke='#f5c542' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'/>{dots}</svg>";
+    }
+
+    public void Dispose()
+    {
+        Career.Changed -= OnChanged;
+        Loc.Changed -= OnChanged;
+    }
+}
