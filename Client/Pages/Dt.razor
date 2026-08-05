@@ -137,8 +137,136 @@ else
         </div>
     }
 
-    @* Oficina / finanzas (pretemporada) *@
+    @* Pestañas del Modo DT *@
     @if (dt.Employed && dt.Pending is null)
+    {
+        <div class="dt-tabs mt">
+            <button class="@(_tab == "cal" ? "on" : "")" @onclick='() => _tab = "cal"'>📅 @Loc["Calendario"]</button>
+            <button class="@(_tab == "squad" ? "on" : "")" @onclick='() => _tab = "squad"'>👥 @Loc["Plantilla"]</button>
+            <button class="@(_tab == "table" ? "on" : "")" @onclick='() => _tab = "table"'>📊 @Loc["Tabla"]</button>
+            <button class="@(_tab == "office" ? "on" : "")" @onclick='() => _tab = "office"'>🏢 @Loc["Oficina"]</button>
+        </div>
+    }
+
+    @* --- Calendario --- *@
+    @if (dt.Employed && dt.Pending is null && _tab == "cal")
+    {
+        <div class="card card--pad mt">
+            <div class="ed-lbl">🎯 @Loc["Objetivos de la directiva"] · @Loc["Temporada"] @dt.Year</div>
+            @foreach (var o in dt.Objectives) { <div class="dt-obj">▪ @o.Text</div> }
+            @if (dt.Warned) { <div class="clash mt"><div class="clash__txt">⚠️ @Loc["La directiva avisó: tu puesto está en riesgo."]</div></div> }
+        </div>
+
+        @if (dt.SeasonInPlay && dt.Round < dt.Fixture.Count)
+        {
+            var m = dt.Fixture[dt.Round];
+            <div class="card card--pad center mt">
+                <div class="faint">@Loc["Fecha"] @(dt.Round + 1) / @dt.Fixture.Count</div>
+                <div class="dt-result" style="font-size:18px; margin-top:2px;">@(m.Home ? "🏠" : "✈") @dt.Club!.Name <span class="faint">vs</span> @m.Opp</div>
+                <div class="faint" style="font-size:12px;">@Loc["Rival"] @m.OppStrength · @Loc["tu XI"] @DtEngine.XiStrength(dt) · @dt.Formation</div>
+                <div class="row" style="gap:8px; justify-content:center; margin-top:10px;">
+                    <button class="btn btn--gold btn--big" @onclick="PlayMatch">▶ @Loc["Jugar la fecha"]</button>
+                    <button class="btn btn--ghost" @onclick="SimRest">⏩ @Loc["Simular resto"]</button>
+                </div>
+            </div>
+        }
+
+        var played = dt.Fixture.Where(x => x.Played).OrderByDescending(x => x.Round).Take(10).ToList();
+        @if (played.Count > 0)
+        {
+            <div class="card card--pad mt">
+                <div class="ed-lbl">📋 @Loc["Resultados"]</div>
+                @foreach (var x in played)
+                {
+                    var win = x.MyGoals > x.OppGoals; var draw = x.MyGoals == x.OppGoals;
+                    <div class="dt-fixrow">
+                        <span class="dt-fixres @(win ? "w" : draw ? "d" : "l")">@x.MyGoals–@x.OppGoals</span>
+                        <span class="faint">@(x.Home ? Loc["vs"] : "@")</span> <span>@x.Opp</span>
+                    </div>
+                }
+            </div>
+        }
+    }
+
+    @* --- Plantilla --- *@
+    @if (dt.Employed && dt.Pending is null && _tab == "squad")
+    {
+        <div class="card card--pad mt">
+            <div class="row" style="justify-content:space-between; align-items:center;">
+                <div class="ed-lbl" style="margin:0;">👥 @Loc["Plantilla"] (@dt.Squad.Count) · @Loc["once"] @dt.Lineup.Count/11</div>
+                <div class="row" style="gap:6px;">
+                    <select class="mkt-select" style="width:auto;" @bind="Formation">
+                        @foreach (var f in DtEngine.Formations) { <option value="@f">@f</option> }
+                    </select>
+                    <button class="btn btn--ghost" @onclick="AutoXI">@Loc["XI auto"]</button>
+                </div>
+            </div>
+            <div class="faint mb" style="font-size:11.5px;">@Loc["Tocá ⭐ para el once (11). Tocá el nombre para comparar (2)."]</div>
+            <div class="grid" style="gap:6px;">
+                @foreach (var p in dt.Squad.OrderByDescending(p => dt.Lineup.Contains(p.Id)).ThenByDescending(p => p.Media))
+                {
+                    var starter = dt.Lineup.Contains(p.Id);
+                    <div class="dt-player @(starter ? "is-xi" : "") @(p.InjuryWeeks > 0 ? "is-injured" : "")">
+                        <button class="dt-star @(starter ? "on" : "")" @onclick="() => Svc.ToggleStarter(p.Id)">⭐</button>
+                        <div class="dt-player__id" @onclick="() => PickCompare(p)">
+                            <div><b>@PosName(p.Pos)</b> @p.Name <span class="faint">· @p.NationCode · @p.Age</span></div>
+                            <div class="faint" style="font-size:11px;">M @p.Media · Pot @p.Potential · @p.Apps PJ · @p.Goals G · @p.Assists A @(p.InjuryWeeks > 0 ? "· 🤕 " + p.InjuryWeeks : "")</div>
+                        </div>
+                        <div class="dt-player__meta faint">💪@p.Morale 🥵@p.Fatigue</div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        @if (_cmp.Count > 0)
+        {
+            <div class="card card--pad mt">
+                <div class="row" style="justify-content:space-between;">
+                    <div class="ed-lbl" style="margin:0;">⚖️ @Loc["Comparar jugadores"]</div>
+                    <button class="btn btn--ghost" style="padding:4px 10px;" @onclick="() => _cmp.Clear()">@Loc["Limpiar"]</button>
+                </div>
+                <div class="grid" style="grid-template-columns:repeat(@_cmp.Count,1fr); gap:10px; margin-top:6px;">
+                    @foreach (var p in _cmp)
+                    {
+                        <div class="dt-cmp">
+                            <div class="dt-cmp__n">@PosName(p.Pos) @p.Name</div>
+                            <div class="dt-cmp__r">@p.Media</div>
+                            <div class="faint" style="font-size:12px; line-height:1.5;">
+                                @Loc["Pot"] @p.Potential · @p.Age @Loc["años"] · @p.NationCode<br />
+                                @Loc["Valor"] $@p.ValueM M · @Loc["Sueldo"] $@p.SalaryM M<br />
+                                @p.Apps PJ · @p.Goals G · @p.Assists A · 💪@p.Morale · 🥵@p.Fatigue
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    }
+
+    @* --- Tabla --- *@
+    @if (dt.Employed && dt.Pending is null && _tab == "table")
+    {
+        <div class="card table-wrap mt">
+            <table class="ltable">
+                <thead><tr><th>#</th><th class="ltable__team">@Loc["Equipo"]</th><th>PJ</th><th>G</th><th>E</th><th>P</th><th>GF</th><th>GC</th><th>DIF</th><th>PTS</th></tr></thead>
+                <tbody>
+                    @{ int rp = 0; }
+                    @foreach (var r in DtEngine.Standings(dt))
+                    {
+                        rp++;
+                        <tr class="@(r.IsMe ? "me" : "")">
+                            <td>@rp</td><td class="ltable__team">@r.Name</td>
+                            <td>@r.Played</td><td>@r.Won</td><td>@r.Drawn</td><td>@r.Lost</td>
+                            <td>@r.GF</td><td>@r.GA</td><td>@(r.Diff > 0 ? "+" : "")@r.Diff</td><td class="ltable__pts">@r.Pts</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    @* Oficina / finanzas (dentro de la pestaña Oficina) *@
+    @if (dt.Employed && dt.Pending is null && _tab == "office")
     {
         var bal = dt.LastIncomeM - dt.LastExpenseM;
         <div class="card card--pad mt">
@@ -191,8 +319,8 @@ else
         </div>
     }
 
-    @* Mercado y scouting (pretemporada) *@
-    @if (dt.Employed && dt.Pending is null)
+    @* Mercado y scouting (dentro de la pestaña Oficina) *@
+    @if (dt.Employed && dt.Pending is null && _tab == "office")
     {
         <div class="card card--pad mt">
             <div class="ed-lbl">🔎 @Loc["Mercado y scouting"]</div>
@@ -244,23 +372,6 @@ else
                     }
                 </div>
             }
-        </div>
-    }
-
-    @* Objetivos de la temporada (mientras tenés trabajo y no hay decisión pendiente) *@
-    @if (dt.Employed && dt.Pending is null && dt.Objectives.Count > 0)
-    {
-        <div class="card card--pad mt">
-            <div class="ed-lbl">🎯 @Loc["Objetivos de la directiva"] · @Loc["Temporada"] @dt.Year</div>
-            @foreach (var o in dt.Objectives)
-            {
-                <div class="dt-obj">▪ @o.Text</div>
-            }
-            @if (dt.Warned)
-            {
-                <div class="clash mt"><div class="clash__txt">⚠️ @Loc["La directiva avisó: tu puesto está en riesgo. Necesitás resultados."]</div></div>
-            }
-            <button class="btn btn--gold btn--block mt" @onclick="Play">▶ @Loc["Jugar la temporada"]</button>
         </div>
     }
 
@@ -357,6 +468,14 @@ else
     private int _scoutPos = -1;
     private int _scoutMin;
     private readonly Dictionary<string, int> _offers = new();
+    private string _tab = "cal";
+    private readonly List<DtPlayer> _cmp = new();
+
+    private string Formation
+    {
+        get => Svc.Current?.Formation ?? "4-3-3";
+        set => Svc.SetFormation(value);
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -369,8 +488,15 @@ else
     private void OnChanged() => InvokeAsync(StateHasChanged);
 
     private void Start() => Svc.Start(_name, _surname, _nation, _age, _lic, _bg);
-    private void Play() => Svc.PlaySeason();
-    private void Choose(DtOption o) => Svc.Choose(o);
+    private void PlayMatch() => Svc.PlayNextMatch();
+    private void SimRest() => Svc.SimRest();
+    private void AutoXI() => Svc.AutoLineup();
+    private void PickCompare(DtPlayer p)
+    {
+        if (_cmp.Any(x => x.Id == p.Id)) _cmp.RemoveAll(x => x.Id == p.Id);
+        else { if (_cmp.Count >= 2) _cmp.RemoveAt(0); _cmp.Add(p); }
+    }
+    private void Choose(DtOption o) { Svc.Choose(o); _tab = "cal"; }
     private void Reinforce() { Svc.Reinforce(_reinf); _reinf = 0; }
     private void Upgrade(string which) => Svc.Upgrade(which);
     private void Loan() { Svc.Loan(_loan); _loan = 0; }

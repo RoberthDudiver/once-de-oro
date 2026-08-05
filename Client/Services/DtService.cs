@@ -39,12 +39,11 @@ public sealed class DtService
         Save();
     }
 
-    public void PlaySeason()
-    {
-        if (Current is null) return;
-        DtEngine.PlaySeason(Current);
-        Save();
-    }
+    public void PlayNextMatch() { if (Current is not null) { DtEngine.PlayNextMatch(Current); Save(); } }
+    public void SimRest() { if (Current is not null) { DtEngine.SimRestOfSeason(Current); Save(); } }
+    public void SetFormation(string f) { if (Current is not null) { DtEngine.SetFormation(Current, f); Save(); } }
+    public void AutoLineup() { if (Current is not null) { DtEngine.AutoLineup(Current); Save(); } }
+    public void ToggleStarter(string id) { if (Current is not null) { DtEngine.ToggleStarter(Current, id); Save(); } }
 
     public void Choose(DtOption opt)
     {

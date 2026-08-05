@@ -1446,3 +1446,27 @@ a { color: inherit; text-decoration: none; }
 .mode-pick__name { font-family:var(--font-head); font-size:18px; margin-top:6px; }
 .mode-pick__desc { font-size:12.5px; color:var(--ink-dim); margin-top:4px; }
 @media (max-width:520px){ .mode-pick__opts { grid-template-columns:1fr; } }
+
+/* pestañas y plantilla del modo DT */
+.dt-tabs { display:flex; gap:6px; }
+.dt-tabs button { flex:1; padding:9px 6px; border:1px solid var(--line); border-radius:11px; background:var(--glass);
+    font-family:var(--font-head); font-size:12.5px; color:var(--ink-dim); }
+.dt-tabs button.on { color:#1a1204; background:linear-gradient(180deg,var(--gold-2),var(--gold)); border-color:transparent; }
+.dt-player { display:flex; align-items:center; gap:8px; padding:8px 10px; border:1px solid var(--line);
+    border-radius:11px; background:var(--glass); }
+.dt-player.is-xi { border-color:rgba(245,197,66,.5); }
+.dt-player.is-injured { opacity:.6; }
+.dt-player__id { flex:1; min-width:0; cursor:pointer; }
+.dt-player__meta { flex:0 0 auto; font-size:11px; }
+.dt-star { flex:0 0 auto; width:30px; height:30px; border-radius:8px; border:1px solid var(--line);
+    background:transparent; filter:grayscale(1) opacity(.5); }
+.dt-star.on { filter:none; border-color:var(--gold); }
+.dt-cmp { border:1px solid var(--line); border-radius:12px; padding:12px; background:var(--panel); text-align:center; }
+.dt-cmp__n { font-family:var(--font-head); font-size:14px; }
+.dt-cmp__r { font-family:var(--font-display); font-size:34px; color:var(--gold-2); line-height:1; margin:2px 0 6px; }
+.dt-fixrow { display:flex; align-items:center; gap:10px; padding:5px 0; font-size:13.5px; border-bottom:1px solid rgba(255,255,255,.05); }
+.dt-fixrow:last-child { border-bottom:none; }
+.dt-fixres { flex:0 0 auto; min-width:44px; text-align:center; font-family:var(--font-head); padding:2px 6px; border-radius:7px; }
+.dt-fixres.w { background:rgba(55,214,122,.18); color:#37d67a; }
+.dt-fixres.d { background:rgba(255,255,255,.08); color:var(--ink-dim); }
+.dt-fixres.l { background:rgba(226,59,59,.16); color:#ff7a7a; }

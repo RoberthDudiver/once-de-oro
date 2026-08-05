@@ -29,6 +29,56 @@ public sealed class DtProspect
     public string Club { get; set; } = "";
 }
 
+/// <summary>Un jugador de la plantilla del club que dirigís (Modo DT).</summary>
+public sealed class DtPlayer
+{
+    public string Id { get; set; } = "";
+    public string Name { get; set; } = "";
+    public string Nation { get; set; } = "";
+    public string NationCode { get; set; } = "";
+    public Position Pos { get; set; }
+    public int Age { get; set; }
+    public int Media { get; set; }
+    public int Potential { get; set; }
+    public int Morale { get; set; } = 70;      // 0..100
+    public int Fatigue { get; set; }           // 0..100
+    public int InjuryWeeks { get; set; }       // >0 = lesionado
+    public int ContractYears { get; set; } = 3;
+    public int SalaryM { get; set; }
+    public int ValueM { get; set; }
+    public int Apps { get; set; }
+    public int Goals { get; set; }
+    public int Assists { get; set; }
+}
+
+/// <summary>Un partido del calendario del club.</summary>
+public sealed class DtMatch
+{
+    public int Round { get; set; }
+    public string Opp { get; set; } = "";
+    public int OppStrength { get; set; }
+    public bool Home { get; set; }
+    public bool Played { get; set; }
+    public int MyGoals { get; set; }
+    public int OppGoals { get; set; }
+}
+
+/// <summary>Una fila de la tabla de la liga del Modo DT.</summary>
+public sealed class DtTableRow
+{
+    public string Name { get; set; } = "";
+    public int Strength { get; set; }
+    public bool IsMe { get; set; }
+    public int Played { get; set; }
+    public int Won { get; set; }
+    public int Drawn { get; set; }
+    public int Lost { get; set; }
+    public int GF { get; set; }
+    public int GA { get; set; }
+    public int Pts => Won * 3 + Drawn;
+    public int Diff => GF - GA;
+}
+
 /// <summary>Un club dirigible en el Modo DT.</summary>
 public sealed class DtClub
 {
@@ -132,6 +182,15 @@ public sealed class DtManager
     public List<DtNews> News { get; set; } = new();            // feed de la última temporada
     public List<string> Awards { get; set; } = new();          // tus premios personales (DT del Año…)
     public List<string> WorldLog { get; set; } = new();        // campeón + Balón de Oro por temporada
+
+    // Plantilla + calendario (semana a semana, pedido de Alexander)
+    public List<DtPlayer> Squad { get; set; } = new();
+    public List<DtMatch> Fixture { get; set; } = new();
+    public int Round { get; set; }                             // próxima fecha (índice del fixture)
+    public List<DtTableRow> Table { get; set; } = new();
+    public string Formation { get; set; } = "4-3-3";
+    public List<string> Lineup { get; set; } = new();          // ids de tus 11 titulares elegidos
+    public bool SeasonInPlay { get; set; }                     // hay una temporada en curso (fixture sin terminar)
 
     // ---- Acumulados de carrera ----
     public int Titles { get; set; }
