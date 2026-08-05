@@ -943,6 +943,9 @@ public sealed class GameService
         Commit();
     }
 
+    /// <summary>Marca que el jugador ya eligió modo (Normal o DT) en la pantalla de inicio.</summary>
+    public void ChooseMode() { State.HasChosenMode = true; Commit(); }
+
     public void SetStyle(TeamStyle style) { State.Style = style; Commit(); }
 
     // ---------------------------------------------------------------- estadio

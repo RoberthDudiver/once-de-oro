@@ -69,6 +69,29 @@
 
     <AchievementToast />
 
+    @if (_ready && !Game.State.HasChosenMode)
+    {
+        <div class="mode-pick">
+            <div class="mode-pick__box">
+                <div class="mode-pick__crest">⚽</div>
+                <h2 class="mode-pick__ttl">@Loc["¿Cómo querés jugar?"]</h2>
+                <p class="faint">@Loc["Podés cambiar de modo cuando quieras desde el menú."]</p>
+                <div class="mode-pick__opts">
+                    <button class="mode-pick__opt" @onclick="@(() => PickMode(""))">
+                        <div class="mode-pick__ico">⚽</div>
+                        <div class="mode-pick__name">@Loc["Modo Normal"]</div>
+                        <div class="mode-pick__desc">@Loc["Armá tu equipo, fichá leyendas y ganá torneos."]</div>
+                    </button>
+                    <button class="mode-pick__opt" @onclick="@(() => PickMode("dt"))">
+                        <div class="mode-pick__ico">🧠</div>
+                        <div class="mode-pick__name">@Loc["Modo DT"]</div>
+                        <div class="mode-pick__desc">@Loc["Dirigí clubes temporada a temporada: directiva, mercado y carrera de entrenador."]</div>
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+
     @Body
 
     <footer class="foot">
@@ -102,9 +125,19 @@
         // ¿Es admin? Si lo es, aparece el link al panel en el pie.
         await Admin.CheckAdminAsync();
 
+        _ready = true;
+
         // Ping anónimo al contador de jugadores (UUID de navegador, sin datos
         // personales). Silencioso si no hay servidor con base configurada.
         await Stats.PingAsync(Game.State.MatchesPlayed);
+    }
+
+    private bool _ready;
+
+    private void PickMode(string route)
+    {
+        Game.ChooseMode();
+        Nav.NavigateTo(route == "dt" ? "dt" : "");
     }
 
     private async Task ChangeLang(string code) => await Loc.SetLangAsync(code);

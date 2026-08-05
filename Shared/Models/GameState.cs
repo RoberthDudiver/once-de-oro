@@ -273,6 +273,9 @@ public sealed class GameState
 
     public bool HasSeenIntro { get; set; }
 
+    /// <summary>Ya eligió si juega el modo Normal o el modo DT al abrir por primera vez.</summary>
+    public bool HasChosenMode { get; set; }
+
     // ---- Logros (trofeos estilo PlayStation) ----
     /// <summary>Ids de los logros ya desbloqueados (ver AchievementCatalog).</summary>
     public List<string> UnlockedAchievements { get; set; } = new();
