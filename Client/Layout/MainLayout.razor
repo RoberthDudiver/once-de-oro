@@ -69,7 +69,7 @@
 
     <AchievementToast />
 
-    @if (_ready && !Game.State.HasChosenMode)
+    @if (_ready && !_modeChosen)
     {
         <div class="mode-pick">
             <div class="mode-pick__box">
@@ -133,10 +133,11 @@
     }
 
     private bool _ready;
+    private bool _modeChosen;   // en memoria: el selector aparece cada vez que abrís el juego
 
     private void PickMode(string route)
     {
-        Game.ChooseMode();
+        _modeChosen = true;
         Nav.NavigateTo(route == "dt" ? "dt" : "");
     }
 

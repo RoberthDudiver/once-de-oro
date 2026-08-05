@@ -40,6 +40,7 @@ public sealed class DtService
     }
 
     public void AdvanceWeek() { if (Current is not null) { DtEngine.AdvanceWeek(Current); Save(); } }
+    public void FinishWatchedMatch(int myGoals, int oppGoals) { if (Current is not null) { DtEngine.FinishWatchedMatch(Current, myGoals, oppGoals); Save(); } }
     public void AdvanceToNextMatch() { if (Current is not null) { DtEngine.AdvanceToNextMatch(Current); Save(); } }
     public void SimRest() { if (Current is not null) { DtEngine.SimRestOfSeason(Current); Save(); } }
     public void SetTraining(string plan, string intensity) { if (Current is not null) { DtEngine.SetTraining(Current, plan, intensity); Save(); } }
@@ -50,6 +51,7 @@ public sealed class DtService
     public void ToggleStarter(string id) { if (Current is not null) { DtEngine.ToggleStarter(Current, id); Save(); } }
     public void Sell(string id) { if (Current is not null) { MarketMsg = DtEngine.SellPlayer(Current, id); Save(); } }
     public void Renew(string id) { if (Current is not null) { MarketMsg = DtEngine.RenewPlayer(Current, id); Save(); } }
+    public void SignReal(string id) { if (Current is not null) { MarketMsg = DtEngine.SignReal(Current, id); Save(); } }
 
     public void Choose(DtOption opt)
     {

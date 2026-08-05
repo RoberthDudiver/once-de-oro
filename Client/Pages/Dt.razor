@@ -122,6 +122,22 @@ else
         </div>
     </div>
 
+    @* Ver el partido en la cancha 2D (como el modo principal) *@
+    @if (_watching && _timeline is not null)
+    {
+        <div class="dt-watch">
+            <div class="dt-watch__inner">
+                <div class="dt-watch__ttl">🎥 @dt.Club!.Name <span class="faint">vs</span> @_awayName</div>
+                <MatchField Timeline="_timeline"
+                            HomeName="@dt.Club!.Name" HomeFlag="@dt.Club!.Emblem" HomeFormationName="@dt.Formation"
+                            AwayName="@_awayName" AwayFlag="🔴"
+                            HomeStarters="_home" AwayStarters="_away"
+                            Round="🧠 Modo DT"
+                            OnFinished="OnWatchFinished" />
+            </div>
+        </div>
+    }
+
     @* Noticias del mundo (Pilar 4) *@
     @if (dt.News.Count > 0)
     {
@@ -226,7 +242,10 @@ else
                     var m = dt.Fixture[dt.Round];
                     <div class="dt-result" style="font-size:19px; margin-top:2px;">⚽ @(m.Home ? "🏠" : "✈") @dt.Club!.Name <span class="faint">vs</span> @m.Opp</div>
                     <div class="faint" style="font-size:12px;">@Loc["Rival"] @m.OppStrength · @Loc["tu XI"] @DtEngine.XiStrength(dt) · @dt.Formation</div>
-                    <button class="btn btn--gold btn--big mt" @onclick="AdvanceWeek">▶ @Loc["Jugar la fecha"]</button>
+                    <div class="row" style="gap:8px; justify-content:center; margin-top:10px;">
+                        <button class="btn btn--gold btn--big" @onclick="WatchMatch">🎥 @Loc["Ver el partido"]</button>
+                        <button class="btn btn--ghost" @onclick="AdvanceWeek">⚡ @Loc["Jugar rápido"]</button>
+                    </div>
                 }
                 else
                 {
@@ -276,6 +295,22 @@ else
                     <div class="dt-fixrow">
                         <span class="dt-fixres @(win ? "w" : draw ? "d" : "l")">@x.MyGoals–@x.OppGoals</span>
                         <span class="faint">@(x.Home ? Loc["vs"] : "@")</span> <span>@x.Opp</span>
+                    </div>
+                }
+            </div>
+        }
+
+        <div class="center mt">
+            <button class="btn btn--ghost" @onclick="() => _showCal = !_showCal">📅 @(_showCal ? Loc["Ocultar calendario"] : Loc["Ver calendario completo"])</button>
+        </div>
+        @if (_showCal)
+        {
+            <div class="card card--pad mt">
+                <div class="ed-lbl">📅 @Loc["Calendario de la temporada"]</div>
+                @foreach (var r in BuildCal(dt))
+                {
+                    <div class="dt-cal-row @(r.Now ? "is-now" : "")">
+                        <span>@r.Icon</span> <span class="faint" style="min-width:74px;">@r.Month</span> <span>@r.Label</span>
                     </div>
                 }
             </div>
@@ -403,6 +438,7 @@ else
         var bal = dt.LastIncomeM - dt.LastExpenseM;
         <div class="card card--pad mt">
             <div class="ed-lbl">🏢 @Loc["Oficina · Finanzas"]</div>
+            <div class="faint mb" style="font-size:11.5px; margin-top:2px;">@Loc["Acá manejás la plata del club: la caja (ahorro), el presupuesto de fichajes (lo que la directiva te deja gastar), mejorás las instalaciones y pedís préstamos."]</div>
             <div class="career-stats" style="margin-top:2px;">
                 <span>@Loc["Caja"] <b>$@dt.CajaM M</b></span>
                 <span>@Loc["Fichajes"] <b>$@dt.TransferBudgetM M</b></span>
@@ -507,6 +543,46 @@ else
         </div>
     }
 
+    @* Mercado de jugadores REALES (leyendas del juego, como el modo principal) *@
+    @if (dt.Employed && dt.Pending is null && _tab == "office")
+    {
+        <div class="card card--pad mt">
+            <div class="ed-lbl">⭐ @Loc["Fichar leyendas (mercado real)"]</div>
+            <div class="faint mb" style="font-size:11.5px;">@Loc["Jugadores reales del juego, como el modo principal. Se pagan del presupuesto de fichajes."]</div>
+            <div class="row wrap" style="gap:8px; align-items:center;">
+                <select class="mkt-select" style="width:auto;" @bind="_realPos">
+                    <option value="-1">@Loc["Todas las posiciones"]</option>
+                    <option value="0">POR</option>
+                    <option value="1">DFC</option>
+                    <option value="2">MC</option>
+                    <option value="3">DC</option>
+                </select>
+                <input class="search" style="width:160px;" placeholder="@Loc["Buscar nombre…"]"
+                       value="@_realSearch" @oninput="e => _realSearch = e.Value?.ToString() ?? string.Empty" />
+            </div>
+            @if (!string.IsNullOrEmpty(Svc.MarketMsg))
+            {
+                <div class="pill @(Svc.MarketMsg.StartsWith("✔") ? "pill--green" : "pill--red") mb" style="margin-top:8px;">@Svc.MarketMsg</div>
+            }
+            <div class="grid mt" style="gap:8px;">
+                @foreach (var p in DtEngine.RealMarket(dt, _realPos < 0 ? null : (Position)_realPos, _realSearch))
+                {
+                    var price = DtEngine.RealPrice(p);
+                    <div class="dt-prospect">
+                        <div>
+                            <b>@p.Flag @p.Name</b> @(p.IsLegend ? "⭐" : "")
+                            <div class="faint" style="font-size:11.5px;">@PosName(p.Pos) · @Loc["media"] @p.Rating · @p.Nation</div>
+                        </div>
+                        <div class="dt-prospect__buy">
+                            <span class="dt-prospect__val">$@price M</span>
+                            <button class="btn btn--gold" disabled="@(dt.TransferBudgetM < price)" @onclick="() => Svc.SignReal(p.Id)">💰 @Loc["Fichar"]</button>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
     @* Decisión de fin de temporada / sin equipo *@
     @if (dt.Pending is { } dec)
     {
@@ -600,8 +676,39 @@ else
     private int _scoutPos = -1;
     private int _scoutMin;
     private readonly Dictionary<string, int> _offers = new();
+    private int _realPos = -1;
+    private string _realSearch = "";
+    private bool _showCal;
+
+    private record CalRow(string Icon, string Label, string Month, bool Now);
+    private List<CalRow> BuildCal(DtManager dt)
+    {
+        var rows = new List<CalRow>(); int mc = 0;
+        foreach (var w in dt.Calendar)
+        {
+            string icon, label;
+            if (w.Type == "match")
+            {
+                var fx = mc < dt.Fixture.Count ? dt.Fixture[mc] : null; mc++;
+                icon = "⚽";
+                label = fx is null ? "" : fx.Played
+                    ? (fx.Home ? $"{dt.Club!.Name} {fx.MyGoals}-{fx.OppGoals} {fx.Opp}" : $"{fx.Opp} {fx.OppGoals}-{fx.MyGoals} {dt.Club!.Name}")
+                    : $"vs {fx.Opp}";
+            }
+            else if (w.Type == "train") { icon = "🏋️"; label = Loc["Entrenamiento"]; }
+            else if (w.Type == "press") { icon = "🎙️"; label = Loc["Prensa"]; }
+            else { icon = "🛌"; label = Loc["Descanso"]; }
+            rows.Add(new CalRow(icon, label, w.Month, w.Index == dt.Week));
+        }
+        return rows;
+    }
     private string _tab = "cal";
     private readonly List<DtPlayer> _cmp = new();
+    private bool _watching;
+    private OnceDeOro.Models.MatchTimeline? _timeline;
+    private List<Player> _home = new();
+    private List<Player> _away = new();
+    private string _awayName = "";
     private static readonly string[] AllLangs = { "Español", "Inglés", "Italiano", "Francés", "Alemán", "Portugués" };
     private readonly HashSet<string> _langs = new() { "Español" };
     private void ToggleLang(string l) { if (!_langs.Remove(l)) _langs.Add(l); }
@@ -631,6 +738,24 @@ else
     private void Start() => Svc.Start(_name, _surname, _nation, _age, _lic, _bg, _langs.ToList());
     private void AdvanceWeek() => Svc.AdvanceWeek();
     private void ToNextMatch() => Svc.AdvanceToNextMatch();
+
+    private void WatchMatch()
+    {
+        var d = DtEngine.MatchViewData(Svc.Current!);
+        if (d is null) return;
+        _home = d.Value.home; _away = d.Value.away; _awayName = d.Value.oppName;
+        _timeline = MatchSimulator.Simulate(
+            Svc.Current!.Club!.Name, Svc.Current!.Club!.Emblem, TeamPower.Flat(d.Value.homeStr), _home,
+            _awayName, "🔴", TeamPower.Flat(d.Value.awayStr), _away,
+            knockout: false, seed: new Random().Next());
+        _watching = true;
+    }
+
+    private void OnWatchFinished()
+    {
+        if (_timeline is not null) Svc.FinishWatchedMatch(_timeline.Result.HomeGoals, _timeline.Result.AwayGoals);
+        _watching = false; _timeline = null;
+    }
     private void SimRest() => Svc.SimRest();
     private void AnswerPress(DtOption o) => Svc.AnswerPress(o);
     private void SetTrain(string plan, string intensity) => Svc.SetTraining(plan, intensity);

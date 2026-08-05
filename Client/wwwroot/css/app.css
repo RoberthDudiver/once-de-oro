@@ -1487,3 +1487,12 @@ a { color: inherit; text-decoration: none; }
 .dt-player__act { display:flex; gap:4px; flex:0 0 auto; }
 .dt-tiny { width:28px; height:28px; border-radius:8px; border:1px solid var(--line); background:transparent; font-size:13px; }
 .dt-tiny:hover { border-color:var(--gold); }
+
+/* ver el partido dentro del modo DT + calendario completo */
+.dt-watch { position:fixed; inset:0; z-index:120; overflow:auto; padding:14px;
+    background:rgba(6,12,24,.93); -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px); }
+.dt-watch__inner { max-width:900px; margin:0 auto; }
+.dt-watch__ttl { text-align:center; font-family:var(--font-head); font-size:18px; color:var(--gold-2); margin-bottom:8px; }
+.dt-cal-row { display:flex; align-items:center; gap:10px; padding:4px 0; font-size:13px; border-bottom:1px solid rgba(255,255,255,.05); }
+.dt-cal-row:last-child { border-bottom:none; }
+.dt-cal-row.is-now { color:var(--gold-2); font-weight:700; }

@@ -292,7 +292,6 @@ public static class DtEngine
     {
         if (!dt.SeasonInPlay || dt.Round >= dt.Fixture.Count) return;
         var mtch = dt.Fixture[dt.Round];
-        var xi = BestXI(dt);
         int my = XiStrength(dt), opp = mtch.OppStrength;
 
         // ---- Táctica: mentalidad, ritmo, presión, construcción y línea ----
@@ -301,7 +300,6 @@ public static class DtEngine
         int pres = dt.Press switch { "baja" => -1, "alta" => 1, _ => 0 };
         int line = dt.Line switch { "baja" => -1, "alta" => 1, _ => 0 };
         double chanceMult = 1 + (tempo + pres) * 0.06 + line * 0.03;   // más ritmo/presión/línea = más goles ambos
-        double fatMult = 1 + (tempo + pres) * 0.15;                    // …y más cansancio
 
         double eMy = GoalExp(my + ment * 2 + line, opp) * (mtch.Home ? 1.12 : 0.9) * chanceMult;
         double eOpp = GoalExp(opp, my - ment + line) * (mtch.Home ? 0.9 : 1.12) * chanceMult;
@@ -310,6 +308,18 @@ public static class DtEngine
         else eMy *= 1.03;                                              // contraataque
 
         int mg = Poisson(eMy), og = Poisson(eOpp);
+        ApplyMatchOutcome(dt, mtch, mg, og);
+    }
+
+    /// <summary>Aplica el resultado de un partido (tabla, goleadores, cansancio, lesiones, resto de la fecha).
+    /// Lo usan el partido rápido y el partido MIRADO en la cancha 2D.</summary>
+    private static void ApplyMatchOutcome(DtManager dt, DtMatch mtch, int mg, int og)
+    {
+        var xi = BestXI(dt);
+        int tempo = dt.Tempo switch { "lento" => -1, "rapido" => 1, _ => 0 };
+        int pres = dt.Press switch { "baja" => -1, "alta" => 1, _ => 0 };
+        double fatMult = 1 + (tempo + pres) * 0.15;
+
         mtch.MyGoals = mg; mtch.OppGoals = og; mtch.Played = true;
         var hurt = new List<string>();
 
@@ -361,6 +371,37 @@ public static class DtEngine
         dt.Round++;
         // El fin de temporada lo decide el CALENDARIO (cuando pasan todos los meses),
         // no el último partido: pueden quedar semanas de entrenamiento/prensa.
+    }
+
+    /// <summary>Datos para VER el partido en la cancha 2D (como el modo principal): XI propio, XI rival y fuerzas.</summary>
+    public static (List<Player> home, List<Player> away, int homeStr, int awayStr, string oppName)? MatchViewData(DtManager dt)
+    {
+        if (!dt.SeasonInPlay || dt.Round >= dt.Fixture.Count || dt.Week >= dt.Calendar.Count || dt.Calendar[dt.Week].Type != "match") return null;
+        var mtch = dt.Fixture[dt.Round];
+        var xi = BestXI(dt);
+        var home = xi.Select((p, i) => new Player { Id = $"h{i}", Name = p.Name, Nation = p.Nation, Flag = "⚽", Pos = p.Pos, Rating = Math.Clamp(p.Media, 40, 99) }).ToList();
+        var away = GenAwayXI(mtch.Opp, mtch.OppStrength);
+        return (home, away, XiStrength(dt), mtch.OppStrength, mtch.Opp);
+    }
+
+    private static List<Player> GenAwayXI(string name, int str)
+    {
+        var poss = new[] { Position.GK, Position.DEF, Position.DEF, Position.DEF, Position.DEF, Position.MID, Position.MID, Position.MID, Position.FWD, Position.FWD, Position.FWD };
+        var list = new List<Player>();
+        for (int i = 0; i < 11; i++)
+            list.Add(new Player { Id = $"a{i}", Name = DtData.LastNames[(i * 3 + str) % DtData.LastNames.Length], Nation = name, Flag = "🔴", Pos = poss[i], Rating = Math.Clamp(str + (i % 3 - 1) * 2, 40, 99) });
+        return list;
+    }
+
+    /// <summary>Cierra un partido MIRADO en la cancha 2D: aplica el resultado del timeline y avanza la semana.</summary>
+    public static void FinishWatchedMatch(DtManager dt, int myGoals, int oppGoals)
+    {
+        if (!dt.SeasonInPlay || dt.Round >= dt.Fixture.Count || dt.Week >= dt.Calendar.Count || dt.Calendar[dt.Week].Type != "match") return;
+        var mtch = dt.Fixture[dt.Round];
+        ApplyMatchOutcome(dt, mtch, myGoals, oppGoals);
+        dt.Calendar[dt.Week].Done = true;
+        dt.Week++;
+        if (dt.Week >= dt.Calendar.Count) EndSeason(dt);
     }
 
     // ---------------------------------------------------------------- calendario: avanzar el tiempo
@@ -661,6 +702,44 @@ public static class DtEngine
         dt.ScoutPool.RemoveAll(x => x.Id == p.Id);
         AutoLineup(dt); RecalcStrength(dt);
         return $"✔ Fichaste a {p.Name} (media {p.Media})";
+    }
+
+    // ---------------------------------------------------------------- mercado real (leyendas del juego)
+    private static string Code3(string nation) => new string((nation ?? "").Where(char.IsLetter).Take(3).ToArray()).ToUpperInvariant();
+
+    /// <summary>Jugadores REALES del juego (leyendas/estrellas) que podés fichar, como en el modo principal.</summary>
+    public static List<Player> RealMarket(DtManager dt, Position? pos, string search)
+    {
+        var have = dt.Squad.Select(p => p.Name).ToHashSet();
+        return PlayerDatabase.All
+            .Where(p => !p.Troll && !have.Contains(p.Name)
+                     && (pos is null || p.Pos == pos)
+                     && (string.IsNullOrWhiteSpace(search) || p.Name.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase)))
+            .OrderByDescending(p => p.Rating).Take(24).ToList();
+    }
+
+    public static int RealPrice(Player p) => Math.Max(1, p.Value);
+
+    /// <summary>Ficha a un jugador real del mercado (se paga del presupuesto de fichajes).</summary>
+    public static string SignReal(DtManager dt, string playerId)
+    {
+        var p = PlayerDatabase.All.FirstOrDefault(x => x.Id == playerId);
+        if (p is null) return "";
+        int price = RealPrice(p);
+        if (dt.TransferBudgetM < price) return $"No te alcanza: cuesta ${price}M.";
+        dt.TransferBudgetM -= price;
+        int media = Math.Clamp(p.Rating, 45, 97);
+        dt.Squad.Insert(0, new DtPlayer
+        {
+            Id = "sq" + Guid.NewGuid().ToString("N")[..7],
+            Name = p.Name, Nation = p.Nation, NationCode = Code3(p.Nation), Pos = p.Pos,
+            Age = 27, Media = media, Potential = Math.Min(99, media + 1),
+            Morale = 80, ContractYears = 4, SalaryM = PlayerSalary(media), ValueM = price,
+        });
+        dt.Signings.Insert(0, $"{p.Name} · {p.Pos} {media}{(p.IsLegend ? " ⭐" : "")}");
+        if (dt.Signings.Count > 12) dt.Signings.RemoveAt(dt.Signings.Count - 1);
+        AutoLineup(dt); RecalcStrength(dt);
+        return $"✔ Fichaste a {p.Name} (media {media})";
     }
 
     // ---------------------------------------------------------------- objetivos / decisiones
