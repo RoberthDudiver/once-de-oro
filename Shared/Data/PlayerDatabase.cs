@@ -560,6 +560,255 @@ public static class PlayerDatabase
             P("Mario Yepes", "Colombia", CO, Position.DEF, 83, 2014, true),
         });
 
+
+        // ============================================================
+        //  MÁS PROFUNDIDAD ACTUAL + selecciones que faltaban
+        //  (para que el mercado de "Actuales" tenga muchísimo más)
+        // ============================================================
+        const string CH = "🇨🇭", EC = "🇪🇨", AU = "🇦🇺", GR = "🇬🇷", SK = "🇸🇰", PE = "🇵🇪";
+
+        l.AddRange(new[]
+        {
+            // ---- Brasil (más actuales) ----
+            P("Bento", "Brasil", BR, Position.GK, 80, 2026),
+            P("Gabriel Magalhães", "Brasil", BR, Position.DEF, 85, 2026),
+            P("Bremer", "Brasil", BR, Position.DEF, 84, 2026),
+            P("Wendell", "Brasil", BR, Position.DEF, 79, 2026),
+            P("André", "Brasil", BR, Position.MID, 82, 2026),
+            P("Gerson", "Brasil", BR, Position.MID, 82, 2026),
+            P("Antony", "Brasil", BR, Position.FWD, 81, 2022),
+            P("Savinho", "Brasil", BR, Position.FWD, 82, 2026),
+            P("Gabriel Martinelli", "Brasil", BR, Position.FWD, 83, 2026),
+            P("João Pedro", "Brasil", BR, Position.FWD, 82, 2026),
+
+            // ---- Argentina (más actuales) ----
+            P("Gonzalo Montiel", "Argentina", AR, Position.DEF, 79, 2022),
+            P("Marcos Acuña", "Argentina", AR, Position.DEF, 80, 2022),
+            P("Leandro Paredes", "Argentina", AR, Position.MID, 81, 2026),
+            P("Franco Mastantuono", "Argentina", AR, Position.MID, 81, 2026),
+            P("Thiago Almada", "Argentina", AR, Position.MID, 82, 2026),
+            P("Giuliano Simeone", "Argentina", AR, Position.FWD, 80, 2026),
+
+            // ---- Francia (más actuales) ----
+            P("Ibrahima Konaté", "Francia", FR, Position.DEF, 84, 2026),
+            P("Wesley Fofana", "Francia", FR, Position.DEF, 82, 2026),
+            P("Lucas Digne", "Francia", FR, Position.DEF, 80, 2022),
+            P("Manu Koné", "Francia", FR, Position.MID, 81, 2026),
+            P("Michael Olise", "Francia", FR, Position.FWD, 84, 2026),
+            P("Bradley Barcola", "Francia", FR, Position.FWD, 83, 2026),
+            P("Randal Kolo Muani", "Francia", FR, Position.FWD, 82, 2026),
+
+            // ---- Inglaterra (más actuales) ----
+            P("Reece James", "Inglaterra", EN, Position.DEF, 84, 2026),
+            P("Levi Colwill", "Inglaterra", EN, Position.DEF, 81, 2026),
+            P("Ezri Konsa", "Inglaterra", EN, Position.DEF, 80, 2026),
+            P("Conor Gallagher", "Inglaterra", EN, Position.MID, 81, 2026),
+            P("Morgan Rogers", "Inglaterra", EN, Position.MID, 81, 2026),
+            P("Eberechi Eze", "Inglaterra", EN, Position.MID, 82, 2026),
+            P("Ollie Watkins", "Inglaterra", EN, Position.FWD, 83, 2026),
+            P("Jarrod Bowen", "Inglaterra", EN, Position.FWD, 82, 2026),
+
+            // ---- España (más actuales) ----
+            P("David Raya", "España", ES, Position.GK, 84, 2026),
+            P("Robin Le Normand", "España", ES, Position.DEF, 83, 2026),
+            P("Martín Zubimendi", "España", ES, Position.MID, 84, 2026),
+            P("Mikel Merino", "España", ES, Position.MID, 83, 2026),
+            P("Álex Baena", "España", ES, Position.MID, 82, 2026),
+            P("Mikel Oyarzabal", "España", ES, Position.FWD, 83, 2026),
+
+            // ---- Portugal (más actuales) ----
+            P("Nuno Mendes", "Portugal", PT, Position.DEF, 84, 2026),
+            P("Rúben Neves", "Portugal", PT, Position.MID, 83, 2026),
+            P("Pedro Neto", "Portugal", PT, Position.FWD, 82, 2026),
+            P("Francisco Conceição", "Portugal", PT, Position.FWD, 81, 2026),
+
+            // ---- Países Bajos (más actuales) ----
+            P("Bart Verbruggen", "P. Bajos", NL, Position.GK, 81, 2026),
+            P("Jurriën Timber", "P. Bajos", NL, Position.DEF, 83, 2026),
+            P("Micky van de Ven", "P. Bajos", NL, Position.DEF, 83, 2026),
+            P("Jeremie Frimpong", "P. Bajos", NL, Position.DEF, 82, 2026),
+            P("Tijjani Reijnders", "P. Bajos", NL, Position.MID, 84, 2026),
+            P("Ryan Gravenberch", "P. Bajos", NL, Position.MID, 83, 2026),
+
+            // ---- Alemania (más actuales) ----
+            P("Jonathan Tah", "Alemania", DE, Position.DEF, 83, 2026),
+            P("Nico Schlotterbeck", "Alemania", DE, Position.DEF, 83, 2026),
+            P("Aleksandar Pavlović", "Alemania", DE, Position.MID, 81, 2026),
+            P("Robert Andrich", "Alemania", DE, Position.MID, 80, 2026),
+            P("Deniz Undav", "Alemania", DE, Position.FWD, 81, 2026),
+
+            // ---- Italia (más actuales) ----
+            P("Federico Dimarco", "Italia", IT, Position.DEF, 84, 2026),
+            P("Riccardo Calafiori", "Italia", IT, Position.DEF, 82, 2026),
+            P("Davide Frattesi", "Italia", IT, Position.MID, 82, 2026),
+            P("Lorenzo Pellegrini", "Italia", IT, Position.MID, 82, 2026),
+            P("Mateo Retegui", "Italia", IT, Position.FWD, 82, 2026),
+            P("Moise Kean", "Italia", IT, Position.FWD, 81, 2026),
+
+            // ---- Bélgica (más actuales) ----
+            P("Leandro Trossard", "Bélgica", BE, Position.FWD, 82, 2026),
+            P("Charles De Ketelaere", "Bélgica", BE, Position.MID, 81, 2026),
+            P("Koen Casteels", "Bélgica", BE, Position.GK, 82, 2022),
+            P("Wout Faes", "Bélgica", BE, Position.DEF, 79, 2026),
+
+            // ---- Uruguay (más actuales) ----
+            P("Facundo Pellistri", "Uruguay", UY, Position.FWD, 78, 2026),
+            P("Maximiliano Araújo", "Uruguay", UY, Position.MID, 78, 2026),
+            P("Sergio Rochet", "Uruguay", UY, Position.GK, 78, 2026),
+
+            // ---- Croacia (más actuales) ----
+            P("Luka Sučić", "Croacia", HR, Position.MID, 80, 2026),
+            P("Josip Šutalo", "Croacia", HR, Position.DEF, 80, 2026),
+
+            // ---- Suecia ----
+            P("Alexander Isak", "Suecia", SE, Position.FWD, 86, 2026, true),
+            P("Viktor Gyökeres", "Suecia", SE, Position.FWD, 85, 2026, true),
+            P("Dejan Kulusevski", "Suecia", SE, Position.MID, 82, 2026),
+
+            // ---- Dinamarca ----
+            P("Christian Eriksen", "Dinamarca", DK, Position.MID, 82, 2022),
+            P("Pierre-Emile Højbjerg", "Dinamarca", DK, Position.MID, 82, 2026),
+            P("Joachim Andersen", "Dinamarca", DK, Position.DEF, 80, 2026),
+
+            // ---- Noruega ----
+            P("Antonio Nusa", "Noruega", NO, Position.FWD, 80, 2026),
+            P("Alexander Sørloth", "Noruega", NO, Position.FWD, 81, 2026),
+
+            // ---- Serbia ----
+            P("Dušan Vlahović", "Serbia", RS, Position.FWD, 84, 2026, true),
+            P("Sergej Milinković-Savić", "Serbia", RS, Position.MID, 84, 2022),
+            P("Aleksandar Mitrović", "Serbia", RS, Position.FWD, 81, 2026),
+            P("Dušan Tadić", "Serbia", RS, Position.MID, 82, 2022),
+
+            // ---- Suiza ----
+            P("Granit Xhaka", "Suiza", CH, Position.MID, 83, 2026, true),
+            P("Manuel Akanji", "Suiza", CH, Position.DEF, 83, 2026),
+            P("Yann Sommer", "Suiza", CH, Position.GK, 84, 2026),
+            P("Dan Ndoye", "Suiza", CH, Position.FWD, 79, 2026),
+
+            // ---- Austria ----
+            P("Marcel Sabitzer", "Austria", AT, Position.MID, 81, 2026),
+            P("Konrad Laimer", "Austria", AT, Position.MID, 80, 2026),
+            P("Christoph Baumgartner", "Austria", AT, Position.MID, 80, 2026),
+            P("Marko Arnautović", "Austria", AT, Position.FWD, 79, 2022),
+
+            // ---- Eslovaquia ----
+            P("Milan Škriniar", "Eslovaquia", SK, Position.DEF, 84, 2026, true),
+            P("Stanislav Lobotka", "Eslovaquia", SK, Position.MID, 83, 2026),
+            P("Dávid Hancko", "Eslovaquia", SK, Position.DEF, 82, 2026),
+
+            // ---- Grecia ----
+            P("Konstantinos Tsimikas", "Grecia", GR, Position.DEF, 79, 2026),
+            P("Kostas Mavropanos", "Grecia", GR, Position.DEF, 79, 2026),
+            P("Vangelis Pavlidis", "Grecia", GR, Position.FWD, 80, 2026),
+
+            // ---- Ecuador ----
+            P("Moisés Caicedo", "Ecuador", EC, Position.MID, 85, 2026, true),
+            P("Piero Hincapié", "Ecuador", EC, Position.DEF, 82, 2026),
+            P("Willian Pacho", "Ecuador", EC, Position.DEF, 82, 2026),
+            P("Pervis Estupiñán", "Ecuador", EC, Position.DEF, 80, 2026),
+            P("Kendry Páez", "Ecuador", EC, Position.MID, 79, 2026),
+            P("Enner Valencia", "Ecuador", EC, Position.FWD, 79, 2022),
+
+            // ---- Perú ----
+            P("Gianluca Lapadula", "Perú", PE, Position.FWD, 77, 2022),
+            P("André Carrillo", "Perú", PE, Position.MID, 77, 2018),
+            P("Paolo Guerrero", "Perú", PE, Position.FWD, 82, 2014, true),
+
+            // ---- Paraguay ----
+            P("Miguel Almirón", "Paraguay", PY, Position.MID, 80, 2022),
+            P("Julio Enciso", "Paraguay", PY, Position.FWD, 79, 2026),
+            P("Antonio Sanabria", "Paraguay", PY, Position.FWD, 78, 2026),
+
+            // ---- Chile ----
+            P("Arturo Vidal", "Chile", CL, Position.MID, 84, 2014, true),
+            P("Gary Medel", "Chile", CL, Position.DEF, 80, 2018),
+            P("Ben Brereton Díaz", "Chile", CL, Position.FWD, 78, 2022),
+
+            // ---- México (más actuales) ----
+            P("Santiago Giménez", "México", MX, Position.FWD, 81, 2026),
+            P("Edson Álvarez", "México", MX, Position.MID, 81, 2026),
+            P("Hirving Lozano", "México", MX, Position.FWD, 81, 2022),
+            P("Raúl Jiménez", "México", MX, Position.FWD, 79, 2022),
+
+            // ---- Marruecos ----
+            P("Sofyan Amrabat", "Marruecos", MA, Position.MID, 81, 2026),
+            P("Brahim Díaz", "Marruecos", MA, Position.MID, 83, 2026),
+            P("Youssef En-Nesyri", "Marruecos", MA, Position.FWD, 81, 2026),
+            P("Noussair Mazraoui", "Marruecos", MA, Position.DEF, 81, 2026),
+            P("Bilal El Khannouss", "Marruecos", MA, Position.MID, 79, 2026),
+
+            // ---- Nigeria ----
+            P("Ademola Lookman", "Nigeria", NG, Position.FWD, 84, 2026, true),
+            P("Alex Iwobi", "Nigeria", NG, Position.MID, 80, 2026),
+            P("Samuel Chukwueze", "Nigeria", NG, Position.FWD, 80, 2022),
+
+            // ---- Senegal ----
+            P("Kalidou Koulibaly", "Senegal", SN, Position.DEF, 83, 2022),
+            P("Nicolas Jackson", "Senegal", SN, Position.FWD, 81, 2026),
+            P("Pape Matar Sarr", "Senegal", SN, Position.MID, 80, 2026),
+            P("Iliman Ndiaye", "Senegal", SN, Position.FWD, 79, 2026),
+
+            // ---- Costa de Marfil ----
+            P("Sébastien Haller", "C. de Marfil", CI, Position.FWD, 81, 2022),
+            P("Franck Kessié", "C. de Marfil", CI, Position.MID, 82, 2022),
+            P("Simon Adingra", "C. de Marfil", CI, Position.FWD, 79, 2026),
+            P("Amad Diallo", "C. de Marfil", CI, Position.FWD, 81, 2026),
+
+            // ---- Ghana ----
+            P("Thomas Partey", "Ghana", GH, Position.MID, 83, 2022),
+            P("Iñaki Williams", "Ghana", GH, Position.FWD, 80, 2026),
+
+            // ---- Egipto / Georgia ----
+            P("Omar Marmoush", "Egipto", EG, Position.FWD, 83, 2026),
+            P("Georges Mikautadze", "Georgia", GE, Position.FWD, 80, 2026),
+
+            // ---- Turquía ----
+            P("Hakan Çalhanoğlu", "Turquía", TR, Position.MID, 85, 2026, true),
+            P("Kenan Yıldız", "Turquía", TR, Position.FWD, 82, 2026),
+            P("Ferdi Kadıoğlu", "Turquía", TR, Position.DEF, 80, 2026),
+
+            // ---- Japón ----
+            P("Takefusa Kubo", "Japón", JP, Position.FWD, 82, 2026),
+            P("Kaoru Mitoma", "Japón", JP, Position.FWD, 82, 2026),
+            P("Wataru Endo", "Japón", JP, Position.MID, 80, 2026),
+            P("Daichi Kamada", "Japón", JP, Position.MID, 80, 2026),
+            P("Takehiro Tomiyasu", "Japón", JP, Position.DEF, 80, 2022),
+
+            // ---- Corea ----
+            P("Kim Min-jae", "Corea", KR, Position.DEF, 84, 2026, true),
+            P("Lee Kang-in", "Corea", KR, Position.MID, 82, 2026),
+            P("Hwang Hee-chan", "Corea", KR, Position.FWD, 80, 2026),
+
+            // ---- EE. UU. ----
+            P("Weston McKennie", "EE. UU.", US, Position.MID, 80, 2026),
+            P("Yunus Musah", "EE. UU.", US, Position.MID, 79, 2026),
+            P("Giovanni Reyna", "EE. UU.", US, Position.MID, 79, 2026),
+            P("Antonee Robinson", "EE. UU.", US, Position.DEF, 80, 2026),
+            P("Folarin Balogun", "EE. UU.", US, Position.FWD, 80, 2026),
+            P("Matt Turner", "EE. UU.", US, Position.GK, 78, 2026),
+
+            // ---- Australia ----
+            P("Mathew Ryan", "Australia", AU, Position.GK, 78, 2022),
+            P("Jackson Irvine", "Australia", AU, Position.MID, 76, 2026),
+
+            // ---- Polonia ----
+            P("Piotr Zieliński", "Polonia", PL, Position.MID, 82, 2022),
+            P("Nicola Zalewski", "Polonia", PL, Position.DEF, 78, 2026),
+            P("Jakub Kiwior", "Polonia", PL, Position.DEF, 79, 2026),
+            P("Wojciech Szczęsny", "Polonia", PL, Position.GK, 84, 2022, true),
+        });
+
+
+        // ============================================================
+        //  MÁS LEYENDAS HISTÓRICAS (las que aún no estaban)
+        // ============================================================
+        l.AddRange(new[]
+        {
+            P("Laurent Blanc", "Francia", FR, Position.DEF, 85, 1998, true),
+            P("Kenny Dalglish", "Escocia", SCO, Position.FWD, 88, 1978, true),
+        });
+
         return l;
     }
 }

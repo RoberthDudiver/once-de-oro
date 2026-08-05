@@ -195,6 +195,11 @@ public sealed class DtManager
     public List<string> Awards { get; set; } = new();          // tus premios personales (DT del Año…)
     public List<string> WorldLog { get; set; } = new();        // campeón + Balón de Oro por temporada
 
+    // El mundo evoluciona: fuerza actual de los clubes y ajuste de media de los
+    // jugadores reales, que cambian temporada a temporada (como en la vida real).
+    public Dictionary<string, int> WorldClub { get; set; } = new();
+    public Dictionary<string, int> WorldPlayer { get; set; } = new();
+
     // Plantilla + calendario (semana a semana, pedido de Alexander)
     public List<DtPlayer> Squad { get; set; } = new();
     public List<DtMatch> Fixture { get; set; } = new();

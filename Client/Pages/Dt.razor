@@ -549,7 +549,12 @@ else
         <div class="card card--pad mt">
             <div class="ed-lbl">⭐ @Loc["Fichar leyendas (mercado real)"]</div>
             <div class="faint mb" style="font-size:11.5px;">@Loc["Jugadores reales del juego, como el modo principal. Se pagan del presupuesto de fichajes."]</div>
-            <div class="row wrap" style="gap:8px; align-items:center;">
+            <div class="seg wrap">
+                <button class="@(_realEra == "current" ? "on" : "")" @onclick='() => _realEra = "current"'>@Loc["Actuales"]</button>
+                <button class="@(_realEra == "legend" ? "on" : "")" @onclick='() => _realEra = "legend"'>@Loc["Leyendas"]</button>
+                <button class="@(_realEra == "all" ? "on" : "")" @onclick='() => _realEra = "all"'>@Loc["Todos"]</button>
+            </div>
+            <div class="row wrap" style="gap:8px; align-items:center; margin-top:8px;">
                 <select class="mkt-select" style="width:auto;" @bind="_realPos">
                     <option value="-1">@Loc["Todas las posiciones"]</option>
                     <option value="0">POR</option>
@@ -565,13 +570,13 @@ else
                 <div class="pill @(Svc.MarketMsg.StartsWith("✔") ? "pill--green" : "pill--red") mb" style="margin-top:8px;">@Svc.MarketMsg</div>
             }
             <div class="grid mt" style="gap:8px;">
-                @foreach (var p in DtEngine.RealMarket(dt, _realPos < 0 ? null : (Position)_realPos, _realSearch))
+                @foreach (var p in DtEngine.RealMarket(dt, _realPos < 0 ? null : (Position)_realPos, _realSearch, _realEra))
                 {
-                    var price = DtEngine.RealPrice(p);
+                    var price = DtEngine.RealPrice(dt, p);
                     <div class="dt-prospect">
                         <div>
                             <b>@p.Flag @p.Name</b> @(p.IsLegend ? "⭐" : "")
-                            <div class="faint" style="font-size:11.5px;">@PosName(p.Pos) · @Loc["media"] @p.Rating · @p.Nation</div>
+                            <div class="faint" style="font-size:11.5px;">@PosName(p.Pos) · @Loc["media"] @DtEngine.EffRating(dt, p) · @p.Nation</div>
                         </div>
                         <div class="dt-prospect__buy">
                             <span class="dt-prospect__val">$@price M</span>
@@ -678,6 +683,7 @@ else
     private readonly Dictionary<string, int> _offers = new();
     private int _realPos = -1;
     private string _realSearch = "";
+    private string _realEra = "current";
     private bool _showCal;
 
     private record CalRow(string Icon, string Label, string Month, bool Now);

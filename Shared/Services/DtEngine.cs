@@ -206,6 +206,8 @@ public static class DtEngine
         // Resetear estadísticas de temporada de la plantilla y curar lesiones.
         foreach (var p in dt.Squad) { p.Apps = p.Goals = p.Assists = 0; p.Fatigue = 0; p.InjuryWeeks = 0; p.Morale = Math.Clamp(p.Morale, 62, 78); }
 
+        EnsureWorld(dt);
+        dt.WorldClub[club.Name] = club.Strength;   // el mundo conoce tu club
         int baseRival = club.Level switch { 1 => 60, 2 => 71, 3 => 80, _ => 86 };
         // Rivales: clubes reales del nivel + genéricos hasta llegar a 13.
         var names = DtData.ByLevel(club.Level).Where(c => c.Name != club.Name).Select(c => c.Name).ToList();
@@ -213,7 +215,8 @@ public static class DtEngine
         names = names.OrderBy(_ => Rng.Next()).Take(Teams - 1).ToList();
 
         dt.Table = new List<DtTableRow> { new() { Name = club.Name, Strength = club.Strength, IsMe = true } };
-        foreach (var n in names) dt.Table.Add(new DtTableRow { Name = n, Strength = baseRival + Rng.Next(-8, 9) });
+        // La fuerza del rival sale de cómo evolucionó ese club en el mundo (o del promedio del nivel si es genérico).
+        foreach (var n in names) dt.Table.Add(new DtTableRow { Name = n, Strength = dt.WorldClub.TryGetValue(n, out var ws) ? ws : baseRival + Rng.Next(-8, 9) });
 
         // Fixture: cada rival dos veces (local y visitante), barajado.
         var fix = new List<DtMatch>();
@@ -577,8 +580,45 @@ public static class DtEngine
         });
 
         DevelopSquad(dt);
+        EvolveWorld(dt);
         WorldAndNews(dt, pos, titles, champ);
         dt.Pending = PostSeason(dt, objMet, relegated);
+    }
+
+    private static void EnsureWorld(DtManager dt)
+    {
+        if (dt.WorldClub.Count == 0)
+            foreach (var c in DtData.Clubs) dt.WorldClub[c.Name] = c.Strength;
+    }
+
+    /// <summary>El mundo evoluciona: los clubes suben o bajan de nivel y los jugadores
+    /// reales crecen o declinan, temporada a temporada, como en la vida real.</summary>
+    private static void EvolveWorld(DtManager dt)
+    {
+        EnsureWorld(dt);
+        // Clubes: derivan hacia su base con ruido; algunos crecen, otros caen.
+        foreach (var c in DtData.Clubs)
+        {
+            int cur = dt.WorldClub.TryGetValue(c.Name, out var v) ? v : c.Strength;
+            int drift = Rng.Next(-2, 3) + (cur > c.Strength + 4 ? -1 : cur < c.Strength - 4 ? 1 : 0);
+            if (Rng.NextDouble() < 0.10) drift += Rng.Next(-3, 4);   // saltos ocasionales
+            dt.WorldClub[c.Name] = Math.Clamp(cur + drift, c.Strength - 8, c.Strength + 8);
+        }
+        // Jugadores reales: los jóvenes/actuales crecen o declinan; las leyendas apenas bajan.
+        foreach (var p in PlayerDatabase.All)
+        {
+            if (p.Troll) continue;
+            int d = dt.WorldPlayer.GetValueOrDefault(p.Id);
+            if (p.IsLegend) { if (Rng.NextDouble() < 0.12) d = Math.Max(-6, d - 1); }
+            else if (Rng.NextDouble() < 0.5)
+            {
+                int step = p.Rating >= 88 ? (Rng.NextDouble() < 0.6 ? -1 : 1)
+                         : p.Rating <= 78 ? (Rng.NextDouble() < 0.6 ? 1 : -1)
+                         : (Rng.Next(0, 2) == 0 ? -1 : 1);
+                d = Math.Clamp(d + step, -6, 8);
+            }
+            if (d != 0) dt.WorldPlayer[p.Id] = d; else dt.WorldPlayer.Remove(p.Id);
+        }
     }
 
     /// <summary>Envejecer y desarrollar la plantilla entre temporadas.</summary>
@@ -707,28 +747,39 @@ public static class DtEngine
     // ---------------------------------------------------------------- mercado real (leyendas del juego)
     private static string Code3(string nation) => new string((nation ?? "").Where(char.IsLetter).Take(3).ToArray()).ToUpperInvariant();
 
-    /// <summary>Jugadores REALES del juego (leyendas/estrellas) que podés fichar, como en el modo principal.</summary>
-    public static List<Player> RealMarket(DtManager dt, Position? pos, string search)
+    /// <summary>Media EFECTIVA de un jugador real: su base + cómo evolucionó en el mundo.</summary>
+    public static int EffRating(DtManager dt, Player p) => Math.Clamp(p.Rating + dt.WorldPlayer.GetValueOrDefault(p.Id), 40, 99);
+
+    /// <summary>
+    /// Jugadores REALES del juego que podés fichar, como en el modo principal.
+    /// era: "current" (actuales) · "legend" (leyendas) · "all" (todos).
+    /// </summary>
+    public static List<Player> RealMarket(DtManager dt, Position? pos, string search, string era)
     {
         var have = dt.Squad.Select(p => p.Name).ToHashSet();
         return PlayerDatabase.All
             .Where(p => !p.Troll && !have.Contains(p.Name)
+                     && (era == "all" || (era == "legend" ? p.Era < 2015 : p.Era >= 2015))
                      && (pos is null || p.Pos == pos)
                      && (string.IsNullOrWhiteSpace(search) || p.Name.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase)))
-            .OrderByDescending(p => p.Rating).Take(24).ToList();
+            .OrderByDescending(p => EffRating(dt, p)).Take(24).ToList();
     }
 
-    public static int RealPrice(Player p) => Math.Max(1, p.Value);
+    public static int RealPrice(DtManager dt, Player p)
+    {
+        int r = EffRating(dt, p);
+        return Math.Max(1, (int)Math.Round(0.0034 * Math.Pow(Math.Max(1, r - 50), 2.95)));
+    }
 
     /// <summary>Ficha a un jugador real del mercado (se paga del presupuesto de fichajes).</summary>
     public static string SignReal(DtManager dt, string playerId)
     {
         var p = PlayerDatabase.All.FirstOrDefault(x => x.Id == playerId);
         if (p is null) return "";
-        int price = RealPrice(p);
+        int price = RealPrice(dt, p);
         if (dt.TransferBudgetM < price) return $"No te alcanza: cuesta ${price}M.";
         dt.TransferBudgetM -= price;
-        int media = Math.Clamp(p.Rating, 45, 97);
+        int media = Math.Clamp(EffRating(dt, p), 45, 97);
         dt.Squad.Insert(0, new DtPlayer
         {
             Id = "sq" + Guid.NewGuid().ToString("N")[..7],
