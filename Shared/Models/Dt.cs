@@ -6,6 +6,22 @@ public enum DtLicense { Basica, Avanzada, Profesional }
 /// <summary>De dónde viene el DT (solo cambia su historia, sin ventajas directas).</summary>
 public enum DtBackground { Exjugador, Cantera, Analista, Preparador, Estudiante }
 
+/// <summary>Un jugador que encontró el ojeador y se puede fichar.</summary>
+public sealed class DtProspect
+{
+    public string Id { get; set; } = "";
+    public string Name { get; set; } = "";
+    public string Nation { get; set; } = "";
+    public string NationCode { get; set; } = "";
+    public Position Pos { get; set; }
+    public int Age { get; set; }
+    public int Media { get; set; }
+    public int Potential { get; set; }
+    public int ValueM { get; set; }
+    public bool Free { get; set; }
+    public string Club { get; set; } = "";
+}
+
 /// <summary>Un club dirigible en el Modo DT.</summary>
 public sealed class DtClub
 {
@@ -99,7 +115,11 @@ public sealed class DtManager
     public int TrainCenter { get; set; } = 1;   // desarrollo del plantel
     public int Youth { get; set; } = 1;         // cantera
     public int Medical { get; set; } = 1;       // menos temporadas malas
-    public int Scouting { get; set; } = 1;      // reforzar rinde más
+    public int Scouting { get; set; } = 1;      // mejores informes y más candidatos
+
+    // Mercado (Pilar 3)
+    public List<DtProspect> ScoutPool { get; set; } = new();   // resultados de la última búsqueda
+    public List<string> Signings { get; set; } = new();        // fichajes hechos (para la vitrina)
 
     // ---- Acumulados de carrera ----
     public int Titles { get; set; }

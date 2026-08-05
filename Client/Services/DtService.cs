@@ -58,6 +58,11 @@ public sealed class DtService
     public void Upgrade(string which) { if (Current is not null && DtEngine.UpgradeFacility(Current, which)) Save(); }
     public void Loan(int m) { if (Current is not null) { DtEngine.RequestLoan(Current, m); Save(); } }
 
+    // ---- Mercado / scouting ----
+    public string MarketMsg { get; private set; } = "";
+    public void Scout(Position? pos, int minMedia) { if (Current is not null) { DtEngine.Scout(Current, pos, minMedia); MarketMsg = ""; Save(); } }
+    public void Sign(string prospectId, int offerM) { if (Current is not null) { MarketMsg = DtEngine.Sign(Current, prospectId, offerM); Save(); } }
+
     public async Task ResetAsync()
     {
         Current = null;

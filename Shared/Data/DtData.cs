@@ -48,4 +48,14 @@ public static class DtData
     {
         1 => "Club pequeño", 2 => "Club mediano", 3 => "Club grande", _ => "Club gigante"
     };
+
+    // Nombres para generar jugadores del mercado.
+    public static readonly string[] FirstNames =
+        { "Lucas", "Mateo", "Thiago", "Bruno", "Diego", "Nico", "Iván", "Marco", "Leo", "Emi",
+          "Franco", "Kevin", "Ezequiel", "Julián", "Facundo", "Rodrigo", "Andrés", "Gastón",
+          "Pablo", "Sergio", "Youssef", "Amadou", "Kenji", "Luka", "Milan", "Omar" };
+    public static readonly string[] LastNames =
+        { "Gómez", "Fernández", "Silva", "Rossi", "Müller", "Torres", "Vidal", "Costa", "Núñez",
+          "Herrera", "Sosa", "Cabrera", "Ferrari", "Kovač", "Diarra", "Okafor", "Tanaka", "Petrov",
+          "Blanco", "Ríos", "Medina", "Iglesias", "Vega", "Sané", "Kane", "Romero" };
 }

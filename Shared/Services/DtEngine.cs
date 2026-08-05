@@ -84,6 +84,7 @@ public static class DtEngine
         double conf = 0.6 + dt.Confidence / 100.0 * 0.7;   // 0.6 .. 1.3
         dt.TransferBudgetM = Math.Max(2, (int)Math.Round(c.BudgetM * conf) + Math.Max(0, dt.CajaM) / 6);
         dt.SpentThisSeasonM = 0;
+        dt.ScoutPool.Clear();
     }
 
     /// <summary>Gasta del presupuesto de fichajes para reforzar: sube la fuerza del club (con tope y rendimiento decreciente).</summary>
@@ -134,6 +135,67 @@ public static class DtEngine
         dt.CajaM += m;
         dt.LoanRemainingM += (int)Math.Round(m * 1.15);
         dt.LoanSeasonsLeft = 4;
+    }
+
+    // ---------------------------------------------------------------- mercado / scouting
+    private static int ProspectValue(int media, int age)
+    {
+        double b = Math.Pow(Math.Max(0, media - 45) / 10.0, 3.1) * 2.2;   // M
+        double af = age <= 21 ? 1.25 : age <= 27 ? 1.1 : Math.Max(0.2, 1.1 - (age - 27) * 0.12);
+        return Math.Max(1, (int)Math.Round(b * af));
+    }
+
+    /// <summary>El ojeador busca jugadores. Mejor scouting = más candidatos y de mayor techo.</summary>
+    public static void Scout(DtManager dt, Position? pos, int minMedia)
+    {
+        var club = dt.Club!;
+        int n = 3 + dt.Scouting;               // 4..8 candidatos
+        int techo = club.Strength + 2 + dt.Scouting * 2;   // el scouting sube el techo del hallazgo
+        var list = new List<DtProspect>();
+        for (int i = 0; i < n; i++)
+        {
+            var pp = pos ?? (Position)Rng.Next(0, 4);
+            int age = Rng.Next(17, 34);
+            int media = Math.Clamp(club.Strength + Rng.Next(-8, 9), 45, Math.Min(96, techo));
+            if (media < minMedia) media = Math.Min(techo, minMedia + Rng.Next(0, 4));
+            bool free = Rng.NextDouble() < 0.16;
+            int pot = age <= 22 ? Math.Min(97, media + Rng.Next(3, 12)) : media + Rng.Next(0, 3);
+            var nat = CareerData.Nations[Rng.Next(CareerData.Nations.Count)];
+            string name = $"{DtData.FirstNames[Rng.Next(DtData.FirstNames.Length)]} {DtData.LastNames[Rng.Next(DtData.LastNames.Length)]}";
+            list.Add(new DtProspect
+            {
+                Id = "p" + Guid.NewGuid().ToString("N")[..6],
+                Name = name, Nation = nat.Name, NationCode = nat.Code, Pos = pp,
+                Age = age, Media = media, Potential = pot,
+                ValueM = free ? 0 : ProspectValue(media, age),
+                Free = free, Club = free ? "Libre" : DtData.Clubs[Rng.Next(DtData.Clubs.Count)].Name,
+            });
+        }
+        dt.ScoutPool = list.OrderByDescending(p => p.Media).ToList();
+    }
+
+    /// <summary>Ofertar por un jugador. Devuelve el mensaje del resultado de la negociación.</summary>
+    public static string Sign(DtManager dt, string prospectId, int offerM)
+    {
+        var p = dt.ScoutPool.FirstOrDefault(x => x.Id == prospectId);
+        if (p is null) return "";
+        var club = dt.Club!;
+
+        if (!p.Free)
+        {
+            if (dt.TransferBudgetM < offerM) return "No te alcanza el presupuesto de fichajes.";
+            if (offerM < p.ValueM) return $"Rechazada: {p.Club} pide ${p.ValueM}M.";
+            dt.TransferBudgetM -= offerM;
+        }
+        // Cuánto aporta al equipo: un crack sube la fuerza; alguien de tu nivel, poco.
+        int gain = Math.Clamp(p.Media - club.Strength, 0, 3);
+        if (gain == 0 && p.Media >= club.Strength - 1) gain = 1;   // profundidad
+        club.Strength = Math.Min(LevelCap(club.Level), club.Strength + gain);
+
+        dt.Signings.Insert(0, $"{p.Name} · {p.Pos} {p.Media}{(p.Free ? " (libre)" : "")}");
+        if (dt.Signings.Count > 12) dt.Signings.RemoveAt(dt.Signings.Count - 1);
+        dt.ScoutPool.RemoveAll(x => x.Id == p.Id);
+        return $"✔ Fichaste a {p.Name} · fuerza +{gain}";
     }
 
     private static List<DtObjective> ObjectivesFor(DtClub c) => c.Level switch

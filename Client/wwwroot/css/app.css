@@ -1420,3 +1420,9 @@ a { color: inherit; text-decoration: none; }
 .dt-fac { display:flex; flex-direction:column; gap:6px; padding:10px; border:1px solid var(--line); border-radius:11px; background:var(--glass); }
 .dt-fac__n { font-size:13px; }
 .dt-fac .btn { font-size:12px; padding:6px 10px; }
+
+/* mercado del modo DT */
+.dt-prospect { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;
+    padding:10px 12px; border:1px solid var(--line); border-radius:11px; background:var(--glass); }
+.dt-prospect__buy { display:flex; align-items:center; gap:8px; }
+.dt-prospect__val { font-family:var(--font-head); color:var(--gold-2); font-size:13px; }
