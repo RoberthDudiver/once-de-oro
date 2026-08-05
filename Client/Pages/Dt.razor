@@ -1,0 +1,243 @@
+@page "/dt"
+@using OnceDeOro.Data
+@using OnceDeOro.Services
+@implements IDisposable
+@inject DtService Svc
+@inject GameService Game
+@inject Loc Loc
+
+<PageTitle>Modo DT — Once de Oro</PageTitle>
+
+<div class="section-title"><span class="dot"></span> 🧠 @Loc["Modo DT · Carrera de entrenador"]</div>
+
+@if (Svc.Current is null || !Svc.Current.Started)
+{
+    @* ---------------- Crear entrenador ---------------- *@
+    <div class="card card--pad">
+        <p class="faint">@Loc["Creá tu entrenador y construí una carrera dirigiendo clubes: la directiva te pone objetivos, tu reputación crece con los títulos y los grandes te vienen a buscar."]</p>
+
+        <div class="grid mt" style="grid-template-columns:1fr 1fr; gap:12px;">
+            <label class="ed-lbl2">@Loc["Nombre"]
+                <input class="search" maxlength="14" value="@_name" @oninput="e => _name = e.Value?.ToString() ?? string.Empty" />
+            </label>
+            <label class="ed-lbl2">@Loc["Apellido"]
+                <input class="search" maxlength="14" value="@_surname" @oninput="e => _surname = e.Value?.ToString() ?? string.Empty" />
+            </label>
+        </div>
+
+        <div class="grid mt" style="grid-template-columns:1fr 1fr; gap:12px;">
+            <label class="ed-lbl2">@Loc["Nacionalidad"]
+                <select class="mkt-select" @bind="_nation">
+                    @foreach (var n in CareerData.Nations)
+                    {
+                        <option value="@n.Name">@n.Name (@n.Code)</option>
+                    }
+                </select>
+            </label>
+            <label class="ed-lbl2">@Loc["Edad"]
+                <select class="mkt-select" @bind="_age">
+                    <option value="34">@Loc["Joven (34)"]</option>
+                    <option value="45">@Loc["Adulto (45)"]</option>
+                    <option value="58">@Loc["Veterano (58)"]</option>
+                </select>
+            </label>
+        </div>
+
+        <div class="ed-lbl mt">@Loc["Licencia de entrenador"]</div>
+        <div class="seg wrap">
+            <button class="@(_lic == DtLicense.Basica ? "on" : "")" @onclick="() => _lic = DtLicense.Basica">@Loc["Básica"]</button>
+            <button class="@(_lic == DtLicense.Avanzada ? "on" : "")" @onclick="() => _lic = DtLicense.Avanzada">@Loc["Avanzada"]</button>
+            <button class="@(_lic == DtLicense.Profesional ? "on" : "")" @onclick="() => _lic = DtLicense.Profesional">@Loc["Profesional"]</button>
+        </div>
+        <div class="faint mb" style="font-size:11.5px; margin-top:4px;">
+            @(_lic == DtLicense.Basica ? Loc["Empezás en un club pequeño."]
+              : _lic == DtLicense.Avanzada ? Loc["Empezás en un club mediano."]
+              : Loc["Empezás en un club grande."])
+        </div>
+
+        <div class="ed-lbl mt">@Loc["Formación previa"]</div>
+        <div class="seg wrap">
+            @foreach (var b in Enum.GetValues<DtBackground>())
+            {
+                <button class="@(_bg == b ? "on" : "")" @onclick="() => _bg = b">@BgName(b)</button>
+            }
+        </div>
+
+        <button class="btn btn--gold btn--block mt" @onclick="Start">▶ @Loc["Empezar carrera de DT"]</button>
+    </div>
+}
+else
+{
+    var dt = Svc.Current;
+
+    @* ---------------- Ficha del DT ---------------- *@
+    <div class="career-card">
+        <div class="dt-face">
+            @if (Game.State.Avatar.Creado)
+            {
+                <AvatarView A="Game.State.Avatar" Size="60" />
+            }
+            else
+            {
+                <span style="font-size:34px;">🧑‍💼</span>
+            }
+        </div>
+        <div class="career-id">
+            <div class="career-id__name">@dt.FullName · @dt.NationCode</div>
+            <div class="career-id__club">
+                @if (dt.Employed && dt.Club is not null)
+                {
+                    @($"{dt.Club.Emblem} {dt.Club.Name} · {DtData.LevelName(dt.Club.Level)} · {dt.Club.League}")
+                }
+                else { <span>@Loc["Sin equipo — libre"]</span> }
+            </div>
+            <div class="career-stats">
+                <span>@Loc["Temporada"] <b>@dt.Year</b></span>
+                <span><b>@DtEngine.RepName(dt.Rep)</b> · @Loc["reputación"]</span>
+                <span>🏆 <b>@dt.Titles</b></span>
+                <span><b>@dt.Wins</b>-@dt.Draws-@dt.Losses</span>
+            </div>
+        </div>
+    </div>
+
+    @* Barras de reputación y confianza *@
+    <div class="grid mt" style="grid-template-columns:1fr 1fr; gap:12px;">
+        <div class="card card--pad">
+            <div class="row" style="justify-content:space-between;"><span class="faint">@Loc["Reputación"]</span><b>@DtEngine.RepName(dt.Rep)</b></div>
+            <div class="dt-bar mt"><i style="width:@dt.Rep%; background:linear-gradient(90deg,#cd7f32,#f5c542,#6fe0ff)"></i></div>
+        </div>
+        <div class="card card--pad">
+            <div class="row" style="justify-content:space-between;"><span class="faint">@Loc["Confianza de la directiva"]</span><b>@DtEngine.ConfName(dt.Confidence)</b></div>
+            <div class="dt-bar mt"><i style="width:@dt.Confidence%; background:@ConfColor(dt.Confidence)"></i></div>
+        </div>
+    </div>
+
+    @* Objetivos de la temporada (mientras tenés trabajo y no hay decisión pendiente) *@
+    @if (dt.Employed && dt.Pending is null && dt.Objectives.Count > 0)
+    {
+        <div class="card card--pad mt">
+            <div class="ed-lbl">🎯 @Loc["Objetivos de la directiva"] · @Loc["Temporada"] @dt.Year</div>
+            @foreach (var o in dt.Objectives)
+            {
+                <div class="dt-obj">▪ @o.Text</div>
+            }
+            @if (dt.Warned)
+            {
+                <div class="clash mt"><div class="clash__txt">⚠️ @Loc["La directiva avisó: tu puesto está en riesgo. Necesitás resultados."]</div></div>
+            }
+            <button class="btn btn--gold btn--block mt" @onclick="Play">▶ @Loc["Jugar la temporada"]</button>
+        </div>
+    }
+
+    @* Decisión de fin de temporada / sin equipo *@
+    @if (dt.Pending is { } dec)
+    {
+        <div class="card card--pad mt career-decision">
+            <div class="career-decision__ttl">@dec.Title</div>
+            <div class="faint mb">@dec.Text</div>
+            @if (dt.Timeline.Count > 0)
+            {
+                var last = dt.Timeline[0];
+                <div class="dt-result mb">@last.Club · @last.Pos@Loc["º"] · @last.Won-@last.Drawn-@last.Lost · @(last.Titles.Count > 0 ? string.Join(" ", last.Titles) : "")</div>
+            }
+            <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px;">
+                @foreach (var o in dec.Options)
+                {
+                    <button class="career-opt" @onclick="() => Choose(o)">
+                        <div class="career-opt__label">@o.Label</div>
+                        <div class="career-opt__sub">@o.Sub</div>
+                    </button>
+                }
+            </div>
+        </div>
+    }
+
+    @* Historial de temporadas *@
+    @if (dt.Timeline.Count > 0)
+    {
+        <div class="section-title" style="margin-top:22px;"><span class="dot"></span> @Loc["Trayectoria del DT"]</div>
+        <div class="card table-wrap">
+            <table class="ltable">
+                <thead>
+                    <tr><th>@Loc["Temp."]</th><th class="ltable__team">@Loc["Club"]</th><th>@Loc["Pos"]</th><th>G-E-P</th><th class="ltable__team">@Loc["Logro"]</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var s in dt.Timeline)
+                    {
+                        <tr>
+                            <td>@s.Year</td>
+                            <td class="ltable__team">@s.Club</td>
+                            <td class="ltable__pts">@s.Pos@Loc["º"]</td>
+                            <td>@s.Won-@s.Drawn-@s.Lost</td>
+                            <td class="ltable__team" style="font-size:12px; color:var(--gold-2);">@s.Note</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card card--pad center mt">
+            <b style="font-family:var(--font-display); font-size:22px; color:var(--gold-2);">@DtEngine.Legacy(dt)</b>
+            <div class="faint" style="font-size:12px;">
+                @dt.SeasonsManaged @Loc["temporadas"] · @dt.ClubsManaged.Count @Loc["clubes"] · @dt.TimesFired @Loc["despidos"]
+            </div>
+        </div>
+    }
+
+    <div class="center mt">
+        @if (_confirmReset)
+        {
+            <span class="faint">@Loc["¿Seguro? Se borra esta carrera de DT."]</span>
+            <button class="btn btn--gold" style="margin-left:8px;" @onclick="Reset">@Loc["Sí, nueva"]</button>
+            <button class="btn btn--ghost" style="margin-left:6px;" @onclick="() => _confirmReset = false">@Loc["Cancelar"]</button>
+        }
+        else
+        {
+            <button class="btn btn--ghost" @onclick="() => _confirmReset = true">↺ @Loc["Nueva carrera de DT"]</button>
+        }
+    </div>
+}
+
+@code {
+    private string _name = "";
+    private string _surname = "";
+    private string _nation = "Argentina";
+    private int _age = 45;
+    private DtLicense _lic = DtLicense.Basica;
+    private DtBackground _bg = DtBackground.Exjugador;
+    private bool _confirmReset;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Svc.Changed += OnChanged;
+        Game.Changed += OnChanged;
+        Loc.Changed += OnChanged;
+        await Svc.LoadAsync();
+    }
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    private void Start() => Svc.Start(_name, _surname, _nation, _age, _lic, _bg);
+    private void Play() => Svc.PlaySeason();
+    private void Choose(DtOption o) => Svc.Choose(o);
+    private async Task Reset() { _confirmReset = false; await Svc.ResetAsync(); }
+
+    private string BgName(DtBackground b) => b switch
+    {
+        DtBackground.Exjugador => Loc["Exjugador"],
+        DtBackground.Cantera => Loc["De cantera"],
+        DtBackground.Analista => Loc["Analista táctico"],
+        DtBackground.Preparador => Loc["Preparador físico"],
+        _ => Loc["Estudiante"],
+    };
+
+    private static string ConfColor(int c) =>
+        c >= 60 ? "#37d67a" : c >= 40 ? "#f5c542" : c >= 20 ? "#ff9a3d" : "#e23b3b";
+
+    public void Dispose()
+    {
+        Svc.Changed -= OnChanged;
+        Game.Changed -= OnChanged;
+        Loc.Changed -= OnChanged;
+    }
+}
