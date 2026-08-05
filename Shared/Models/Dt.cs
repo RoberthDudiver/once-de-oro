@@ -6,6 +6,13 @@ public enum DtLicense { Basica, Avanzada, Profesional }
 /// <summary>De dónde viene el DT (solo cambia su historia, sin ventajas directas).</summary>
 public enum DtBackground { Exjugador, Cantera, Analista, Preparador, Estudiante }
 
+/// <summary>Una noticia del mundo del fútbol.</summary>
+public sealed class DtNews
+{
+    public string Icon { get; set; } = "📰";
+    public string Text { get; set; } = "";
+}
+
 /// <summary>Un jugador que encontró el ojeador y se puede fichar.</summary>
 public sealed class DtProspect
 {
@@ -120,6 +127,11 @@ public sealed class DtManager
     // Mercado (Pilar 3)
     public List<DtProspect> ScoutPool { get; set; } = new();   // resultados de la última búsqueda
     public List<string> Signings { get; set; } = new();        // fichajes hechos (para la vitrina)
+
+    // Mundo vivo (Pilar 4)
+    public List<DtNews> News { get; set; } = new();            // feed de la última temporada
+    public List<string> Awards { get; set; } = new();          // tus premios personales (DT del Año…)
+    public List<string> WorldLog { get; set; } = new();        // campeón + Balón de Oro por temporada
 
     // ---- Acumulados de carrera ----
     public int Titles { get; set; }

@@ -112,6 +112,31 @@ else
         </div>
     </div>
 
+    @* Noticias del mundo (Pilar 4) *@
+    @if (dt.News.Count > 0)
+    {
+        <div class="card card--pad mt">
+            <div class="ed-lbl">📰 @Loc["Noticias del mundo"]</div>
+            @foreach (var n in dt.News)
+            {
+                <div class="dt-news"><span class="dt-news__i">@n.Icon</span> @n.Text</div>
+            }
+        </div>
+    }
+
+    @if (dt.Awards.Count > 0)
+    {
+        <div class="card card--pad mt">
+            <div class="ed-lbl">🏅 @Loc["Tus premios"]</div>
+            <div class="row wrap" style="gap:6px;">
+                @foreach (var a in dt.Awards)
+                {
+                    <span class="pill pill--gold">@a</span>
+                }
+            </div>
+        </div>
+    }
+
     @* Oficina / finanzas (pretemporada) *@
     @if (dt.Employed && dt.Pending is null)
     {
@@ -289,9 +314,20 @@ else
         <div class="card card--pad center mt">
             <b style="font-family:var(--font-display); font-size:22px; color:var(--gold-2);">@DtEngine.Legacy(dt)</b>
             <div class="faint" style="font-size:12px;">
-                @dt.SeasonsManaged @Loc["temporadas"] · @dt.ClubsManaged.Count @Loc["clubes"] · @dt.TimesFired @Loc["despidos"]
+                @dt.SeasonsManaged @Loc["temporadas"] · @dt.ClubsManaged.Count @Loc["clubes"] · @dt.TimesFired @Loc["despidos"] · @dt.Awards.Count @Loc["premios"]
             </div>
         </div>
+
+        @if (dt.WorldLog.Count > 0)
+        {
+            <div class="section-title" style="margin-top:22px;"><span class="dot"></span> 🌍 @Loc["Historia del mundo"]</div>
+            <div class="card card--pad">
+                @foreach (var w in dt.WorldLog)
+                {
+                    <div class="dt-news" style="font-size:12.5px;">@w</div>
+                }
+            </div>
+        }
     }
 
     <div class="center mt">

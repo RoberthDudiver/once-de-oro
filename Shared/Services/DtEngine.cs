@@ -309,6 +309,7 @@ public static class DtEngine
             Titles = titles, ObjectiveMet = objMet, RepAfter = dt.Rep, Note = note,
         });
 
+        WorldAndNews(dt, pos, titles, champ);
         dt.Pending = PostSeason(dt, objMet, relegated);
     }
 
@@ -376,6 +377,53 @@ public static class DtEngine
         if (opt.Kind == "move" && opt.Club is not null) Hire(dt, opt.Club);
         else { dt.Objectives = ObjectivesFor(dt.Club!); dt.Pending = null; NewBudget(dt); } // stay: nuevos objetivos + presupuesto
         dt.Year++;
+    }
+
+    // ---------------------------------------------------------------- mundo vivo
+    private static string RandName() =>
+        $"{DtData.FirstNames[Rng.Next(DtData.FirstNames.Length)]} {DtData.LastNames[Rng.Next(DtData.LastNames.Length)]}";
+
+    /// <summary>Genera premios, noticias del mundo e historial al cerrar la temporada.</summary>
+    private static void WorldAndNews(DtManager dt, int pos, List<string> titles, bool champ)
+    {
+        var club = dt.Club!;
+        dt.News.Clear();
+
+        // Tu resumen.
+        dt.News.Add(new DtNews { Icon = "📋", Text = $"{club.Name} terminó {pos}º" + (titles.Count > 0 ? $" y ganó {string.Join(", ", titles)}" : "") });
+
+        // Campeones de otras grandes ligas.
+        var gigs = DtData.ByLevel(4).Where(c => c.Name != club.Name).OrderBy(_ => Rng.Next()).Take(3).ToList();
+        foreach (var g in gigs) dt.News.Add(new DtNews { Icon = "🏆", Text = $"{g.Name} se coronó campeón de {g.League}" });
+
+        // Fichaje bomba y joven promesa.
+        var buyer = DtData.ByLevel(4).OrderBy(_ => Rng.Next()).First();
+        dt.News.Add(new DtNews { Icon = "💸", Text = $"{buyer.Name} fichó a {RandName()} por ${Rng.Next(70, 190)}M" });
+        dt.News.Add(new DtNews { Icon = "🌟", Text = $"{RandName()} ({Rng.Next(17, 20)} años) es la sensación de la temporada" });
+        dt.News.Add(new DtNews { Icon = "🔁", Text = $"{DtData.Clubs[Rng.Next(DtData.Clubs.Count)].Name} cambió de entrenador" });
+
+        // Premios individuales.
+        string ballon = (champ && dt.Signings.Count > 0 && Rng.NextDouble() < 0.45)
+            ? dt.Signings[0].Split(" ·")[0]        // uno de tus cracks
+            : RandName();
+        string bota = RandName();
+
+        bool youWin = (champ || titles.Contains("⭐ Internacional")) && Rng.NextDouble() < (club.Level >= 4 ? 0.55 : 0.30);
+        string dtAward;
+        if (youWin)
+        {
+            dt.Awards.Insert(0, $"🏅 DT del Año · T{dt.Year}");
+            dt.Rep = Math.Clamp(dt.Rep + 5, 0, 100);
+            dtAward = $"{dt.Surname} — 🏅 DT del Año";
+        }
+        else dtAward = $"{RandName()} — DT del Año";
+
+        dt.News.Add(new DtNews { Icon = "🥇", Text = $"Balón de Oro: {ballon} · Bota de Oro: {bota}" });
+        dt.News.Add(new DtNews { Icon = "🎖️", Text = dtAward });
+
+        // Historial persistente del mundo.
+        dt.WorldLog.Insert(0, $"T{dt.Year}: 🏆 {gigs.FirstOrDefault()?.Name ?? club.Name} · 🥇 {ballon}");
+        if (dt.WorldLog.Count > 24) dt.WorldLog.RemoveAt(dt.WorldLog.Count - 1);
     }
 
     // ---- Etiqueta de legado ----
