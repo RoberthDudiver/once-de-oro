@@ -85,6 +85,22 @@ public sealed class DtManager
     public List<DtObjective> Objectives { get; set; } = new();
     public DtDecision? Pending { get; set; }
 
+    // ---- Economía (Pilar 2) ----
+    public int CajaM { get; set; }              // caja del club (M)
+    public int TransferBudgetM { get; set; }    // presupuesto de fichajes de la temporada (M)
+    public int WageBudgetM { get; set; }        // presupuesto salarial (M/temporada, informativo)
+    public int LastIncomeM { get; set; }        // ingresos de la última temporada
+    public int LastExpenseM { get; set; }       // gastos de la última temporada
+    public int LoanRemainingM { get; set; }     // deuda pendiente de préstamos
+    public int LoanSeasonsLeft { get; set; }    // temporadas que faltan para saldarla
+    public int SpentThisSeasonM { get; set; }   // ya reforzado esta temporada (para la UI)
+
+    // Instalaciones (nivel 1..5). Suben con inversión y benefician a largo plazo.
+    public int TrainCenter { get; set; } = 1;   // desarrollo del plantel
+    public int Youth { get; set; } = 1;         // cantera
+    public int Medical { get; set; } = 1;       // menos temporadas malas
+    public int Scouting { get; set; } = 1;      // reforzar rinde más
+
     // ---- Acumulados de carrera ----
     public int Titles { get; set; }
     public int Matches { get; set; }

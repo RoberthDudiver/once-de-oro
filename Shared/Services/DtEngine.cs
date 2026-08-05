@@ -61,6 +61,79 @@ public static class DtEngine
         if (!dt.ClubsManaged.Contains(club.Name)) dt.ClubsManaged.Add(club.Name);
         dt.Objectives = ObjectivesFor(club);
         dt.Pending = null;
+
+        // Economía del nuevo club: cada club llega con su caja, instalaciones e
+        // historia. Las mejoras que hiciste en el club anterior quedan allá.
+        dt.CajaM = club.BudgetM;
+        dt.WageBudgetM = WageBase(club.Level);
+        dt.LoanRemainingM = 0; dt.LoanSeasonsLeft = 0;
+        dt.TrainCenter = dt.Youth = dt.Medical = dt.Scouting = Math.Clamp(club.Level, 1, 4);
+        dt.LastIncomeM = dt.LastExpenseM = 0;
+        NewBudget(dt);
+    }
+
+    // ---------------------------------------------------------------- economía
+    private static int LevelCap(int lvl) => lvl switch { 1 => 68, 2 => 79, 3 => 87, _ => 93 };
+    private static int WageBase(int lvl) => lvl switch { 1 => 10, 2 => 32, 3 => 78, _ => 170 };
+    private static int IncomeBase(int lvl) => lvl switch { 1 => 24, 2 => 66, 3 => 150, _ => 320 };
+
+    /// <summary>La directiva fija el presupuesto de fichajes de la temporada según nivel, confianza y caja.</summary>
+    public static void NewBudget(DtManager dt)
+    {
+        var c = dt.Club!;
+        double conf = 0.6 + dt.Confidence / 100.0 * 0.7;   // 0.6 .. 1.3
+        dt.TransferBudgetM = Math.Max(2, (int)Math.Round(c.BudgetM * conf) + Math.Max(0, dt.CajaM) / 6);
+        dt.SpentThisSeasonM = 0;
+    }
+
+    /// <summary>Gasta del presupuesto de fichajes para reforzar: sube la fuerza del club (con tope y rendimiento decreciente).</summary>
+    public static void Reinforce(DtManager dt, int m)
+    {
+        var c = dt.Club!;
+        m = Math.Clamp(m, 0, dt.TransferBudgetM);
+        if (m <= 0) return;
+        // Costo por punto según nivel; el scouting lo abarata.
+        double costPerPoint = c.Level switch { 1 => 4.0, 2 => 9.0, 3 => 20.0, _ => 42.0 } * (1.0 - (dt.Scouting - 1) * 0.08);
+        int gain = (int)Math.Floor(m / Math.Max(1.0, costPerPoint));
+        int cap = LevelCap(c.Level);
+        c.Strength = Math.Min(cap, c.Strength + gain);
+        dt.TransferBudgetM -= m;
+        dt.SpentThisSeasonM += m;
+    }
+
+    public static int FacilityLevel(DtManager dt, string which) => which switch
+    {
+        "train" => dt.TrainCenter, "youth" => dt.Youth, "medical" => dt.Medical, _ => dt.Scouting
+    };
+
+    /// <summary>Costo (M) de subir una instalación al siguiente nivel.</summary>
+    public static int FacilityCost(int currentLevel) => currentLevel switch { 1 => 15, 2 => 30, 3 => 55, 4 => 90, _ => 0 };
+
+    public static bool UpgradeFacility(DtManager dt, string which)
+    {
+        int lvl = FacilityLevel(dt, which);
+        if (lvl >= 5) return false;
+        int cost = FacilityCost(lvl);
+        if (dt.CajaM < cost) return false;
+        dt.CajaM -= cost;
+        switch (which)
+        {
+            case "train": dt.TrainCenter++; break;
+            case "youth": dt.Youth++; break;
+            case "medical": dt.Medical++; break;
+            default: dt.Scouting++; break;
+        }
+        return true;
+    }
+
+    /// <summary>Pide un préstamo: entra a la caja ahora y se paga en 4 temporadas con interés.</summary>
+    public static void RequestLoan(DtManager dt, int m)
+    {
+        m = Math.Clamp(m, 0, 300);
+        if (m <= 0) return;
+        dt.CajaM += m;
+        dt.LoanRemainingM += (int)Math.Round(m * 1.15);
+        dt.LoanSeasonsLeft = 4;
     }
 
     private static List<DtObjective> ObjectivesFor(DtClub c) => c.Level switch
@@ -90,8 +163,15 @@ public static class DtEngine
         var club = dt.Club;
         int teams = 18, games = (teams - 1) * 2;
 
-        // Fuerza del equipo con algo de azar de temporada.
-        double rating = club.Strength + Rng.Next(-6, 7);
+        // Desarrollo por instalaciones: centro de entrenamiento + cantera hacen
+        // crecer la fuerza del club temporada a temporada (hasta el tope del nivel).
+        int dev = dt.TrainCenter + dt.Youth;   // 2..10
+        if (dev >= 4 && club.Strength < LevelCap(club.Level))
+            club.Strength = Math.Min(LevelCap(club.Level), club.Strength + (dev >= 8 ? 2 : 1));
+
+        // Fuerza del equipo con algo de azar de temporada. El departamento médico
+        // recorta la mala suerte (menos lesiones/imponderables en contra).
+        double rating = club.Strength + Rng.Next(-6 + (dt.Medical - 1), 7);
         // Campo de rivales alrededor del nivel del club.
         int baseRival = club.Level switch { 1 => 60, 2 => 71, 3 => 80, _ => 86 };
         var field = Enumerable.Range(0, teams - 1)
@@ -146,6 +226,19 @@ public static class DtEngine
         string note = titles.Count > 0 ? string.Join(" · ", titles)
                     : objMet ? "✔ Objetivos cumplidos"
                     : relegated ? "⬇ Descenso" : "✖ Objetivos incumplidos";
+
+        // ---- Finanzas de la temporada ----
+        int upkeep = (dt.TrainCenter + dt.Youth + dt.Medical + dt.Scouting) * 3;   // mantenimiento
+        int loanPay = dt.LoanSeasonsLeft > 0 ? (int)Math.Ceiling(dt.LoanRemainingM / (double)dt.LoanSeasonsLeft) : 0;
+        if (loanPay > 0) { dt.LoanRemainingM -= loanPay; dt.LoanSeasonsLeft--; }
+        int income = IncomeBase(club.Level)
+                   + Math.Max(0, (teams / 2 - pos)) * 3            // mejor puesto, más ingresos
+                   + titles.Count * 25
+                   + (titles.Contains("⭐ Internacional") ? 60 : 0);
+        int expense = WageBase(club.Level) + upkeep + loanPay;
+        dt.CajaM += income - expense;
+        dt.LastIncomeM = income;
+        dt.LastExpenseM = expense;
 
         dt.Timeline.Insert(0, new DtSeason
         {
@@ -219,7 +312,7 @@ public static class DtEngine
     public static void Choose(DtManager dt, DtOption opt)
     {
         if (opt.Kind == "move" && opt.Club is not null) Hire(dt, opt.Club);
-        else { dt.Objectives = ObjectivesFor(dt.Club!); dt.Pending = null; } // stay: nuevos objetivos
+        else { dt.Objectives = ObjectivesFor(dt.Club!); dt.Pending = null; NewBudget(dt); } // stay: nuevos objetivos + presupuesto
         dt.Year++;
     }
 

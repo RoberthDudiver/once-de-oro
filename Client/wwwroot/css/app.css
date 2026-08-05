@@ -1415,3 +1415,8 @@ a { color: inherit; text-decoration: none; }
 .dt-bar i { display:block; height:100%; }
 .dt-obj { font-size:13.5px; padding:4px 0; color:var(--ink); }
 .dt-result { font-family:var(--font-head); font-size:14px; color:var(--gold-2); }
+
+/* instalaciones del modo DT */
+.dt-fac { display:flex; flex-direction:column; gap:6px; padding:10px; border:1px solid var(--line); border-radius:11px; background:var(--glass); }
+.dt-fac__n { font-size:13px; }
+.dt-fac .btn { font-size:12px; padding:6px 10px; }

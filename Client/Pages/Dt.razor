@@ -112,6 +112,60 @@ else
         </div>
     </div>
 
+    @* Oficina / finanzas (pretemporada) *@
+    @if (dt.Employed && dt.Pending is null)
+    {
+        var bal = dt.LastIncomeM - dt.LastExpenseM;
+        <div class="card card--pad mt">
+            <div class="ed-lbl">🏢 @Loc["Oficina · Finanzas"]</div>
+            <div class="career-stats" style="margin-top:2px;">
+                <span>@Loc["Caja"] <b>$@dt.CajaM M</b></span>
+                <span>@Loc["Fichajes"] <b>$@dt.TransferBudgetM M</b></span>
+                <span>@Loc["Fuerza del club"] <b>@dt.Club!.Strength</b></span>
+                @if (dt.LastIncomeM > 0 || dt.LastExpenseM > 0)
+                {
+                    <span>@Loc["Balance"] <b style="color:@(bal >= 0 ? "#37d67a" : "#e23b3b")">@(bal >= 0 ? "+" : "")@bal M</b></span>
+                }
+                @if (dt.LoanRemainingM > 0) { <span>@Loc["Deuda"] <b style="color:#ff9a3d">$@dt.LoanRemainingM M</b></span> }
+            </div>
+
+            <div class="ed-lbl mt">💪 @Loc["Reforzar el plantel"]</div>
+            <div class="row wrap" style="gap:8px; align-items:center;">
+                <input type="number" class="search" style="width:100px;" min="0" max="@dt.TransferBudgetM"
+                       value="@_reinf" @oninput="e => int.TryParse(e.Value?.ToString(), out _reinf)" />
+                <button class="btn btn--gold" disabled="@(dt.TransferBudgetM <= 0)" @onclick="Reinforce">➕ @Loc["Fichar (sube la fuerza)"]</button>
+                <span class="faint" style="font-size:11.5px;">@Loc["del presupuesto de fichajes"]</span>
+            </div>
+
+            <div class="ed-lbl mt">🏗️ @Loc["Instalaciones (mejoras permanentes)"]</div>
+            <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:8px;">
+                @foreach (var f in new[] { ("train", "🏋️ " + Loc["Centro"], dt.TrainCenter), ("youth", "🎓 " + Loc["Cantera"], dt.Youth), ("medical", "🏥 " + Loc["Médico"], dt.Medical), ("scouting", "🔎 " + Loc["Scouting"], dt.Scouting) })
+                {
+                    var cost = DtEngine.FacilityCost(f.Item3);
+                    <div class="dt-fac">
+                        <div class="dt-fac__n">@f.Item2 · @Loc["Nv"] @f.Item3</div>
+                        @if (f.Item3 >= 5)
+                        {
+                            <span class="pill pill--gold">@Loc["Máximo"]</span>
+                        }
+                        else
+                        {
+                            <button class="btn btn--ghost" disabled="@(dt.CajaM < cost)" @onclick="() => Upgrade(f.Item1)">@Loc["Mejorar"] $@cost M</button>
+                        }
+                    </div>
+                }
+            </div>
+
+            <div class="ed-lbl mt">🏦 @Loc["Préstamo"]</div>
+            <div class="row wrap" style="gap:8px; align-items:center;">
+                <input type="number" class="search" style="width:100px;" min="0" max="300"
+                       value="@_loan" @oninput="e => int.TryParse(e.Value?.ToString(), out _loan)" />
+                <button class="btn btn--ghost" @onclick="Loan">🏦 @Loc["Pedir préstamo"]</button>
+                <span class="faint" style="font-size:11.5px;">@Loc["entra a la caja; se paga en 4 temporadas (+15%)"]</span>
+            </div>
+        </div>
+    }
+
     @* Objetivos de la temporada (mientras tenés trabajo y no hay decisión pendiente) *@
     @if (dt.Employed && dt.Pending is null && dt.Objectives.Count > 0)
     {
@@ -206,6 +260,8 @@ else
     private DtLicense _lic = DtLicense.Basica;
     private DtBackground _bg = DtBackground.Exjugador;
     private bool _confirmReset;
+    private int _reinf;
+    private int _loan;
 
     protected override async Task OnInitializedAsync()
     {
@@ -220,6 +276,9 @@ else
     private void Start() => Svc.Start(_name, _surname, _nation, _age, _lic, _bg);
     private void Play() => Svc.PlaySeason();
     private void Choose(DtOption o) => Svc.Choose(o);
+    private void Reinforce() { Svc.Reinforce(_reinf); _reinf = 0; }
+    private void Upgrade(string which) => Svc.Upgrade(which);
+    private void Loan() { Svc.Loan(_loan); _loan = 0; }
     private async Task Reset() { _confirmReset = false; await Svc.ResetAsync(); }
 
     private string BgName(DtBackground b) => b switch

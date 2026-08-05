@@ -53,6 +53,11 @@ public sealed class DtService
         Save();
     }
 
+    // ---- Oficina / economía ----
+    public void Reinforce(int m) { if (Current is not null) { DtEngine.Reinforce(Current, m); Save(); } }
+    public void Upgrade(string which) { if (Current is not null && DtEngine.UpgradeFacility(Current, which)) Save(); }
+    public void Loan(int m) { if (Current is not null) { DtEngine.RequestLoan(Current, m); Save(); } }
+
     public async Task ResetAsync()
     {
         Current = null;
