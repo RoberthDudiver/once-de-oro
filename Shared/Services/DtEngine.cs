@@ -199,7 +199,36 @@ public static class DtEngine
         dt.Pending = null;
         NewBudget(dt);
         dt.Objectives = ObjectivesFor(club);
+        BuildCalendar(dt);
         AutoLineup(dt);
+    }
+
+    private static readonly string[] Months =
+        { "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre", "Enero", "Febrero", "Marzo", "Abril", "Mayo" };
+
+    /// <summary>Arma el calendario del año: partidos, entrenamientos, prensa y descansos, repartidos por meses.</summary>
+    private static void BuildCalendar(DtManager dt)
+    {
+        int matches = dt.Fixture.Count;
+        var seq = new List<string>();
+        for (int i = 0; i < matches; i++)
+        {
+            if (i > 0 && i % 3 == 0) seq.Add("train");
+            if (i == 8 || i == 18) seq.Add("press");
+            if (i == 13) seq.Add("rest");
+            seq.Add("match");
+        }
+        seq.Add("train");   // semana final de cierre
+
+        dt.Calendar = new List<DtWeek>();
+        for (int i = 0; i < seq.Count; i++)
+        {
+            string month = Months[Math.Min(Months.Length - 1, i * Months.Length / seq.Count)];
+            dt.Calendar.Add(new DtWeek { Index = i, Month = month, Type = seq[i] });
+        }
+        dt.Week = 0;
+        dt.PressPending = null;
+        dt.WeekMsg = "";
     }
 
     private static double GoalExp(int a, int b) => Math.Clamp(1.35 * Math.Exp((a - b) / 16.0), 0.2, 4.0);
@@ -277,14 +306,119 @@ public static class DtEngine
         }
 
         dt.Round++;
-        if (dt.Round >= dt.Fixture.Count) EndSeason(dt);
+        // El fin de temporada lo decide el CALENDARIO (cuando pasan todos los meses),
+        // no el último partido: pueden quedar semanas de entrenamiento/prensa.
     }
 
-    /// <summary>Simula todas las fechas que faltan de la temporada de un tirón.</summary>
+    // ---------------------------------------------------------------- calendario: avanzar el tiempo
+    public static string PlanName(string p) => p switch
+    {
+        "ataque" => "Ataque", "defensa" => "Defensa", "fisico" => "Condición física",
+        "balon" => "Balón parado", "juvenil" => "Desarrollo juvenil", "recuperacion" => "Recuperación", _ => "Táctica"
+    };
+
+    public static void SetTraining(DtManager dt, string plan, string intensity)
+    {
+        dt.TrainPlan = plan; dt.TrainIntensity = intensity;
+    }
+
+    private static void ApplyTraining(DtManager dt)
+    {
+        int inten = dt.TrainIntensity switch { "alta" => 3, "baja" => 1, _ => 2 };
+        foreach (var p in dt.Squad.Where(p => p.InjuryWeeks <= 0))
+        {
+            if (dt.TrainPlan == "recuperacion") p.Fatigue = Math.Max(0, p.Fatigue - 14 - inten * 3);
+            else if (dt.TrainPlan == "fisico")
+            {
+                p.Fatigue = Math.Max(0, p.Fatigue - 6);
+                if (dt.TrainIntensity == "alta" && Rng.NextDouble() < 0.02) p.InjuryWeeks = Rng.Next(1, 4);
+            }
+            else
+            {
+                p.Fatigue = Math.Min(100, p.Fatigue + inten * 2);
+                bool joven = dt.TrainPlan == "juvenil" && p.Age <= 22;
+                if ((joven && Rng.NextDouble() < 0.10 * inten) || (p.Age <= 24 && Rng.NextDouble() < 0.04 * inten))
+                    p.Media = Math.Min(p.Potential, p.Media + 1);
+            }
+        }
+        RecalcStrength(dt);
+        dt.WeekMsg = $"🏋️ Entrenamiento: {PlanName(dt.TrainPlan)} · {dt.TrainIntensity}";
+    }
+
+    private static DtDecision GenPress(DtManager dt)
+    {
+        var d = new DtDecision { Title = "🎙️ Rueda de prensa" };
+        int topic = Rng.Next(0, 3);
+        if (topic == 0)
+        {
+            d.Text = "Un periodista cuestiona el rendimiento del equipo.";
+            d.Options.Add(new DtOption { Label = "Bancar a los jugadores", Sub = "sube la moral", Kind = "press", MoraleDelta = 6, ConfDelta = -2 });
+            d.Options.Add(new DtOption { Label = "Exigir más en público", Sub = "presión", Kind = "press", MoraleDelta = -5, ConfDelta = 4 });
+            d.Options.Add(new DtOption { Label = "Evitar la polémica", Sub = "neutral", Kind = "press", MoraleDelta = 1, ConfDelta = 0 });
+        }
+        else if (topic == 1)
+        {
+            d.Text = "Te preguntan por rumores de una oferta de otro club.";
+            d.Options.Add(new DtOption { Label = "Prometer que te quedás", Sub = "gana la directiva", Kind = "press", MoraleDelta = 2, ConfDelta = 5 });
+            d.Options.Add(new DtOption { Label = "No cerrar puertas", Sub = "arriesgado", Kind = "press", MoraleDelta = 0, ConfDelta = -5 });
+            d.Options.Add(new DtOption { Label = "No responder", Sub = "neutral", Kind = "press", MoraleDelta = 0, ConfDelta = 0 });
+        }
+        else
+        {
+            d.Text = "El capitán pidió refuerzos en la prensa.";
+            d.Options.Add(new DtOption { Label = "Prometer fichajes", Sub = "sube la moral", Kind = "press", MoraleDelta = 6, ConfDelta = -3 });
+            d.Options.Add(new DtOption { Label = "Confiar en el plantel", Sub = "gana la directiva", Kind = "press", MoraleDelta = -2, ConfDelta = 3 });
+            d.Options.Add(new DtOption { Label = "Bajarle el tono", Sub = "neutral", Kind = "press", MoraleDelta = 1, ConfDelta = 0 });
+        }
+        return d;
+    }
+
+    public static void AnswerPress(DtManager dt, DtOption opt)
+    {
+        if (dt.PressPending is null) return;
+        foreach (var p in dt.Squad) p.Morale = Math.Clamp(p.Morale + opt.MoraleDelta, 20, 100);
+        dt.Confidence = Math.Clamp(dt.Confidence + opt.ConfDelta, 0, 100);
+        dt.WeekMsg = $"🎙️ {opt.Label}";
+        dt.PressPending = null;
+    }
+
+    /// <summary>Procesa la semana actual del calendario (partido, entrenamiento, prensa o descanso).</summary>
+    public static void AdvanceWeek(DtManager dt)
+    {
+        if (!dt.SeasonInPlay || dt.PressPending is not null || dt.Week >= dt.Calendar.Count) return;
+        var w = dt.Calendar[dt.Week];
+        switch (w.Type)
+        {
+            case "match": PlayNextMatch(dt); dt.WeekMsg = ""; break;
+            case "train": ApplyTraining(dt); break;
+            case "press": dt.PressPending = GenPress(dt); dt.WeekMsg = "🎙️ Rueda de prensa"; break;
+            case "rest":
+                foreach (var p in dt.Squad) { p.Fatigue = Math.Max(0, p.Fatigue - 25); if (p.InjuryWeeks > 0) p.InjuryWeeks--; }
+                dt.WeekMsg = "🛌 Semana de recuperación"; break;
+        }
+        w.Done = true;
+        dt.Week++;
+        if (dt.Week >= dt.Calendar.Count) EndSeason(dt);
+    }
+
+    /// <summary>Avanza (aplicando entrenamientos) hasta la próxima semana de partido, para que armes el equipo.</summary>
+    public static void AdvanceToNextMatch(DtManager dt)
+    {
+        int guard = 0;
+        while (dt.SeasonInPlay && dt.PressPending is null && dt.Week < dt.Calendar.Count
+               && dt.Calendar[dt.Week].Type != "match" && guard++ < 60)
+            AdvanceWeek(dt);
+    }
+
+    /// <summary>Simula el resto de la temporada (todos los meses). La prensa se responde sola en modo neutral.</summary>
     public static void SimRestOfSeason(DtManager dt)
     {
         int guard = 0;
-        while (dt.SeasonInPlay && guard++ < 60) PlayNextMatch(dt);
+        while (dt.SeasonInPlay && guard++ < 120)
+        {
+            if (dt.PressPending is not null) { AnswerPress(dt, dt.PressPending.Options.Last()); continue; }
+            AdvanceWeek(dt);
+        }
     }
 
     public static List<DtTableRow> Standings(DtManager dt) =>

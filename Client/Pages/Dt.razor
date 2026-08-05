@@ -157,16 +157,66 @@ else
             @if (dt.Warned) { <div class="clash mt"><div class="clash__txt">⚠️ @Loc["La directiva avisó: tu puesto está en riesgo."]</div></div> }
         </div>
 
-        @if (dt.SeasonInPlay && dt.Round < dt.Fixture.Count)
+        @if (dt.SeasonInPlay && dt.Week < dt.Calendar.Count)
         {
-            var m = dt.Fixture[dt.Round];
+            var w = dt.Calendar[dt.Week];
             <div class="card card--pad center mt">
-                <div class="faint">@Loc["Fecha"] @(dt.Round + 1) / @dt.Fixture.Count</div>
-                <div class="dt-result" style="font-size:18px; margin-top:2px;">@(m.Home ? "🏠" : "✈") @dt.Club!.Name <span class="faint">vs</span> @m.Opp</div>
-                <div class="faint" style="font-size:12px;">@Loc["Rival"] @m.OppStrength · @Loc["tu XI"] @DtEngine.XiStrength(dt) · @dt.Formation</div>
-                <div class="row" style="gap:8px; justify-content:center; margin-top:10px;">
-                    <button class="btn btn--gold btn--big" @onclick="PlayMatch">▶ @Loc["Jugar la fecha"]</button>
-                    <button class="btn btn--ghost" @onclick="SimRest">⏩ @Loc["Simular resto"]</button>
+                <div class="faint">📅 @w.Month · @Loc["Semana"] @(dt.Week + 1) / @dt.Calendar.Count</div>
+
+                @if (dt.PressPending is { } press)
+                {
+                    <div class="dt-result mt" style="font-size:17px;">@press.Title</div>
+                    <div class="faint mb">@press.Text</div>
+                    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px;">
+                        @foreach (var o in press.Options)
+                        {
+                            <button class="career-opt" @onclick="() => AnswerPress(o)">
+                                <div class="career-opt__label">@o.Label</div>
+                                <div class="career-opt__sub">@o.Sub</div>
+                            </button>
+                        }
+                    </div>
+                }
+                else if (w.Type == "match" && dt.Round < dt.Fixture.Count)
+                {
+                    var m = dt.Fixture[dt.Round];
+                    <div class="dt-result" style="font-size:19px; margin-top:2px;">⚽ @(m.Home ? "🏠" : "✈") @dt.Club!.Name <span class="faint">vs</span> @m.Opp</div>
+                    <div class="faint" style="font-size:12px;">@Loc["Rival"] @m.OppStrength · @Loc["tu XI"] @DtEngine.XiStrength(dt) · @dt.Formation</div>
+                    <button class="btn btn--gold btn--big mt" @onclick="AdvanceWeek">▶ @Loc["Jugar la fecha"]</button>
+                }
+                else
+                {
+                    <div class="dt-result mt" style="font-size:17px;">@(w.Type == "train" ? "🏋️ " + Loc["Semana de entrenamiento"] : "🛌 " + Loc["Semana de descanso"])</div>
+                    <button class="btn btn--gold btn--big mt" @onclick="AdvanceWeek">▶ @Loc["Avanzar semana"]</button>
+                }
+
+                @if (dt.PressPending is null)
+                {
+                    <div class="row" style="gap:8px; justify-content:center; margin-top:10px;">
+                        <button class="btn btn--ghost" @onclick="ToNextMatch">⏩ @Loc["Hasta el próximo partido"]</button>
+                        <button class="btn btn--ghost" @onclick="SimRest">⏩⏩ @Loc["Simular temporada"]</button>
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(dt.WeekMsg))
+                {
+                    <div class="pill mt">@dt.WeekMsg</div>
+                }
+            </div>
+
+            <div class="card card--pad mt">
+                <div class="ed-lbl">🏋️ @Loc["Plan de entrenamiento de la semana"]</div>
+                <div class="seg wrap">
+                    @foreach (var pl in Plans)
+                    {
+                        <button class="@(dt.TrainPlan == pl.k ? "on" : "")" @onclick="() => SetTrain(pl.k, dt.TrainIntensity)">@pl.lbl</button>
+                    }
+                </div>
+                <div class="ed-lbl mt">@Loc["Intensidad"]</div>
+                <div class="seg wrap">
+                    @foreach (var it in new[] { "baja", "normal", "alta" })
+                    {
+                        <button class="@(dt.TrainIntensity == it ? "on" : "")" @onclick="() => SetTrain(dt.TrainPlan, it)">@it</button>
+                    }
                 </div>
             </div>
         }
@@ -191,6 +241,24 @@ else
     @* --- Plantilla --- *@
     @if (dt.Employed && dt.Pending is null && _tab == "squad")
     {
+        <div class="card card--pad mt">
+            <div class="ed-lbl">🟩 @Loc["Tu once"] · @dt.Formation</div>
+            <div class="dt-pitch">
+                @foreach (var line in new[] { Position.FWD, Position.MID, Position.DEF, Position.GK })
+                {
+                    <div class="dt-pitch__line">
+                        @foreach (var p in DtEngine.BestXI(dt).Where(x => x.Pos == line))
+                        {
+                            <div class="dt-badge">
+                                <div class="dt-badge__m">@p.Media</div>
+                                <div class="dt-badge__n">@Short(p.Name)</div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
         <div class="card card--pad mt">
             <div class="row" style="justify-content:space-between; align-items:center;">
                 <div class="ed-lbl" style="margin:0;">👥 @Loc["Plantilla"] (@dt.Squad.Count) · @Loc["once"] @dt.Lineup.Count/11</div>
@@ -487,9 +555,18 @@ else
 
     private void OnChanged() => InvokeAsync(StateHasChanged);
 
+    private static readonly (string k, string lbl)[] Plans =
+    {
+        ("tactica", "Táctica"), ("ataque", "Ataque"), ("defensa", "Defensa"),
+        ("fisico", "Físico"), ("balon", "Balón parado"), ("juvenil", "Juveniles"), ("recuperacion", "Recuperación"),
+    };
+
     private void Start() => Svc.Start(_name, _surname, _nation, _age, _lic, _bg);
-    private void PlayMatch() => Svc.PlayNextMatch();
+    private void AdvanceWeek() => Svc.AdvanceWeek();
+    private void ToNextMatch() => Svc.AdvanceToNextMatch();
     private void SimRest() => Svc.SimRest();
+    private void AnswerPress(DtOption o) => Svc.AnswerPress(o);
+    private void SetTrain(string plan, string intensity) => Svc.SetTraining(plan, intensity);
     private void AutoXI() => Svc.AutoLineup();
     private void PickCompare(DtPlayer p)
     {
@@ -506,6 +583,7 @@ else
     private int Offer(DtProspect p) => _offers.TryGetValue(p.Id, out var v) ? v : p.ValueM;
     private void SetOffer(string id, string? raw) { if (int.TryParse(raw, out var v)) _offers[id] = Math.Max(0, v); }
     private static string PosName(Position p) => p switch { Position.GK => "POR", Position.DEF => "DFC", Position.MID => "MC", _ => "DC" };
+    private static string Short(string n) { var parts = n.Split(' '); return parts.Length == 1 ? n : parts[^1]; }
     private async Task Reset() { _confirmReset = false; await Svc.ResetAsync(); }
 
     private string BgName(DtBackground b) => b switch

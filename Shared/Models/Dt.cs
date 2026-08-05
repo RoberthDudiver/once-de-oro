@@ -63,6 +63,15 @@ public sealed class DtMatch
     public int OppGoals { get; set; }
 }
 
+/// <summary>Una semana del calendario: partido, entrenamiento, prensa o descanso.</summary>
+public sealed class DtWeek
+{
+    public int Index { get; set; }
+    public string Month { get; set; } = "";
+    public string Type { get; set; } = "";   // match | train | press | rest
+    public bool Done { get; set; }
+}
+
 /// <summary>Una fila de la tabla de la liga del Modo DT.</summary>
 public sealed class DtTableRow
 {
@@ -123,8 +132,10 @@ public sealed class DtOption
 {
     public string Label { get; set; } = "";
     public string Sub { get; set; } = "";
-    public string Kind { get; set; } = "";   // stay | move | retire
+    public string Kind { get; set; } = "";   // stay | move | retire | press
     public DtClub? Club { get; set; }
+    public int MoraleDelta { get; set; }     // efecto en la moral del plantel (prensa)
+    public int ConfDelta { get; set; }       // efecto en la confianza de la directiva (prensa)
 }
 
 public sealed class DtDecision
@@ -191,6 +202,14 @@ public sealed class DtManager
     public string Formation { get; set; } = "4-3-3";
     public List<string> Lineup { get; set; } = new();          // ids de tus 11 titulares elegidos
     public bool SeasonInPlay { get; set; }                     // hay una temporada en curso (fixture sin terminar)
+
+    // Calendario por meses/semanas (pedido de Alexander)
+    public List<DtWeek> Calendar { get; set; } = new();
+    public int Week { get; set; }                              // semana actual del calendario
+    public string TrainPlan { get; set; } = "tactica";         // plan de entrenamiento elegido
+    public string TrainIntensity { get; set; } = "normal";     // baja | normal | alta
+    public string WeekMsg { get; set; } = "";                  // qué pasó en la última semana
+    public DtDecision? PressPending { get; set; }              // entrevista de prensa que frena el avance
 
     // ---- Acumulados de carrera ----
     public int Titles { get; set; }
