@@ -63,6 +63,15 @@
             }
         </div>
 
+        <div class="ed-lbl mt">@Loc["Idiomas"]</div>
+        <div class="seg wrap">
+            @foreach (var lang in AllLangs)
+            {
+                <button class="@(_langs.Contains(lang) ? "on" : "")" @onclick="() => ToggleLang(lang)">@lang</button>
+            }
+        </div>
+        <div class="faint mb" style="font-size:11.5px; margin-top:4px;">@Loc["Los idiomas ayudan a adaptarte a cada país (dan color a tu historia)."]</div>
+
         <button class="btn btn--gold btn--block mt" @onclick="Start">▶ @Loc["Empezar carrera de DT"]</button>
     </div>
 }
@@ -96,6 +105,7 @@ else
                 <span><b>@DtEngine.RepName(dt.Rep)</b> · @Loc["reputación"]</span>
                 <span>🏆 <b>@dt.Titles</b></span>
                 <span><b>@dt.Wins</b>-@dt.Draws-@dt.Losses</span>
+                @if (dt.Languages.Count > 0) { <span>🗣️ @string.Join(", ", dt.Languages)</span> }
             </div>
         </div>
     </div>
@@ -143,8 +153,42 @@ else
         <div class="dt-tabs mt">
             <button class="@(_tab == "cal" ? "on" : "")" @onclick='() => _tab = "cal"'>📅 @Loc["Calendario"]</button>
             <button class="@(_tab == "squad" ? "on" : "")" @onclick='() => _tab = "squad"'>👥 @Loc["Plantilla"]</button>
+            <button class="@(_tab == "tact" ? "on" : "")" @onclick='() => _tab = "tact"'>🧭 @Loc["Táctica"]</button>
             <button class="@(_tab == "table" ? "on" : "")" @onclick='() => _tab = "table"'>📊 @Loc["Tabla"]</button>
             <button class="@(_tab == "office" ? "on" : "")" @onclick='() => _tab = "office"'>🏢 @Loc["Oficina"]</button>
+        </div>
+    }
+
+    @* --- Táctica --- *@
+    @if (dt.Employed && dt.Pending is null && _tab == "tact")
+    {
+        <div class="card card--pad mt">
+            <div class="ed-lbl">🧭 @Loc["Mentalidad"]</div>
+            <div class="seg wrap">
+                @foreach (var t in new[] { ("ultradef", "Ultra def."), ("def", "Defensiva"), ("equilibrada", "Equilibrada"), ("of", "Ofensiva"), ("ultraof", "Ultra of.") })
+                { <button class="@(dt.Mentality == t.Item1 ? "on" : "")" @onclick="() => Svc.SetTactics(t.Item1, dt.Tempo, dt.Press, dt.Build, dt.Line)">@t.Item2</button> }
+            </div>
+            <div class="ed-lbl mt">⏱️ @Loc["Ritmo"]</div>
+            <div class="seg wrap">
+                @foreach (var t in new[] { ("lento", "Lento"), ("normal", "Normal"), ("rapido", "Rápido") })
+                { <button class="@(dt.Tempo == t.Item1 ? "on" : "")" @onclick="() => Svc.SetTactics(dt.Mentality, t.Item1, dt.Press, dt.Build, dt.Line)">@t.Item2</button> }
+            </div>
+            <div class="ed-lbl mt">🕸️ @Loc["Presión"]</div>
+            <div class="seg wrap">
+                @foreach (var t in new[] { ("baja", "Bloque bajo"), ("media", "Media"), ("alta", "Alta") })
+                { <button class="@(dt.Press == t.Item1 ? "on" : "")" @onclick="() => Svc.SetTactics(dt.Mentality, dt.Tempo, t.Item1, dt.Build, dt.Line)">@t.Item2</button> }
+            </div>
+            <div class="ed-lbl mt">🎯 @Loc["Construcción"]</div>
+            <div class="seg wrap">
+                @foreach (var t in new[] { ("posesion", "Posesión"), ("directo", "Directo"), ("contra", "Contraataque") })
+                { <button class="@(dt.Build == t.Item1 ? "on" : "")" @onclick="() => Svc.SetTactics(dt.Mentality, dt.Tempo, dt.Press, t.Item1, dt.Line)">@t.Item2</button> }
+            </div>
+            <div class="ed-lbl mt">🛡️ @Loc["Línea defensiva"]</div>
+            <div class="seg wrap">
+                @foreach (var t in new[] { ("baja", "Baja"), ("media", "Media"), ("alta", "Alta") })
+                { <button class="@(dt.Line == t.Item1 ? "on" : "")" @onclick="() => Svc.SetTactics(dt.Mentality, dt.Tempo, dt.Press, dt.Build, t.Item1)">@t.Item2</button> }
+            </div>
+            <div class="faint mt" style="font-size:11.5px;">@Loc["Más ritmo/presión y línea alta = más goles de los dos lados y más cansancio. La mentalidad ofensiva ataca más pero deja espacios atrás."]</div>
         </div>
     }
 
@@ -269,7 +313,11 @@ else
                     <button class="btn btn--ghost" @onclick="AutoXI">@Loc["XI auto"]</button>
                 </div>
             </div>
-            <div class="faint mb" style="font-size:11.5px;">@Loc["Tocá ⭐ para el once (11). Tocá el nombre para comparar (2)."]</div>
+            <div class="faint mb" style="font-size:11.5px;">@Loc["Tocá ⭐ para el once (11). Tocá el nombre para comparar (2). 🖊️ renovar · 💰 vender."]</div>
+            @if (!string.IsNullOrEmpty(Svc.MarketMsg))
+            {
+                <div class="pill @(Svc.MarketMsg.StartsWith("No ") ? "pill--red" : "pill--green") mb">@Svc.MarketMsg</div>
+            }
             <div class="grid" style="gap:6px;">
                 @foreach (var p in dt.Squad.OrderByDescending(p => dt.Lineup.Contains(p.Id)).ThenByDescending(p => p.Media))
                 {
@@ -278,9 +326,13 @@ else
                         <button class="dt-star @(starter ? "on" : "")" @onclick="() => Svc.ToggleStarter(p.Id)">⭐</button>
                         <div class="dt-player__id" @onclick="() => PickCompare(p)">
                             <div><b>@PosName(p.Pos)</b> @p.Name <span class="faint">· @p.NationCode · @p.Age</span></div>
-                            <div class="faint" style="font-size:11px;">M @p.Media · Pot @p.Potential · @p.Apps PJ · @p.Goals G · @p.Assists A @(p.InjuryWeeks > 0 ? "· 🤕 " + p.InjuryWeeks : "")</div>
+                            <div class="faint" style="font-size:11px;">M @p.Media · Pot @p.Potential · @p.Apps PJ · @p.Goals G · @p.Assists A @(p.InjuryWeeks > 0 ? "· 🤕 " + DtEngine.InjuryLevel(p.InjuryWeeks) : "")</div>
                         </div>
                         <div class="dt-player__meta faint">💪@p.Morale 🥵@p.Fatigue</div>
+                        <div class="dt-player__act">
+                            <button class="dt-tiny" title="@Loc["Renovar"]" @onclick="() => Svc.Renew(p.Id)">🖊️</button>
+                            <button class="dt-tiny" title="@Loc["Vender"]" @onclick="() => Svc.Sell(p.Id)">💰</button>
+                        </div>
                     </div>
                 }
             </div>
@@ -331,6 +383,18 @@ else
                 </tbody>
             </table>
         </div>
+
+        var scorers = dt.Squad.Where(p => p.Goals > 0).OrderByDescending(p => p.Goals).ThenByDescending(p => p.Assists).Take(6).ToList();
+        @if (scorers.Count > 0)
+        {
+            <div class="card card--pad mt">
+                <div class="ed-lbl">⚽ @Loc["Goleadores del equipo"]</div>
+                @foreach (var p in scorers)
+                {
+                    <div class="dt-fixrow"><span class="dt-fixres w">@p.Goals</span> <span>@p.Name</span> <span class="faint">· @p.Assists @Loc["asist."]</span></div>
+                }
+            </div>
+        }
     }
 
     @* Oficina / finanzas (dentro de la pestaña Oficina) *@
@@ -538,6 +602,9 @@ else
     private readonly Dictionary<string, int> _offers = new();
     private string _tab = "cal";
     private readonly List<DtPlayer> _cmp = new();
+    private static readonly string[] AllLangs = { "Español", "Inglés", "Italiano", "Francés", "Alemán", "Portugués" };
+    private readonly HashSet<string> _langs = new() { "Español" };
+    private void ToggleLang(string l) { if (!_langs.Remove(l)) _langs.Add(l); }
 
     private string Formation
     {
@@ -561,7 +628,7 @@ else
         ("fisico", "Físico"), ("balon", "Balón parado"), ("juvenil", "Juveniles"), ("recuperacion", "Recuperación"),
     };
 
-    private void Start() => Svc.Start(_name, _surname, _nation, _age, _lic, _bg);
+    private void Start() => Svc.Start(_name, _surname, _nation, _age, _lic, _bg, _langs.ToList());
     private void AdvanceWeek() => Svc.AdvanceWeek();
     private void ToNextMatch() => Svc.AdvanceToNextMatch();
     private void SimRest() => Svc.SimRest();

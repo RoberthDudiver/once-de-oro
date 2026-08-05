@@ -33,9 +33,9 @@ public sealed class DtService
         Changed?.Invoke();
     }
 
-    public void Start(string name, string surname, string nation, int age, DtLicense lic, DtBackground bg)
+    public void Start(string name, string surname, string nation, int age, DtLicense lic, DtBackground bg, List<string>? languages = null)
     {
-        Current = DtEngine.NewCareer(name, surname, nation, age, lic, bg);
+        Current = DtEngine.NewCareer(name, surname, nation, age, lic, bg, languages);
         Save();
     }
 
@@ -45,8 +45,11 @@ public sealed class DtService
     public void SetTraining(string plan, string intensity) { if (Current is not null) { DtEngine.SetTraining(Current, plan, intensity); Save(); } }
     public void AnswerPress(DtOption opt) { if (Current is not null) { DtEngine.AnswerPress(Current, opt); Save(); } }
     public void SetFormation(string f) { if (Current is not null) { DtEngine.SetFormation(Current, f); Save(); } }
+    public void SetTactics(string m, string t, string p, string b, string l) { if (Current is not null) { DtEngine.SetTactics(Current, m, t, p, b, l); Save(); } }
     public void AutoLineup() { if (Current is not null) { DtEngine.AutoLineup(Current); Save(); } }
     public void ToggleStarter(string id) { if (Current is not null) { DtEngine.ToggleStarter(Current, id); Save(); } }
+    public void Sell(string id) { if (Current is not null) { MarketMsg = DtEngine.SellPlayer(Current, id); Save(); } }
+    public void Renew(string id) { if (Current is not null) { MarketMsg = DtEngine.RenewPlayer(Current, id); Save(); } }
 
     public void Choose(DtOption opt)
     {

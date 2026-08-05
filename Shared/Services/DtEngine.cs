@@ -25,7 +25,7 @@ public static class DtEngine
         c >= 80 ? "Excelente" : c >= 60 ? "Buena" : c >= 40 ? "Aceptable" : c >= 20 ? "En riesgo" : "Muy baja";
 
     // ---- Alta ----
-    public static DtManager NewCareer(string name, string surname, string nationName, int age, DtLicense lic, DtBackground bg)
+    public static DtManager NewCareer(string name, string surname, string nationName, int age, DtLicense lic, DtBackground bg, List<string>? languages = null)
     {
         var nat = CareerData.NationByName(nationName);
         var dt = new DtManager
@@ -35,6 +35,7 @@ public static class DtEngine
             Nation = nat.Name, NationCode = nat.Code,
             Age = Math.Clamp(age, 28, 65),
             License = lic, Background = bg,
+            Languages = languages is { Count: > 0 } ? languages : new() { "Español" },
             Rep = lic switch { DtLicense.Profesional => 46, DtLicense.Avanzada => 26, _ => 8 },
             Confidence = 62,
             Started = true, Employed = true,
@@ -167,6 +168,37 @@ public static class DtEngine
 
     public static void SetFormation(DtManager dt, string form) { dt.Formation = form; AutoLineup(dt); }
 
+    public static void SetTactics(DtManager dt, string mentality, string tempo, string press, string build, string line)
+    { dt.Mentality = mentality; dt.Tempo = tempo; dt.Press = press; dt.Build = build; dt.Line = line; }
+
+    /// <summary>Nombre del nivel de lesión según las semanas de baja (como el PDF).</summary>
+    public static string InjuryLevel(int weeks) => weeks <= 0 ? "" : weeks <= 1 ? "Molestia" : weeks <= 3 ? "Leve" : weeks <= 6 ? "Moderada" : weeks <= 12 ? "Grave" : "Muy grave";
+
+    /// <summary>Vende un jugador: entra su valor a la caja y sale del plantel.</summary>
+    public static string SellPlayer(DtManager dt, string id)
+    {
+        if (dt.Squad.Count <= 14) return "No podés bajar de 14 jugadores.";
+        var p = dt.Squad.FirstOrDefault(x => x.Id == id);
+        if (p is null) return "";
+        dt.CajaM += p.ValueM;
+        dt.Squad.Remove(p);
+        dt.Lineup.Remove(p.Id);
+        AutoLineup(dt); RecalcStrength(dt);
+        return $"💰 Vendiste a {p.Name} por ${p.ValueM}M";
+    }
+
+    /// <summary>Renueva el contrato de un jugador: cuesta un sueldo y suma años + moral.</summary>
+    public static string RenewPlayer(DtManager dt, string id)
+    {
+        var p = dt.Squad.FirstOrDefault(x => x.Id == id);
+        if (p is null) return "";
+        if (dt.CajaM < p.SalaryM) return "No te alcanza la caja para la prima.";
+        dt.CajaM -= p.SalaryM;
+        p.ContractYears += 2;
+        p.Morale = Math.Clamp(p.Morale + 6, 20, 100);
+        return $"🖊️ Renovaste a {p.Name} (+2 años)";
+    }
+
     // ---------------------------------------------------------------- calendario
     private static void StartSeason(DtManager dt)
     {
@@ -263,9 +295,23 @@ public static class DtEngine
         var xi = BestXI(dt);
         int my = XiStrength(dt), opp = mtch.OppStrength;
 
-        int mg = Poisson(GoalExp(my, opp) * (mtch.Home ? 1.12 : 0.9));
-        int og = Poisson(GoalExp(opp, my) * (mtch.Home ? 0.9 : 1.12));
+        // ---- Táctica: mentalidad, ritmo, presión, construcción y línea ----
+        int ment = dt.Mentality switch { "ultradef" => -2, "def" => -1, "of" => 1, "ultraof" => 2, _ => 0 };
+        int tempo = dt.Tempo switch { "lento" => -1, "rapido" => 1, _ => 0 };
+        int pres = dt.Press switch { "baja" => -1, "alta" => 1, _ => 0 };
+        int line = dt.Line switch { "baja" => -1, "alta" => 1, _ => 0 };
+        double chanceMult = 1 + (tempo + pres) * 0.06 + line * 0.03;   // más ritmo/presión/línea = más goles ambos
+        double fatMult = 1 + (tempo + pres) * 0.15;                    // …y más cansancio
+
+        double eMy = GoalExp(my + ment * 2 + line, opp) * (mtch.Home ? 1.12 : 0.9) * chanceMult;
+        double eOpp = GoalExp(opp, my - ment + line) * (mtch.Home ? 0.9 : 1.12) * chanceMult;
+        if (dt.Build == "posesion") eOpp *= 0.93;                      // controlás la pelota, el rival crea menos
+        else if (dt.Build == "directo") eMy *= 1.06;                   // ataque directo, más volumen
+        else eMy *= 1.03;                                              // contraataque
+
+        int mg = Poisson(eMy), og = Poisson(eOpp);
         mtch.MyGoals = mg; mtch.OppGoals = og; mtch.Played = true;
+        var hurt = new List<string>();
 
         // Tabla: mi fila y la del rival.
         var me = dt.Table.First(t => t.IsMe);
@@ -278,10 +324,14 @@ public static class DtEngine
         foreach (var p in xi)
         {
             p.Apps++;
-            p.Fatigue = Math.Min(100, p.Fatigue + Rng.Next(9, 17));
-            // Lesión: baja con mejor departamento médico.
-            if (p.Fatigue > 55 && Rng.NextDouble() < 0.02 * (1.0 - (dt.Medical - 1) * 0.12))
-                p.InjuryWeeks = Rng.Next(1, 6);
+            p.Fatigue = Math.Min(100, p.Fatigue + (int)Math.Round(Rng.Next(9, 17) * fatMult));
+            // Lesión (5 niveles): más riesgo con presión/ritmo alto y cansancio; menos con buen médico.
+            if (p.Fatigue > 55 && Rng.NextDouble() < 0.02 * fatMult * (1.0 - (dt.Medical - 1) * 0.12))
+            {
+                int wk = Rng.Next(1, 14);
+                p.InjuryWeeks = Math.Max(1, wk - (dt.Medical - 1));
+                hurt.Add($"{p.Name} ({InjuryLevel(p.InjuryWeeks)})");
+            }
             p.Morale = Math.Clamp(p.Morale + (mg > og ? 4 : mg == og ? 0 : -4), 20, 100);
         }
         for (int g = 0; g < mg && att.Count > 0; g++)
@@ -304,6 +354,9 @@ public static class DtEngine
             int gb = Poisson(GoalExp(others[i + 1].Strength, others[i].Strength));
             Record(others[i], ga, gb); Record(others[i + 1], gb, ga);
         }
+
+        string res = mtch.Home ? $"{dt.Club!.Name} {mg}-{og} {mtch.Opp}" : $"{mtch.Opp} {og}-{mg} {dt.Club!.Name}";
+        dt.WeekMsg = "⚽ " + res + (hurt.Count > 0 ? " · 🤕 " + string.Join(", ", hurt) : "");
 
         dt.Round++;
         // El fin de temporada lo decide el CALENDARIO (cuando pasan todos los meses),
@@ -389,7 +442,7 @@ public static class DtEngine
         var w = dt.Calendar[dt.Week];
         switch (w.Type)
         {
-            case "match": PlayNextMatch(dt); dt.WeekMsg = ""; break;
+            case "match": PlayNextMatch(dt); break;   // el mensaje lo pone PlayNextMatch (resultado + lesiones)
             case "train": ApplyTraining(dt); break;
             case "press": dt.PressPending = GenPress(dt); dt.WeekMsg = "🎙️ Rueda de prensa"; break;
             case "rest":

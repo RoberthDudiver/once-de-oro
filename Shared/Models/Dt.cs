@@ -156,6 +156,7 @@ public sealed class DtManager
     public int Age { get; set; } = 35;
     public DtLicense License { get; set; } = DtLicense.Basica;
     public DtBackground Background { get; set; } = DtBackground.Exjugador;
+    public List<string> Languages { get; set; } = new() { "Español" };
 
     // ---- Estado ----
     public bool Started { get; set; }
@@ -201,6 +202,13 @@ public sealed class DtManager
     public List<DtTableRow> Table { get; set; } = new();
     public string Formation { get; set; } = "4-3-3";
     public List<string> Lineup { get; set; } = new();          // ids de tus 11 titulares elegidos
+
+    // Estilo de juego / táctica (sistema táctico del PDF)
+    public string Mentality { get; set; } = "equilibrada";     // ultradef | def | equilibrada | of | ultraof
+    public string Tempo { get; set; } = "normal";              // lento | normal | rapido
+    public string Press { get; set; } = "media";               // baja | media | alta
+    public string Build { get; set; } = "posesion";            // posesion | directo | contra
+    public string Line { get; set; } = "media";                // alta | media | baja
     public bool SeasonInPlay { get; set; }                     // hay una temporada en curso (fixture sin terminar)
 
     // Calendario por meses/semanas (pedido de Alexander)
