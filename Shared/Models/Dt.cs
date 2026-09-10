@@ -231,6 +231,8 @@ public sealed class DtManager
     public int Draws { get; set; }
     public int Losses { get; set; }
     public int SeasonsManaged { get; set; }
+    /// <summary>La carrera termina al completar las 15 temporadas.</summary>
+    public bool CareerFinished { get; set; }
     public int TimesFired { get; set; }
     public List<string> ClubsManaged { get; set; } = new();
     public List<DtSeason> Timeline { get; set; } = new();

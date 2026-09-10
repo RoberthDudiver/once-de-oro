@@ -13,6 +13,7 @@ public static class DtEngine
 {
     private static readonly Random Rng = new();
     private const int Teams = 14;                 // vos + 13 rivales
+    public const int MaxCareerSeasons = 15;
     private static int Rounds => (Teams - 1) * 2; // ida y vuelta = 26 fechas
 
     // ---- Reputación / confianza ----
@@ -482,7 +483,7 @@ public static class DtEngine
     /// <summary>Procesa la semana actual del calendario (partido, entrenamiento, prensa o descanso).</summary>
     public static void AdvanceWeek(DtManager dt)
     {
-        if (!dt.SeasonInPlay || dt.PressPending is not null || dt.Week >= dt.Calendar.Count) return;
+        if (dt.CareerFinished || !dt.SeasonInPlay || dt.PressPending is not null || dt.Week >= dt.Calendar.Count) return;
         var w = dt.Calendar[dt.Week];
         switch (w.Type)
         {
@@ -501,6 +502,7 @@ public static class DtEngine
     /// <summary>Avanza (aplicando entrenamientos) hasta la próxima semana de partido, para que armes el equipo.</summary>
     public static void AdvanceToNextMatch(DtManager dt)
     {
+        if (dt.CareerFinished) return;
         int guard = 0;
         while (dt.SeasonInPlay && dt.PressPending is null && dt.Week < dt.Calendar.Count
                && dt.Calendar[dt.Week].Type != "match" && guard++ < 60)
@@ -510,6 +512,7 @@ public static class DtEngine
     /// <summary>Simula el resto de la temporada (todos los meses). La prensa se responde sola en modo neutral.</summary>
     public static void SimRestOfSeason(DtManager dt)
     {
+        if (dt.CareerFinished) return;
         int guard = 0;
         while (dt.SeasonInPlay && guard++ < 120)
         {
@@ -582,6 +585,15 @@ public static class DtEngine
         DevelopSquad(dt);
         EvolveWorld(dt);
         WorldAndNews(dt, pos, titles, champ);
+
+        if (dt.SeasonsManaged >= MaxCareerSeasons)
+        {
+            dt.CareerFinished = true;
+            dt.Pending = null;
+            dt.WeekMsg = $"🏁 Carrera completada: {MaxCareerSeasons} temporadas dirigidas";
+            return;
+        }
+
         dt.Pending = PostSeason(dt, objMet, relegated);
     }
 
@@ -621,15 +633,37 @@ public static class DtEngine
         }
     }
 
-    /// <summary>Envejecer y desarrollar la plantilla entre temporadas.</summary>
+    /// <summary>
+    /// Envejece y desarrolla a toda la plantilla entre temporadas. Esto incluye
+    /// tanto a los jugadores iniciales como a los fichajes: todos permanecen en
+    /// el mismo ciclo de evolución mientras sigan en el club.
+    ///
+    /// La curva es deliberadamente gradual: los menores de 35 progresan según su
+    /// edad, uso y potencial; desde los 35 empieza el declive y se acelera con la
+    /// edad. El entrenamiento y las instalaciones mejoran el desarrollo joven,
+    /// pero no eliminan el efecto natural de la edad.
+    /// </summary>
     private static void DevelopSquad(DtManager dt)
     {
         int dev = dt.TrainCenter + dt.Youth;   // 2..10
         foreach (var p in dt.Squad)
         {
             p.Age++;
-            if (p.Age <= 23 && p.Apps >= 12) p.Media = Math.Min(p.Potential, p.Media + (dev >= 6 ? 2 : 1));
-            else if (p.Age >= 32 && Rng.NextDouble() < 0.5) p.Media = Math.Max(40, p.Media - 1);
+            int delta = p.Age switch
+            {
+                <= 21 => dev >= 6 ? 2 : 1,
+                <= 26 => 1,
+                <= 30 => 1,
+                <= 34 => 1,
+                35 or 36 => -1,
+                37 or 38 => -1 - (Rng.NextDouble() < 0.35 ? 1 : 0),
+                _ => -2,
+            };
+
+            if (delta > 0)
+                p.Media = Math.Min(p.Potential, p.Media + delta);
+            else if (delta < 0)
+                p.Media = Math.Max(40, p.Media + delta);
             p.ContractYears = Math.Max(0, p.ContractYears - 1);
             p.ValueM = PlayerValue(p.Media, p.Age);
         }
@@ -849,6 +883,7 @@ public static class DtEngine
 
     public static void Choose(DtManager dt, DtOption opt)
     {
+        if (dt.CareerFinished) return;
         if (opt.Kind == "move" && opt.Club is not null) Hire(dt, opt.Club);   // nuevo club, nueva plantilla
         else StartSeason(dt);                                                  // seguir: nueva temporada con la misma plantilla
         dt.Year++;

@@ -102,6 +102,7 @@ else
             </div>
             <div class="career-stats">
                 <span>@Loc["Temporada"] <b>@dt.Year</b></span>
+                <span>🏁 <b>@dt.SeasonsManaged/@DtEngine.MaxCareerSeasons</b> @Loc["temporadas"]</span>
                 <span><b>@DtEngine.RepName(dt.Rep)</b> · @Loc["reputación"]</span>
                 <span>🏆 <b>@dt.Titles</b></span>
                 <span><b>@dt.Wins</b>-@dt.Draws-@dt.Losses</span>
@@ -109,6 +110,17 @@ else
             </div>
         </div>
     </div>
+
+    @if (dt.CareerFinished)
+    {
+        <div class="card card--pad mt" style="border-color:rgba(245,197,66,.65); background:linear-gradient(135deg, rgba(245,197,66,.12), transparent 65%);">
+            <div class="center">
+                <div style="font-size:42px;">🏁</div>
+                <h2 style="font-family:var(--font-head); color:var(--gold-2); margin-top:4px;">Carrera completada</h2>
+                <p class="muted">Dirigiste durante @DtEngine.MaxCareerSeasons temporadas. Tu plantilla evolucionó y envejeció a lo largo de todo el proyecto.</p>
+            </div>
+        </div>
+    }
 
     @* Barras de reputación y confianza *@
     <div class="grid mt" style="grid-template-columns:1fr 1fr; gap:12px;">
