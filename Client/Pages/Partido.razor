@@ -27,6 +27,10 @@ else
         <div class="board fade-up">
             <div class="board__comp">@comp.Emblem @Loc[comp.Name]</div>
             <div class="board__stage">@info.stageName · @Loc["PREVIA"]</div>
+            @if (run.IsDaily)
+            {
+                <div class="center" style="margin-top:10px;"><span class="pill pill--gold">⚡ Desafío Diario · @run.Stage/20 · ❤️ @(3 - run.DailyErrors) vidas</span></div>
+            }
             <div class="board__main">
                 <div class="board__team">
                     <div class="board__flag">⚽</div>
@@ -197,6 +201,8 @@ else
                 <div class="result-banner__title">@(win ? Loc["¡VICTORIA!"] : draw ? Loc["EMPATE"] : Loc["DERROTA"])</div>
                 @if (_reward > 0) { <div class="result-banner__reward">+ $@_reward M @Loc["en premios"] 💰</div> }
                 @if (_gate > 0) { <div class="result-banner__reward">+ $@_gate M @Loc["de recaudación"] 🎟️</div> }
+                @if (run.IsDaily && win && run.Champion) { <div class="result-banner__reward">🏛️ ×2 Cajas Olimpo · desafío completado</div> }
+                @if (run.IsDaily && !win && !run.Eliminated) { <div class="result-banner__reward">❤️ @Game.DailyLives vidas restantes</div> }
             </div>
         }
 
@@ -208,6 +214,7 @@ else
                     <div class="trophy champ-cele__trophy">🏆</div>
                     <h2 style="font-family:var(--font-display); font-size:38px; color:var(--gold-2); margin-top:6px;">@Loc["¡CAMPEÓN!"]</h2>
                     <p class="muted">@Loc[comp.Name]</p>
+                    @if (run.IsDaily) { <div class="pill pill--gold mt">🏛️ ×2 Cajas Olimpo + $1M</div> }
                     @if (run.CleanRun) { <div class="pill pill--gold" style="margin-top:8px; padding:8px 14px;">@Loc["⭐ CAMPEÓN INVICTO SIN RECIBIR GOLES"]</div> }
                     <div class="mt"><button class="btn btn--gold btn--big" @onclick="Conclude">@Loc["Cobrar y volver"]</button></div>
                 </div>

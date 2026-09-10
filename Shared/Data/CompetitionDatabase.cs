@@ -7,6 +7,39 @@ public static class CompetitionDatabase
 {
     private static RivalTeam R(string n, string f, int s) => new(n, f, s);
 
+    /// <summary>Desafío rotativo: sólo se puede iniciar lunes, miércoles y jueves.</summary>
+    public static readonly Competition Daily = new()
+    {
+        Id = "diario",
+        Kind = CompetitionKind.Continental,
+        Name = "Desafío Diario",
+        Subtitle = "20 rivales · 3 errores · recompensa Olimpo",
+        Emblem = "⚡",
+        Accent = "#f5c542",
+        Tier = 4,
+        RecommendedStrength = 82,
+        EntryFee = 0,
+        ChampionPrize = 1,
+        Format = CompetitionFormat.Knockout,
+        KnockoutRounds = new[]
+        {
+            "Rival 1", "Rival 2", "Rival 3", "Rival 4", "Rival 5",
+            "Rival 6", "Rival 7", "Rival 8", "Rival 9", "Rival 10",
+            "Rival 11", "Rival 12", "Rival 13", "Rival 14", "Rival 15",
+            "Rival 16", "Rival 17", "Rival 18", "Rival 19", "Rival 20"
+        },
+        Rivals = new[]
+        {
+            R("Águila Roja", "🦅", 72), R("Leones del Sur", "🦁", 74), R("Furia Azul", "🔵", 75),
+            R("Tormenta FC", "🌩️", 76), R("Titanes", "⚔️", 77), R("Dragones", "🐉", 78),
+            R("Cóndor Real", "🦅", 79), R("Centauros", "🏹", 80), R("Gladiadores", "🛡️", 81),
+            R("Lobos de Acero", "🐺", 82), R("Panteras", "🐆", 83), R("Fénix", "🔥", 84),
+            R("Vikingos", "🪓", 85), R("Samuráis", "⚔️", 86), R("Guardianes", "🛡️", 87),
+            R("Colosos", "🗿", 88), R("Dioses del Juego", "⚡", 89), R("Imperio Dorado", "👑", 90),
+            R("Leyendas Eternas", "🌟", 91), R("Olimpo XI", "🏛️", 92),
+        }
+    };
+
     public static readonly IReadOnlyList<Competition> All = new List<Competition>
     {
         new()
@@ -234,5 +267,5 @@ public static class CompetitionDatabase
         Rivals = rivals,
     };
 
-    public static Competition ById(string id) => All.First(c => c.Id == id);
+    public static Competition ById(string id) => id == Daily.Id ? Daily : All.First(c => c.Id == id);
 }

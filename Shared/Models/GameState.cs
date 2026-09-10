@@ -199,6 +199,10 @@ public sealed class RunState
     public bool CleanRun { get; set; } = true;
     public bool PerfectRun { get; set; } = true;
     public int MoneyWon { get; set; }
+    /// <summary>Indica que esta participación pertenece al modo diario.</summary>
+    public bool IsDaily { get; set; }
+    /// <summary>Errores cometidos en el modo diario (se permiten hasta 3).</summary>
+    public int DailyErrors { get; set; }
     public List<RivalSnapshot> Schedule { get; set; } = new();
     public List<string> Timeline { get; set; } = new();
 }
@@ -250,6 +254,10 @@ public sealed class GameState
 
     /// <summary>Jugadores que te salieron de las cajas sorpresa.</summary>
     public List<LootPlayer> Loot { get; set; } = new();
+    /// <summary>Cajas Olimpo ganadas gratis y todavía no abiertas.</summary>
+    public int OlympusBoxes { get; set; }
+    /// <summary>Fecha local en la que se inició o completó el último diario.</summary>
+    public DateTime? LastDailyDate { get; set; }
 
     /// <summary>Promesas que encontraron tus ojeadores y todavía podés fichar.</summary>
     public List<Prospect> Prospects { get; set; } = new();

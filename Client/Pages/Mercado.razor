@@ -28,6 +28,15 @@
     <div class="faint mb" style="font-size:12.5px;">
         @Loc["Pagás, tirás la moneda y sale lo que sale. Ojo: lo que salga de una caja se revende a precio de saldo, así que no es negocio abrirlas para vender."]
     </div>
+    @if (Game.State.OlympusBoxes > 0)
+    {
+        <div class="card card--pad mb" style="border-color:rgba(245,197,66,.55);">
+            <div class="row wrap" style="justify-content:space-between; gap:12px;">
+                <div><b>🏛️ Cajas Olimpo gratis disponibles: ×@Game.State.OlympusBoxes</b><div class="muted" style="font-size:12px;">Ganadas en el Desafío Diario.</div></div>
+                <button class="btn btn--gold" disabled="@_girando" @onclick="AbrirOlympus">Abrir una gratis</button>
+            </div>
+        </div>
+    }
 
     @* ---------------- El rodillo: gira, frena y cae en el premio ---------------- *@
     @if (_tira.Count > 0)
@@ -307,11 +316,13 @@ else
     private bool _girando;
     private int _offset;
 
-    private async Task Abrir(GameService.LootBox caja)
+    private Task AbrirOlympus() => Abrir(GameService.LootBoxes.First(c => c.Key == "olimpo"), true);
+
+    private async Task Abrir(GameService.LootBox caja, bool gratis = false)
     {
         if (_girando) return;
 
-        var p = Game.OpenBox(caja);
+        var p = gratis ? Game.OpenOlympusBox() : Game.OpenBox(caja);
         if (p is null) return;
 
         _premio = null;

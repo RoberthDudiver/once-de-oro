@@ -426,10 +426,19 @@ public sealed class GameService
     /// Abre una caja: descuenta la plata, sortea el tramo, genera al jugador y te lo
     /// pone en el plantel. Devuelve al que salió (null si no te alcanzaba).
     /// </summary>
-    public Player? OpenBox(LootBox box)
+    public Player? OpenBox(LootBox box) => OpenBoxInternal(box, false);
+
+    public Player? OpenOlympusBox()
     {
-        if (!CanOpenBox(box)) return null;
-        State.Money -= box.Cost;
+        if (State.OlympusBoxes <= 0) return null;
+        State.OlympusBoxes--;
+        return OpenBoxInternal(LootBoxes.First(b => b.Key == "olimpo"), true);
+    }
+
+    private Player? OpenBoxInternal(LootBox box, bool free)
+    {
+        if (!free && !CanOpenBox(box)) return null;
+        if (!free) State.Money -= box.Cost;
 
         bool payaso = box.Key == ClownBox;
 
@@ -1502,6 +1511,17 @@ public sealed class GameService
 
     public bool CanEnter(Competition c) => State.Money >= c.EntryFee && CanPlay && State.Run is null;
 
+    public bool IsDailyDay => DateTime.Now.DayOfWeek is DayOfWeek.Monday or DayOfWeek.Wednesday or DayOfWeek.Thursday;
+    public bool DailyAlreadyPlayed => State.LastDailyDate?.Date == DateTime.Now.Date;
+    public bool CanStartDaily => IsDailyDay && !DailyAlreadyPlayed && CanPlay && State.Run is null;
+    public int DailyLives => Math.Max(0, 3 - (State.Run?.DailyErrors ?? 0));
+
+    public void StartDaily()
+    {
+        if (!CanStartDaily) return;
+        StartTournament("diario");
+    }
+
     // ---------------------------------------------------------------- dificultad viva
     // Los rivales no se quedan quietos: crecen con tu trayectoria y se ponen a tiro
     // si tu equipo quedó muy por encima del torneo. Así ganar nunca es un trámite.
@@ -1524,9 +1544,11 @@ public sealed class GameService
     {
         var c = CompetitionDatabase.ById(compId);
         if (!CanEnter(c)) return;
+        if (c.Id == "diario" && !CanStartDaily) return;
 
         State.Money -= c.EntryFee;
-        var run = new RunState { CompId = compId };
+        var run = new RunState { CompId = compId, IsDaily = c.Id == "diario" };
+        if (run.IsDaily) State.LastDailyDate = DateTime.Now.Date;
 
         // --- LIGA: jugás contra cada rival una vez y se arma la tabla de posiciones ---
         if (c.Format == CompetitionFormat.League)
@@ -1836,7 +1858,9 @@ public sealed class GameService
     {
         var run = State.Run!;
         var comp = ActiveComp!;
-        int reward = comp.Format == CompetitionFormat.League
+        int reward = run.IsDaily
+            ? ApplyDailyResult(run, result)
+            : comp.Format == CompetitionFormat.League
             ? ApplyLeagueResult(comp, run, result)
             : ApplyResult(comp, run, result, group: comp.Format == CompetitionFormat.GroupKnockout && run.Stage < 3);
         Commit();
@@ -2026,6 +2050,51 @@ public sealed class GameService
         TrackMatchStats(r);
         EvaluateAchievements();
         return reward;
+    }
+
+    /// <summary>Resuelve una fecha del desafío diario: se puede fallar hasta 3 veces.</summary>
+    private int ApplyDailyResult(RunState run, MatchResult r)
+    {
+        bool win = r.HomeWon;
+        State.MatchesPlayed++;
+        State.GoalsFor += r.HomeGoals;
+        State.GoalsAgainst += r.AwayGoals;
+        if (win) State.Wins++; else State.Losses++;
+        State.BestRatingReached = Math.Max(State.BestRatingReached, Power.Overall);
+        GrantMatchXp();
+        ApplyConditions();
+        LastGateM = CobrarEntrada();
+
+        run.GoalsFor += r.HomeGoals;
+        run.GoalsAgainst += r.AwayGoals;
+        if (r.AwayGoals > 0) run.CleanRun = false;
+        if (!win) run.DailyErrors++;
+        run.Timeline.Add($"Rival {run.Stage + 1}: {Score(r)} vs {r.AwayName}" +
+                         (!win ? $" · Error {run.DailyErrors}/3" : ""));
+        run.Stage++;
+
+        if (run.DailyErrors >= 3)
+        {
+            run.Eliminated = true;
+            run.MoneyWon = 0;
+            TrackMatchStats(r);
+            EvaluateAchievements();
+            return 0;
+        }
+
+        if (run.Stage >= 20)
+        {
+            run.Champion = true;
+            State.Money += 1;
+            State.OlympusBoxes += 2;
+            run.MoneyWon = 1;
+            run.Timeline.Add("🏛️ Desafío completado · 2 Cajas Olimpo + $1M");
+            State.Honours.Add("Desafío Diario");
+        }
+
+        TrackMatchStats(r);
+        EvaluateAchievements();
+        return run.Champion ? 1 : 0;
     }
 
     private static string Score(MatchResult r) =>
