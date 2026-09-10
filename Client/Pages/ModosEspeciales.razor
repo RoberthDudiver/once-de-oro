@@ -1,0 +1,49 @@
+@page "/modos-especiales"
+@inherits GamePageBase
+@inject NavigationManager Nav
+
+<PageTitle>Modos especiales — Once de Oro</PageTitle>
+
+<div class="section-title"><span class="dot"></span> Modos especiales</div>
+
+@if (Game.State.Run is not null && Game.State.Run.IsDaily)
+{
+    <div class="card card--pad mb" style="border-color:rgba(245,197,66,.55);">
+        <div class="row wrap" style="justify-content:space-between; gap:12px;">
+            <div>
+                <div style="font-family:var(--font-head); font-size:20px;">⚡ Desafío Diario en curso</div>
+                <div class="muted">@Game.State.Run.Stage/20 rivales superados · ❤️ @Game.DailyLives vidas</div>
+            </div>
+            <button class="btn btn--gold" @onclick='() => Nav.NavigateTo("partido")'>▶ Continuar</button>
+        </div>
+    </div>
+}
+
+<div class="card card--pad" style="border-color:rgba(245,197,66,.55); background:linear-gradient(135deg, rgba(245,197,66,.10), transparent 60%);">
+    <div class="row wrap" style="justify-content:space-between; gap:14px;">
+        <div>
+            <div style="font-family:var(--font-head); font-size:23px; color:var(--gold-2);">⚡ Desafío Diario</div>
+            <div class="muted" style="margin-top:4px;">20 equipos · 3 vidas · sólo lunes, miércoles y jueves</div>
+            <div class="faint" style="font-size:12px; margin-top:6px;">Completalo para ganar 🏛️ ×2 y $1M.</div>
+        </div>
+        <div class="row wrap" style="gap:8px; align-items:center;">
+            @if (Game.DailyAlreadyPlayed)
+            {
+                <span class="pill">✓ Ya jugado hoy</span>
+            }
+            else if (!Game.IsDailyDay)
+            {
+                <span class="pill">Disponible lun., mié. y jue.</span>
+            }
+            <button class="btn btn--gold" disabled="@(!Game.CanStartDaily)" @onclick="StartDaily">Jugar diario</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private void StartDaily()
+    {
+        Game.StartDaily();
+        if (Game.State.Run?.IsDaily == true) Nav.NavigateTo("partido");
+    }
+}
