@@ -58,6 +58,7 @@ public sealed class DtMatch
     public string Opp { get; set; } = "";
     public int OppStrength { get; set; }
     public bool Home { get; set; }
+    public bool IsInternational { get; set; }
     public bool Played { get; set; }
     public int MyGoals { get; set; }
     public int OppGoals { get; set; }
@@ -145,6 +146,30 @@ public sealed class DtDecision
     public List<DtOption> Options { get; set; } = new();
 }
 
+/// <summary>Minijuego decisivo de una copa importante.</summary>
+public sealed class DtMinigame
+{
+    public string Competition { get; set; } = "";
+    public int Difficulty { get; set; } = 1;
+    public int Round { get; set; }
+    public int Score { get; set; }
+    public string Prompt { get; set; } = "";
+    public string CorrectOption { get; set; } = "";
+    public List<string> Options { get; set; } = new();
+    public bool ObjectiveMet { get; set; }
+    public bool Relegated { get; set; }
+}
+
+/// <summary>Entrenador contratado para potenciar un aspecto y estilo del equipo.</summary>
+public sealed class DtCoach
+{
+    public string Name { get; set; } = "";
+    public string Type { get; set; } = "";       // físico | táctico | ataque
+    public string Style { get; set; } = "equilibrada";
+    public int Level { get; set; } = 1;           // 1 básico · 2 bueno · 3 élite
+    public int Cost { get; set; }
+}
+
 /// <summary>Toda la carrera del entrenador (se guarda aparte).</summary>
 public sealed class DtManager
 {
@@ -165,10 +190,17 @@ public sealed class DtManager
     public int Rep { get; set; }            // 0..100 (reputación)
     public int Confidence { get; set; } = 60; // 0..100 (confianza de la directiva)
     public int Year { get; set; } = 1;
+    public bool HasRepresentative { get; set; } = true;
+    public string RepresentativeName { get; set; } = "Martín Sosa";
+    public string DreamClub { get; set; } = "Blaugrana FC";
+    public bool CareerFinished { get; set; }
+    public bool QualifiedInternational { get; set; }
 
     public DtClub? Club { get; set; }
     public List<DtObjective> Objectives { get; set; } = new();
     public DtDecision? Pending { get; set; }
+    public DtMinigame? PendingMinigame { get; set; }
+    public string LastTrophy { get; set; } = "";
 
     // ---- Economía (Pilar 2) ----
     public int CajaM { get; set; }              // caja del club (M)
@@ -189,6 +221,7 @@ public sealed class DtManager
     // Mercado (Pilar 3)
     public List<DtProspect> ScoutPool { get; set; } = new();   // resultados de la última búsqueda
     public List<string> Signings { get; set; } = new();        // fichajes hechos (para la vitrina)
+    public List<DtCoach> Coaches { get; set; } = new();
 
     // Mundo vivo (Pilar 4)
     public List<DtNews> News { get; set; } = new();            // feed de la última temporada
@@ -231,8 +264,6 @@ public sealed class DtManager
     public int Draws { get; set; }
     public int Losses { get; set; }
     public int SeasonsManaged { get; set; }
-    /// <summary>La carrera termina al completar las 15 temporadas.</summary>
-    public bool CareerFinished { get; set; }
     public int TimesFired { get; set; }
     public List<string> ClubsManaged { get; set; } = new();
     public List<DtSeason> Timeline { get; set; } = new();

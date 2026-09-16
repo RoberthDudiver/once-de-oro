@@ -106,6 +106,7 @@ else
                 <span><b>@DtEngine.RepName(dt.Rep)</b> · @Loc["reputación"]</span>
                 <span>🏆 <b>@dt.Titles</b></span>
                 <span><b>@dt.Wins</b>-@dt.Draws-@dt.Losses</span>
+                @if (dt.HasRepresentative) { <span>🤝 @dt.RepresentativeName · representante</span> }
                 @if (dt.Languages.Count > 0) { <span>🗣️ @string.Join(", ", dt.Languages)</span> }
             </div>
         </div>
@@ -159,6 +160,34 @@ else
             {
                 <div class="dt-news"><span class="dt-news__i">@n.Icon</span> @n.Text</div>
             }
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(dt.LastTrophy))
+    {
+        <div class="card card--pad mt center" style="border-color:rgba(245,197,66,.7); background:radial-gradient(circle at center, rgba(245,197,66,.18), transparent 70%);">
+            <div style="font-size:46px;">@dt.LastTrophy.Split(' ')[0]</div>
+            <div class="ed-lbl" style="color:var(--gold-2);">Último título ganado</div>
+            <div style="font-family:var(--font-display); font-size:24px; color:var(--gold-2);">@string.Join(" ", dt.LastTrophy.Split(' ').Skip(1))</div>
+        </div>
+    }
+
+    @if (dt.PendingMinigame is { } mini)
+    {
+        <div class="card card--pad mt" style="border-color:rgba(185,139,255,.65); background:linear-gradient(135deg, rgba(185,139,255,.14), transparent 65%);">
+            <div class="center">
+                <div style="font-size:38px;">🏆</div>
+                <div class="ed-lbl" style="color:var(--violet);">@mini.Competition · Minijuego decisivo</div>
+                <p class="muted">La liga se define en la tabla. Para ganar este título tenés que superar el desafío táctico.</p>
+                <div class="dt-result mt">@mini.Prompt</div>
+                <div class="faint" style="font-size:12px;">Ronda @mini.Round/@(2 + mini.Difficulty) · Aciertos @mini.Score · dificultad @mini.Difficulty/3</div>
+                <div class="row wrap" style="justify-content:center; gap:8px; margin-top:14px;">
+                    @foreach (var option in mini.Options)
+                    {
+                        <button class="career-opt" style="min-width:150px;" @onclick="() => PlayMini(option)">@option</button>
+                    }
+                </div>
+            </div>
         </div>
     }
 
@@ -269,7 +298,6 @@ else
                 {
                     <div class="row" style="gap:8px; justify-content:center; margin-top:10px;">
                         <button class="btn btn--ghost" @onclick="ToNextMatch">⏩ @Loc["Hasta el próximo partido"]</button>
-                        <button class="btn btn--ghost" @onclick="SimRest">⏩⏩ @Loc["Simular temporada"]</button>
                     </div>
                 }
                 @if (!string.IsNullOrEmpty(dt.WeekMsg))
@@ -495,6 +523,36 @@ else
                        value="@_loan" @oninput="e => int.TryParse(e.Value?.ToString(), out _loan)" />
                 <button class="btn btn--ghost" @onclick="Loan">🏦 @Loc["Pedir préstamo"]</button>
                 <span class="faint" style="font-size:11.5px;">@Loc["entra a la caja; se paga en 4 temporadas (+15%)"]</span>
+            </div>
+        </div>
+    }
+
+    @if (dt.Employed && dt.Pending is null && _tab == "office")
+    {
+        <div class="card card--pad mt" style="border-color:rgba(78,163,255,.45);">
+            <div class="ed-lbl">🧑‍🏫 Cuerpo técnico</div>
+            <div class="faint mb" style="font-size:11.5px;">Contratá entrenadores de nivel 1 a 3. Los que coinciden con tu estilo potencian más el rendimiento y el entrenamiento.</div>
+            @if (dt.Coaches.Count > 0)
+            {
+                <div class="row wrap mb" style="gap:6px;">
+                    @foreach (var c in dt.Coaches)
+                    {
+                        <span class="pill pill--gold">@c.Name · Nv. @c.Level · @c.Style</span>
+                    }
+                </div>
+            }
+            <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:8px;">
+                @foreach (var c in DtEngine.CoachMarket(CoachStyle(dt)))
+                {
+                    var hired = dt.Coaches.Any(x => x.Name == c.Name);
+                    <div class="dt-fac">
+                        <div><b>@c.Name</b></div>
+                        <div class="faint" style="font-size:11.5px;">@c.Type · @c.Style · nivel @c.Level</div>
+                        <button class="btn btn--ghost mt" disabled="@(hired || dt.CajaM < c.Cost)" @onclick="() => HireCoach(c)">
+                            @(hired ? "✓ Contratado" : $"Contratar · ${c.Cost}M")
+                        </button>
+                    </div>
+                }
             </div>
         </div>
     }
@@ -774,7 +832,8 @@ else
         if (_timeline is not null) Svc.FinishWatchedMatch(_timeline.Result.HomeGoals, _timeline.Result.AwayGoals);
         _watching = false; _timeline = null;
     }
-    private void SimRest() => Svc.SimRest();
+    private void PlayMini(string option) => Svc.PlayMinigame(option);
+    private void HireCoach(DtCoach coach) => Svc.HireCoach(coach);
     private void AnswerPress(DtOption o) => Svc.AnswerPress(o);
     private void SetTrain(string plan, string intensity) => Svc.SetTraining(plan, intensity);
     private void AutoXI() => Svc.AutoLineup();
@@ -794,6 +853,12 @@ else
     private void SetOffer(string id, string? raw) { if (int.TryParse(raw, out var v)) _offers[id] = Math.Max(0, v); }
     private static string PosName(Position p) => p switch { Position.GK => "POR", Position.DEF => "DFC", Position.MID => "MC", _ => "DC" };
     private static string Short(string n) { var parts = n.Split(' '); return parts.Length == 1 ? n : parts[^1]; }
+    private static string CoachStyle(DtManager dt) => dt.Mentality switch
+    {
+        "def" or "ultradef" => "defensiva",
+        "of" or "ultraof" => "ofensiva",
+        _ => "equilibrada",
+    };
     private async Task Reset() { _confirmReset = false; await Svc.ResetAsync(); }
 
     private string BgName(DtBackground b) => b switch

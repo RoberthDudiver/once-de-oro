@@ -40,6 +40,13 @@ public static class DtData
         C("City Sky", "🩵", "Inglaterra", "Premier League", 4, 89, 240),
         C("Les Parisiens", "🔵", "Francia", "Ligue 1", 4, 87, 210),
         C("Reds Anfield", "🔴", "Inglaterra", "Premier League", 4, 88, 200),
+
+        // -------- Selecciones nacionales --------
+        C("Argentina", "🇦🇷", "Argentina", "Selección Nacional", 3, 84, 35),
+        C("Brasil", "🇧🇷", "Brasil", "Selección Nacional", 4, 87, 50),
+        C("España", "🇪🇸", "España", "Selección Nacional", 4, 86, 48),
+        C("Francia", "🇫🇷", "Francia", "Selección Nacional", 4, 88, 55),
+        C("Uruguay", "🇺🇾", "Uruguay", "Selección Nacional", 2, 76, 18),
     };
 
     public static IEnumerable<DtClub> ByLevel(int level) => Clubs.Where(c => c.Level == level);

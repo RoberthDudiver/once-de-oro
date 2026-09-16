@@ -12,9 +12,10 @@ namespace OnceDeOro.Services;
 public static class DtEngine
 {
     private static readonly Random Rng = new();
-    private const int Teams = 14;                 // vos + 13 rivales
+    private const int Teams = 10;                 // vos + 9 rivales
     public const int MaxCareerSeasons = 15;
-    private static int Rounds => (Teams - 1) * 2; // ida y vuelta = 26 fechas
+    private const int LeagueMatches = 10;
+    private const int InternationalMatches = 10;
 
     // ---- Reputación / confianza ----
     public static string RepName(int rep) =>
@@ -172,6 +173,37 @@ public static class DtEngine
     public static void SetTactics(DtManager dt, string mentality, string tempo, string press, string build, string line)
     { dt.Mentality = mentality; dt.Tempo = tempo; dt.Press = press; dt.Build = build; dt.Line = line; }
 
+    public static IReadOnlyList<DtCoach> CoachMarket(string style) => new[]
+    {
+        new DtCoach { Name = "Julián Acosta", Type = "Preparador físico", Style = "equilibrada", Level = 1, Cost = 8 },
+        new DtCoach { Name = "Mauro Silva", Type = "Analista táctico", Style = "defensiva", Level = 2, Cost = 18 },
+        new DtCoach { Name = "Rafael Costa", Type = "Entrenador ofensivo", Style = "ofensiva", Level = 3, Cost = 34 },
+        new DtCoach { Name = "Diego Prieto", Type = "Preparador físico", Style = "ofensiva", Level = 2, Cost = 22 },
+        new DtCoach { Name = "Tomás Rinaldi", Type = "Analista táctico", Style = "equilibrada", Level = 3, Cost = 32 },
+        new DtCoach { Name = "Néstor Vidal", Type = "Entrenador defensivo", Style = "defensiva", Level = 3, Cost = 30 },
+    }.Where(c => c.Style == style || style == "equilibrada" || c.Level == 3).ToList();
+
+    public static string HireCoach(DtManager dt, DtCoach coach)
+    {
+        if (dt.Coaches.Any(c => c.Name == coach.Name)) return "Ya tenés contratado a este entrenador.";
+        if (dt.CajaM < coach.Cost) return "No alcanza la caja para contratarlo.";
+        dt.CajaM -= coach.Cost;
+        dt.Coaches.Add(coach);
+        return $"✔ Contrataste a {coach.Name} ({coach.Type}, nivel {coach.Level})";
+    }
+
+    private static int CoachingBonus(DtManager dt)
+    {
+        return dt.Coaches.Sum(c => c.Level + (c.Style == StyleFor(dt) ? 1 : 0));
+    }
+
+    private static string StyleFor(DtManager dt) => dt.Mentality switch
+    {
+        "def" or "ultradef" => "defensiva",
+        "of" or "ultraof" => "ofensiva",
+        _ => "equilibrada",
+    };
+
     /// <summary>Nombre del nivel de lesión según las semanas de baja (como el PDF).</summary>
     public static string InjuryLevel(int weeks) => weeks <= 0 ? "" : weeks <= 1 ? "Molestia" : weeks <= 3 ? "Leve" : weeks <= 6 ? "Moderada" : weeks <= 12 ? "Grave" : "Muy grave";
 
@@ -210,7 +242,7 @@ public static class DtEngine
         EnsureWorld(dt);
         dt.WorldClub[club.Name] = club.Strength;   // el mundo conoce tu club
         int baseRival = club.Level switch { 1 => 60, 2 => 71, 3 => 80, _ => 86 };
-        // Rivales: clubes reales del nivel + genéricos hasta llegar a 13.
+        // Rivales: clubes reales del nivel + genéricos hasta llegar a 9.
         var names = DtData.ByLevel(club.Level).Where(c => c.Name != club.Name).Select(c => c.Name).ToList();
         while (names.Count < Teams - 1) names.Add($"{DtData.LastNames[Rng.Next(DtData.LastNames.Length)]} FC");
         names = names.OrderBy(_ => Rng.Next()).Take(Teams - 1).ToList();
@@ -219,14 +251,20 @@ public static class DtEngine
         // La fuerza del rival sale de cómo evolucionó ese club en el mundo (o del promedio del nivel si es genérico).
         foreach (var n in names) dt.Table.Add(new DtTableRow { Name = n, Strength = dt.WorldClub.TryGetValue(n, out var ws) ? ws : baseRival + Rng.Next(-8, 9) });
 
-        // Fixture: cada rival dos veces (local y visitante), barajado.
+        // Fixture corto: exactamente 10 partidos de liga (5 rivales, ida y vuelta).
         var fix = new List<DtMatch>();
-        foreach (var r in dt.Table.Where(t => !t.IsMe))
+        foreach (var r in dt.Table.Where(t => !t.IsMe).Take(LeagueMatches / 2))
         {
             fix.Add(new DtMatch { Opp = r.Name, OppStrength = r.Strength, Home = true });
             fix.Add(new DtMatch { Opp = r.Name, OppStrength = r.Strength, Home = false });
         }
         fix = fix.OrderBy(_ => Rng.Next()).ToList();
+        if (dt.QualifiedInternational)
+        {
+            var international = new[] { "Atlético Continental", "Capital United", "Sporting del Plata", "North Stars", "Real del Pacífico", "Aurora FC", "Union Europa", "Libertad FC", "Cruz del Sur", "Estrella Mundial" };
+            for (int i = 0; i < InternationalMatches; i++)
+                fix.Add(new DtMatch { Opp = international[i], OppStrength = Math.Clamp(club.Strength + Rng.Next(-5, 7), 55, 94), Home = i % 2 == 0, IsInternational = true });
+        }
         for (int i = 0; i < fix.Count; i++) fix[i].Round = i + 1;
         dt.Fixture = fix;
 
@@ -288,7 +326,7 @@ public static class DtEngine
         double avg = xi.Average(p => p.Media);
         double mor = 0.94 + xi.Average(p => p.Morale) / 100.0 * 0.12;
         double fat = xi.Average(p => p.Fatigue) / 100.0 * 6.0;
-        return (int)Math.Round(avg * mor - fat);
+        return (int)Math.Round(avg * mor - fat + CoachingBonus(dt) * 0.7);
     }
 
     /// <summary>Juega la próxima fecha del calendario.</summary>
@@ -327,11 +365,14 @@ public static class DtEngine
         mtch.MyGoals = mg; mtch.OppGoals = og; mtch.Played = true;
         var hurt = new List<string>();
 
-        // Tabla: mi fila y la del rival.
-        var me = dt.Table.First(t => t.IsMe);
-        Record(me, mg, og);
-        var oppRow = dt.Table.FirstOrDefault(t => t.Name == mtch.Opp);
-        if (oppRow is not null) Record(oppRow, og, mg);
+        // Los partidos internacionales suman al balance, pero no alteran la tabla de liga.
+        if (!mtch.IsInternational)
+        {
+            var me = dt.Table.First(t => t.IsMe);
+            Record(me, mg, og);
+            var oppRow = dt.Table.FirstOrDefault(t => t.Name == mtch.Opp);
+            if (oppRow is not null) Record(oppRow, og, mg);
+        }
 
         // Estadísticas de mis jugadores (titulares).
         var att = xi.Where(p => p.Pos == Position.FWD || p.Pos == Position.MID).ToList();
@@ -361,7 +402,9 @@ public static class DtEngine
         }
 
         // Simular el resto de la fecha (los otros equipos).
-        var others = dt.Table.Where(t => !t.IsMe && t.Name != mtch.Opp).OrderBy(_ => Rng.Next()).ToList();
+        var others = mtch.IsInternational
+            ? new List<DtTableRow>()
+            : dt.Table.Where(t => !t.IsMe && t.Name != mtch.Opp).OrderBy(_ => Rng.Next()).ToList();
         for (int i = 0; i + 1 < others.Count; i += 2)
         {
             int ga = Poisson(GoalExp(others[i].Strength, others[i + 1].Strength));
@@ -370,7 +413,7 @@ public static class DtEngine
         }
 
         string res = mtch.Home ? $"{dt.Club!.Name} {mg}-{og} {mtch.Opp}" : $"{mtch.Opp} {og}-{mg} {dt.Club!.Name}";
-        dt.WeekMsg = "⚽ " + res + (hurt.Count > 0 ? " · 🤕 " + string.Join(", ", hurt) : "");
+        dt.WeekMsg = (mtch.IsInternational ? "🌍 " : "⚽ ") + res + (hurt.Count > 0 ? " · 🤕 " + string.Join(", ", hurt) : "");
 
         dt.Round++;
         // El fin de temporada lo decide el CALENDARIO (cuando pasan todos los meses),
@@ -435,7 +478,8 @@ public static class DtEngine
             {
                 p.Fatigue = Math.Min(100, p.Fatigue + inten * 2);
                 bool joven = dt.TrainPlan == "juvenil" && p.Age <= 22;
-                if ((joven && Rng.NextDouble() < 0.10 * inten) || (p.Age <= 24 && Rng.NextDouble() < 0.04 * inten))
+                double coachBoost = 1 + dt.Coaches.Where(c => c.Type.Contains("Entrenador") && c.Style == StyleFor(dt)).Sum(c => c.Level) * 0.06;
+                if ((joven && Rng.NextDouble() < 0.10 * inten * coachBoost) || (p.Age <= 24 && Rng.NextDouble() < 0.04 * inten * coachBoost))
                     p.Media = Math.Min(p.Potential, p.Media + 1);
             }
         }
@@ -509,18 +553,6 @@ public static class DtEngine
             AdvanceWeek(dt);
     }
 
-    /// <summary>Simula el resto de la temporada (todos los meses). La prensa se responde sola en modo neutral.</summary>
-    public static void SimRestOfSeason(DtManager dt)
-    {
-        if (dt.CareerFinished) return;
-        int guard = 0;
-        while (dt.SeasonInPlay && guard++ < 120)
-        {
-            if (dt.PressPending is not null) { AnswerPress(dt, dt.PressPending.Options.Last()); continue; }
-            AdvanceWeek(dt);
-        }
-    }
-
     public static List<DtTableRow> Standings(DtManager dt) =>
         dt.Table.OrderByDescending(t => t.Pts).ThenByDescending(t => t.Diff).ThenByDescending(t => t.GF).ThenBy(t => t.Name).ToList();
 
@@ -536,9 +568,11 @@ public static class DtEngine
         bool relegated = pos >= Teams - 1;
 
         var titles = new List<string>();
-        if (champ) titles.Add("🏆 Liga");
-        if (Rng.NextDouble() < 0.12 + (Teams / 2.0 - pos) / 100.0) titles.Add("🏅 Copa");
-        if (club.Level >= 3 && pos <= 2 && Rng.NextDouble() < (club.Level == 4 ? 0.35 : 0.18)) titles.Add("⭐ Internacional");
+        if (champ)
+        {
+            titles.Add("🏆 Liga");
+            dt.LastTrophy = "🏆 Liga";
+        }
 
         int mediaCut = (int)Math.Ceiling(Teams * 0.6);
         foreach (var o in dt.Objectives)
@@ -559,7 +593,12 @@ public static class DtEngine
                  + (pos <= 3 ? 5 : 0) + (champ ? 4 : 0) - (relegated ? 6 : 0);
         dt.Rep = Math.Clamp(dt.Rep + dRep, 0, 100);
 
-        dt.Matches += me.Played; dt.Wins += me.Won; dt.Draws += me.Drawn; dt.Losses += me.Lost;
+        int intlPlayed = dt.Fixture.Count(x => x.Played && x.IsInternational);
+        int intlWins = dt.Fixture.Count(x => x.Played && x.IsInternational && x.MyGoals > x.OppGoals);
+        int intlDraws = dt.Fixture.Count(x => x.Played && x.IsInternational && x.MyGoals == x.OppGoals);
+        dt.Matches += me.Played + intlPlayed;
+        dt.Wins += me.Won + intlWins; dt.Draws += me.Drawn + intlDraws;
+        dt.Losses += me.Lost + intlPlayed - intlWins - intlDraws;
         dt.Titles += titles.Count; dt.SeasonsManaged++;
 
         string note = titles.Count > 0 ? string.Join(" · ", titles)
@@ -582,6 +621,7 @@ public static class DtEngine
             Titles = titles, ObjectiveMet = objMet, RepAfter = dt.Rep, Note = note,
         });
 
+        dt.QualifiedInternational = pos <= 4 && club.Level >= 2;
         DevelopSquad(dt);
         EvolveWorld(dt);
         WorldAndNews(dt, pos, titles, champ);
@@ -594,7 +634,69 @@ public static class DtEngine
             return;
         }
 
-        dt.Pending = PostSeason(dt, objMet, relegated);
+        if (dt.Fixture.Any(x => x.Played && x.IsInternational))
+        {
+            dt.PendingMinigame = NewMinigame(dt, objMet, relegated);
+            dt.Pending = null;
+        }
+        else dt.Pending = PostSeason(dt, objMet, relegated);
+    }
+
+    private static DtMinigame NewMinigame(DtManager dt, bool objMet, bool relegated)
+    {
+        string name = dt.Club!.Level >= 4 ? "Champions League"
+                    : dt.Club.Level >= 3 && dt.Club.Country is ("Argentina" or "Brasil" or "Uruguay") ? "Copa Libertadores"
+                    : dt.Club.Country == "España" ? "Copa del Rey"
+                    : dt.Club.Level <= 2 ? "Copa Argentina" : "Copa Internacional";
+        int difficulty = name == "Champions League" ? 3 : name == "Copa Libertadores" ? 2 : 1;
+        var game = new DtMinigame { Competition = name, Difficulty = difficulty, ObjectiveMet = objMet, Relegated = relegated };
+        SetMinigameRound(game);
+        return game;
+    }
+
+    private static void SetMinigameRound(DtMinigame game)
+    {
+        var prompts = new[]
+        {
+            ("El rival adelanta la línea y deja espacio a la espalda. ¿Qué orden das?", "Ataque directo"),
+            ("Vas ganando y quedan diez minutos. ¿Cómo protegés el resultado?", "Bloque bajo"),
+            ("El rival domina la pelota en campo propio. ¿Cuál es tu respuesta?", "Presionar alto"),
+            ("Tu extremo recibe aislado contra su lateral. ¿Qué buscás?", "Ataque directo"),
+            ("Perdés la pelota cerca de tu área. ¿Qué priorizás?", "Bloque bajo"),
+        };
+        var p = prompts[Rng.Next(prompts.Length)];
+        game.Prompt = p.Item1;
+        game.CorrectOption = p.Item2;
+        game.Options = new List<string> { "Presionar alto", "Bloque bajo", "Ataque directo" }.OrderBy(_ => Rng.Next()).ToList();
+    }
+
+    /// <summary>Resuelve una jugada del minijuego y avanza a la siguiente.</summary>
+    public static bool PlayMinigame(DtManager dt, string option)
+    {
+        var game = dt.PendingMinigame;
+        if (game is null) return false;
+        if (option == game.CorrectOption) game.Score++;
+        game.Round++;
+        int total = 2 + game.Difficulty;
+        if (game.Round < total) { SetMinigameRound(game); return false; }
+
+        bool won = game.Score >= total - 1;
+        if (won)
+        {
+            dt.Titles++;
+            dt.LastTrophy = $"🏆 {game.Competition}";
+            if (dt.Timeline.Count > 0)
+            {
+                var season = dt.Timeline[0];
+                season.Titles.Add($"🏆 {game.Competition}");
+                season.Note = string.Join(" · ", season.Titles);
+            }
+            dt.Rep = Math.Clamp(dt.Rep + 10, 0, 100);
+            dt.Confidence = Math.Clamp(dt.Confidence + 12, 0, 100);
+        }
+        dt.PendingMinigame = null;
+        dt.Pending = PostSeason(dt, game.ObjectiveMet, game.Relegated);
+        return won;
     }
 
     private static void EnsureWorld(DtManager dt)
@@ -863,9 +965,18 @@ public static class DtEngine
         {
             var offers = Enumerable.Range(club.Level, max - club.Level + 1)
                 .SelectMany(DtData.ByLevel).Where(c => c.Name != club.Name && c.Level >= club.Level)
-                .OrderBy(_ => Rng.Next()).Take(2).ToList();
+                .OrderBy(_ => Rng.Next()).Take(5).ToList();
             foreach (var c in offers)
                 d.Options.Add(new DtOption { Label = $"Firmar por {c.Name}", Sub = $"{DtData.LevelName(c.Level)} · {c.League}", Kind = "move", Club = c });
+
+            var dream = DtData.Clubs.FirstOrDefault(c => c.Name == dt.DreamClub);
+            bool dreamReady = dt.HasRepresentative && dream is not null
+                && dt.Rep >= 65
+                && dt.Timeline.SelectMany(s => s.Titles).Any(t => t.Contains("Liga"))
+                && dt.Timeline.SelectMany(s => s.Titles).Any(t => t.Contains("Copa"))
+                && dt.Awards.Any(a => a.Contains("DT del Año"));
+            if (dreamReady && dream is not null && !offers.Any(c => c.Name == dream.Name) && dream.Name != club.Name)
+                d.Options.Add(new DtOption { Label = $"🌟 Club de tus sueños: {dream.Name}", Sub = "Requisitos cumplidos · representante", Kind = "move", Club = dream });
         }
         return d;
     }

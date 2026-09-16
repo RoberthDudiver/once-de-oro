@@ -42,7 +42,6 @@ public sealed class DtService
     public void AdvanceWeek() { if (Current is not null) { DtEngine.AdvanceWeek(Current); Save(); } }
     public void FinishWatchedMatch(int myGoals, int oppGoals) { if (Current is not null) { DtEngine.FinishWatchedMatch(Current, myGoals, oppGoals); Save(); } }
     public void AdvanceToNextMatch() { if (Current is not null) { DtEngine.AdvanceToNextMatch(Current); Save(); } }
-    public void SimRest() { if (Current is not null) { DtEngine.SimRestOfSeason(Current); Save(); } }
     public void SetTraining(string plan, string intensity) { if (Current is not null) { DtEngine.SetTraining(Current, plan, intensity); Save(); } }
     public void AnswerPress(DtOption opt) { if (Current is not null) { DtEngine.AnswerPress(Current, opt); Save(); } }
     public void SetFormation(string f) { if (Current is not null) { DtEngine.SetFormation(Current, f); Save(); } }
@@ -52,6 +51,8 @@ public sealed class DtService
     public void Sell(string id) { if (Current is not null) { MarketMsg = DtEngine.SellPlayer(Current, id); Save(); } }
     public void Renew(string id) { if (Current is not null) { MarketMsg = DtEngine.RenewPlayer(Current, id); Save(); } }
     public void SignReal(string id) { if (Current is not null) { MarketMsg = DtEngine.SignReal(Current, id); Save(); } }
+    public void HireCoach(DtCoach coach) { if (Current is not null) { MarketMsg = DtEngine.HireCoach(Current, coach); Save(); } }
+    public void PlayMinigame(string option) { if (Current is not null) { DtEngine.PlayMinigame(Current, option); Save(); } }
 
     public void Choose(DtOption opt)
     {
