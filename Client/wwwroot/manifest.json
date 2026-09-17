@@ -1,7 +1,7 @@
 {
   "name": "Once de Oro",
   "short_name": "Once de Oro",
-  "description": "Juego web tipo manager de fútbol.",
+  "description": "Juego de manager de fútbol online y gratis: dirigí equipos, fichá jugadores, entrená tu plantilla y ganá torneos.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0f1a",

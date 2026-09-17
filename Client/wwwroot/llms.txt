@@ -1,0 +1,35 @@
+# Once de Oro
+
+> Once de Oro es un juego de manager de fútbol online, gratuito y jugable desde el navegador.
+
+## Descripción
+
+Once de Oro permite crear y dirigir un equipo de fútbol, fichar jugadores, formar un once titular, elegir tácticas, disputar partidos y ganar competiciones. No requiere instalación y funciona en computadora y celular.
+
+## Modos de juego
+
+- **Modo Normal:** mercado de fichajes, plantilla, academia, torneos, partidos animados y logros.
+- **Modo DT:** carrera de entrenador de hasta 15 temporadas, dirección de clubes y selecciones, calendario semanal, entrenamientos, fichajes, cuerpo técnico, evolución de jugadores y títulos.
+- **Modos especiales:** desafíos temporales como el Desafío Diario, con 20 rivales, 3 vidas y recompensas especiales. Está disponible lunes, miércoles y jueves.
+
+## Funciones principales
+
+- Mercado de fichajes y jugadores especiales.
+- Formación, estilo de juego y cambios durante el partido.
+- Academia para crear y entrenar jóvenes.
+- Ligas, copas nacionales, Libertadores, Champions League y Mundial.
+- Progreso guardado en el navegador y, si se habilita, en una cuenta.
+
+## Enlaces
+
+- Inicio: https://oncedeoro.dudiver.net/
+- Mercado: https://oncedeoro.dudiver.net/mercado
+- Torneos: https://oncedeoro.dudiver.net/torneos
+- Modos especiales: https://oncedeoro.dudiver.net/modos-especiales
+- Modo DT: https://oncedeoro.dudiver.net/dt
+- Academia: https://oncedeoro.dudiver.net/academia
+- Información y privacidad: https://oncedeoro.dudiver.net/info
+
+## Autoría
+
+Creado por Roberth Dudiver y Alexander Dudiver.

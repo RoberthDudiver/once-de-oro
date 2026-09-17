@@ -1,4 +1,11 @@
 User-agent: *
 Allow: /
 
+# El contenido público se puede leer sin ejecutar acciones del juego.
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
 Sitemap: https://oncedeoro.dudiver.net/sitemap.xml
